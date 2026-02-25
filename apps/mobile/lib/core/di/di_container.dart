@@ -4,6 +4,7 @@ import '../../data/analytics/analytics_tracker.dart';
 import '../../data/analytics/debug_analytics_tracker.dart';
 import '../../data/remote_config/in_memory_remote_config_repository.dart';
 import '../../data/remote_config/remote_config_repository.dart';
+import '../../data/repositories/in_memory_player_progress_repository.dart';
 import '../../domain/generator/basic_difficulty_tuner.dart';
 import '../../domain/generator/basic_piece_generation_service.dart';
 import '../../domain/generator/difficulty_tuner.dart';
@@ -12,6 +13,7 @@ import '../../domain/gameplay/basic_line_clear_service.dart';
 import '../../domain/gameplay/basic_move_validator.dart';
 import '../../domain/gameplay/line_clear_service.dart';
 import '../../domain/gameplay/move_validator.dart';
+import '../../domain/progression/player_progress_repository.dart';
 import '../../domain/scoring/basic_score_service.dart';
 import '../../domain/scoring/score_service.dart';
 import '../../features/game_loop/audio/flame_game_sfx_player.dart';
@@ -60,6 +62,9 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<RemoteConfigRepository>(
     () => inMemoryRemoteConfigRepository,
   );
+  sl.registerLazySingleton<PlayerProgressRepository>(
+    InMemoryPlayerProgressRepository.new,
+  );
   sl.registerLazySingleton<IapStoreService>(
     () => DebugIapStoreService(
       includeBundle: includeBundle,
@@ -101,6 +106,7 @@ Future<void> configureDependencies() async {
       analyticsTracker: sl(),
       adService: sl(),
       adGuardrailPolicy: sl(),
+      playerProgressRepository: sl(),
       logger: sl(),
     ),
   );

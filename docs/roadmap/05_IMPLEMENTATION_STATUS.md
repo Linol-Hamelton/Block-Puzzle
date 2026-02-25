@@ -25,18 +25,19 @@ Last updated: 2026-02-25
   - performance pass (assets/draw calls/memory) in next technical iteration
 
 ## Sprint 5
-- Status: `in_progress`
+- Status: `partially_done`
 - Done:
   - AB foundation: `ab.bucket` + `ab_experiment_exposure` tracking
+  - dashboard MVP contract + export script (`data/dashboards/dashboard_mvp_contract_v1.json`, `scripts/export_dashboard_mvp_snapshot.ps1`)
 - Pending:
-  - dashboard MVP wiring for retention/session/commercial metrics
   - soft launch readiness checklist hardening
 
 ## Sprint 6
-- Status: `pending`
+- Status: `in_progress`
+- Done:
+  - daily goals (moves/lines/score) with runtime progress and completion analytics events
+  - streak system with day rollover update and streak analytics event
 - Pending:
-  - daily goals
-  - streak system
   - rewarded hint/undo alternative for ad-free strategy (IAP or earned currency based)
   - UX/balance AB wave #1
 
@@ -59,6 +60,6 @@ Last updated: 2026-02-25
   - pre-production package for stage 3 modes
 
 ## Next Sequential Execution Queue
-1. Sprint 5: dashboard MVP sources + export contract for playtest/soft-launch metrics.
-2. Sprint 6: daily goals + streak system (first functional implementation).
+1. Sprint 6: rewarded hint/undo alternative for ad-free strategy (IAP or earned currency path).
+2. Sprint 6: UX/balance AB wave #1.
 3. Sprint 7: segmentation and offer targeting v1 for cosmetics catalog ordering.

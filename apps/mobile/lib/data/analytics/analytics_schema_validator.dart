@@ -205,6 +205,25 @@ class AnalyticsSchemaValidator {
         'source',
       },
     ),
+    'daily_goal_progress': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'goal_id',
+        'progress',
+        'target',
+        'is_completed',
+      },
+      optionalParams: <String>{
+        'completed_goals',
+        'total_goals',
+      },
+    ),
+    'streak_updated': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'current_streak',
+        'best_streak',
+        'reason',
+      },
+    ),
     'ad_impression': AnalyticsEventSchema(
       requiredParams: <String>{
         'placement',

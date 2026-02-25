@@ -1,5 +1,6 @@
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/piece.dart';
+import '../../../domain/progression/progression_snapshots.dart';
 import '../../../domain/scoring/score_state.dart';
 
 class GameLoopViewState {
@@ -13,6 +14,8 @@ class GameLoopViewState {
     required this.canUseRewardedRevive,
     required this.isBannerVisible,
     required this.isOnboardingVisible,
+    required this.dailyGoals,
+    required this.streak,
     required this.bestScore,
     required this.gamesPlayed,
     required this.movesPlayed,
@@ -31,6 +34,8 @@ class GameLoopViewState {
   final bool canUseRewardedRevive;
   final bool isBannerVisible;
   final bool isOnboardingVisible;
+  final DailyGoalsSnapshot dailyGoals;
+  final StreakSnapshot streak;
   final int bestScore;
   final int gamesPlayed;
   final int movesPlayed;
@@ -50,6 +55,8 @@ class GameLoopViewState {
       canUseRewardedRevive: false,
       isBannerVisible: false,
       isOnboardingVisible: false,
+      dailyGoals: DailyGoalsSnapshot.initial(),
+      streak: StreakSnapshot.initial,
       bestScore: 0,
       gamesPlayed: 0,
       movesPlayed: 0,
@@ -69,6 +76,8 @@ class GameLoopViewState {
     bool? canUseRewardedRevive,
     bool? isBannerVisible,
     bool? isOnboardingVisible,
+    DailyGoalsSnapshot? dailyGoals,
+    StreakSnapshot? streak,
     int? bestScore,
     int? gamesPlayed,
     int? movesPlayed,
@@ -89,6 +98,8 @@ class GameLoopViewState {
       canUseRewardedRevive: canUseRewardedRevive ?? this.canUseRewardedRevive,
       isBannerVisible: isBannerVisible ?? this.isBannerVisible,
       isOnboardingVisible: isOnboardingVisible ?? this.isOnboardingVisible,
+      dailyGoals: dailyGoals ?? this.dailyGoals,
+      streak: streak ?? this.streak,
       bestScore: bestScore ?? this.bestScore,
       gamesPlayed: gamesPlayed ?? this.gamesPlayed,
       movesPlayed: movesPlayed ?? this.movesPlayed,

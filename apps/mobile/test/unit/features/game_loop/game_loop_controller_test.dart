@@ -1,6 +1,7 @@
 import 'package:block_puzzle_mobile/core/logging/app_logger.dart';
 import 'package:block_puzzle_mobile/data/analytics/analytics_tracker.dart';
 import 'package:block_puzzle_mobile/data/remote_config/remote_config_repository.dart';
+import 'package:block_puzzle_mobile/data/repositories/in_memory_player_progress_repository.dart';
 import 'package:block_puzzle_mobile/domain/generator/difficulty_profile.dart';
 import 'package:block_puzzle_mobile/domain/generator/difficulty_tuner.dart';
 import 'package:block_puzzle_mobile/domain/generator/piece_generation_service.dart';
@@ -43,6 +44,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
 
@@ -79,6 +81,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
 
@@ -115,6 +118,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
 
@@ -157,6 +161,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
 
@@ -185,6 +190,94 @@ void main() {
       expect(
         analytics.events.where((String event) => event == 'move_made').length,
         greaterThanOrEqualTo(10),
+      );
+    });
+
+    test('updates daily goals and tracks completion event', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _DailyGoalsRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      final Move? move = _firstValidMove(controller);
+      expect(move, isNotNull);
+      await controller.processMove(move!);
+
+      expect(
+          controller.state.dailyGoals.movesProgress, greaterThanOrEqualTo(1));
+      expect(
+          controller.state.dailyGoals.completedCount, greaterThanOrEqualTo(1));
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'daily_goal_progress' &&
+              event.params['goal_id'] == 'daily_moves' &&
+              event.params['is_completed'] == true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('increments streak when user returns the next day', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final InMemoryPlayerProgressRepository progressRepository =
+          InMemoryPlayerProgressRepository();
+      DateTime nowUtc = DateTime.utc(2026, 2, 24, 10, 0, 0);
+
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _InMemoryRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        playerProgressRepository: progressRepository,
+        logger: AppLogger(),
+        nowUtcProvider: () => nowUtc,
+      );
+
+      await controller.initialize();
+      expect(controller.state.streak.currentDays, 1);
+
+      nowUtc = DateTime.utc(2026, 2, 25, 9, 0, 0);
+      await controller.startNewGame();
+
+      expect(controller.state.streak.currentDays, 2);
+      expect(controller.state.streak.bestDays, greaterThanOrEqualTo(2));
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'streak_updated' &&
+              event.params['reason'] == 'continued' &&
+              event.params['current_streak'] == 2,
+        ),
+        isTrue,
       );
     });
   });
@@ -284,6 +377,27 @@ class _AbVariantRemoteConfigRepository implements RemoteConfigRepository {
       'ab.tutorial_variant': 'guided_v2',
       'ab.offer_strategy_variant': 'cosmetics_first_v2',
       'ab.difficulty_variant': 'fairness_bias_v1',
+    };
+  }
+}
+
+class _DailyGoalsRemoteConfigRepository implements RemoteConfigRepository {
+  const _DailyGoalsRemoteConfigRepository();
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return getCached();
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return <String, Object?>{
+      'difficulty.hard_piece_weight': 0.2,
+      'difficulty.max_hard_pieces_per_triplet': 1,
+      'progression.daily_goal_moves_target': 1,
+      'progression.daily_goal_lines_target': 200,
+      'progression.daily_goal_score_target': 5000,
+      'progression.streak_enabled': true,
     };
   }
 }

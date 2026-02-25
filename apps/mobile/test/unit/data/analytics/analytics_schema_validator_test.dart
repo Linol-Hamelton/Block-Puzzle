@@ -91,5 +91,40 @@ void main() {
       expect(result.missingRequired, isEmpty);
       expect(result.unknownParams, isEmpty);
     });
+
+    test('accepts daily_goal_progress payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'daily_goal_progress',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'goal_id': 'daily_moves',
+          'progress': 18,
+          'target': 18,
+          'is_completed': true,
+          'completed_goals': 1,
+          'total_goals': 3,
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts streak_updated payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'streak_updated',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'current_streak': 4,
+          'best_streak': 7,
+          'reason': 'continued',
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
   });
 }

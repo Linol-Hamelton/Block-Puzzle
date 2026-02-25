@@ -10,6 +10,9 @@ import '../../../domain/generator/piece_generation_service.dart';
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
+import '../../../domain/progression/player_progress_repository.dart';
+import '../../../domain/progression/player_progress_state.dart';
+import '../../../domain/progression/progression_snapshots.dart';
 import '../../../domain/scoring/score_state.dart';
 import '../../../domain/session/session_state.dart';
 import '../../monetization/ad_guardrail_decision.dart';
@@ -100,6 +103,9 @@ class GameLoopController {
   static const String _tutorialStatusShown = 'shown';
   static const String _tutorialStatusCompleted = 'completed';
   static const String _tutorialStatusSkipped = 'skipped';
+  static const String _dailyGoalMoves = 'daily_moves';
+  static const String _dailyGoalLines = 'daily_lines_cleared';
+  static const String _dailyGoalScore = 'daily_score';
 
   GameLoopController({
     required this.placePieceUseCase,
@@ -111,8 +117,10 @@ class GameLoopController {
     required this.analyticsTracker,
     required this.adService,
     required this.adGuardrailPolicy,
+    required this.playerProgressRepository,
     required this.logger,
-  });
+    DateTime Function()? nowUtcProvider,
+  }) : _nowUtc = nowUtcProvider ?? (() => DateTime.now().toUtc());
 
   final PlacePieceUseCase placePieceUseCase;
   final ClearLinesUseCase clearLinesUseCase;
@@ -123,7 +131,9 @@ class GameLoopController {
   final AnalyticsTracker analyticsTracker;
   final AdService adService;
   final AdGuardrailPolicy adGuardrailPolicy;
+  final PlayerProgressRepository playerProgressRepository;
   final AppLogger logger;
+  final DateTime Function() _nowUtc;
 
   final ValueNotifier<GameLoopViewState> _stateNotifier =
       ValueNotifier<GameLoopViewState>(GameLoopViewState.initial());
@@ -135,6 +145,10 @@ class GameLoopController {
   bool _onboardingEnabled = true;
   bool _onboardingCompleted = false;
   int _onboardingMoveCount = 0;
+  bool _streakEnabled = true;
+  int _dailyGoalMovesTarget = 18;
+  int _dailyGoalLinesTarget = 6;
+  int _dailyGoalScoreTarget = 350;
   bool _bannerRequestedInSession = false;
   bool _rewardedReviveUsedInCurrentGame = false;
   int _currentGameNumber = 0;
@@ -144,6 +158,9 @@ class GameLoopController {
   String? _sessionId;
   String _abBucket = 'control';
   Map<String, String> _abExperimentVariants = <String, String>{};
+  PlayerProgressState _playerProgressState = PlayerProgressState.initialForDay(
+    DateTime.utc(1970, 1, 1),
+  );
 
   ValueListenable<GameLoopViewState> get stateListenable => _stateNotifier;
   GameLoopViewState get state => _stateNotifier.value;
@@ -158,15 +175,32 @@ class GameLoopController {
       'onboarding.enabled',
       fallback: true,
     );
+    _streakEnabled = _readBoolConfig(
+      'progression.streak_enabled',
+      fallback: true,
+    );
+    _dailyGoalMovesTarget = _readIntConfig(
+      'progression.daily_goal_moves_target',
+      fallback: 18,
+    ).clamp(1, 500);
+    _dailyGoalLinesTarget = _readIntConfig(
+      'progression.daily_goal_lines_target',
+      fallback: 6,
+    ).clamp(1, 100);
+    _dailyGoalScoreTarget = _readIntConfig(
+      'progression.daily_goal_score_target',
+      fallback: 350,
+    ).clamp(20, 50000);
     _abBucket = _readStringConfig(
       'ab.bucket',
       fallback: 'control',
     );
     _abExperimentVariants = _collectAbExperimentVariants();
+    await _loadAndSyncProgressForCurrentDay();
     await adService.preload();
 
     _initialized = true;
-    _sessionStartedAt = DateTime.now().toUtc();
+    _sessionStartedAt = _nowUtc();
     _sessionId = 'session_${_sessionStartedAt!.millisecondsSinceEpoch}';
 
     logger.info('Game loop initialized with config: $_remoteConfig');
@@ -186,8 +220,10 @@ class GameLoopController {
   }
 
   Future<void> startNewGame() async {
+    await _syncProgressForCurrentDay();
+
     _currentGameNumber += 1;
-    _gameStartedAt = DateTime.now().toUtc();
+    _gameStartedAt = _nowUtc();
     _rewardedReviveUsedInCurrentGame = false;
     final int nextGamesPlayed = state.gamesPlayed + 1;
     final bool shouldShowOnboarding =
@@ -218,6 +254,8 @@ class GameLoopController {
       canUseRewardedRevive: false,
       isBannerVisible: adGuardrailPolicy.isBannerEnabled(_remoteConfig),
       isOnboardingVisible: shouldShowOnboarding,
+      dailyGoals: _buildDailyGoalsSnapshot(),
+      streak: _buildStreakSnapshot(),
       onboardingStepId: shouldShowOnboarding ? _tutorialStepWelcome : null,
       onboardingTitle: shouldShowOnboarding ? 'Welcome to Classic Mode' : null,
       onboardingDescription: shouldShowOnboarding
@@ -336,12 +374,24 @@ class GameLoopController {
         ? nextScore.totalScore
         : state.bestScore;
     final int nextMovesPlayed = state.movesPlayed + 1;
+    final int scoreDelta = nextScore.totalScore - state.scoreState.totalScore;
     final int previousLevel = state.level;
     final int nextLevel = _resolveLevel(totalScore: nextScore.totalScore);
     final bool levelUp = nextLevel > previousLevel;
     final int nextColorThemeIndex = _resolveColorThemeIndex(nextLevel);
     final double boardFillPct = lineResult.boardState.occupiedCells.length /
         (lineResult.boardState.size * lineResult.boardState.size);
+
+    final DailyGoalsSnapshot dailyGoalsBefore = _buildDailyGoalsSnapshot();
+    await _applyProgressAfterMove(
+      clearedLines: lineResult.clearedTotal,
+      scoreDelta: scoreDelta,
+    );
+    final DailyGoalsSnapshot dailyGoalsAfter = _buildDailyGoalsSnapshot();
+    await _trackNewGoalCompletions(
+      before: dailyGoalsBefore,
+      after: dailyGoalsAfter,
+    );
 
     _sessionState = SessionState(
       roundsPlayed: state.gamesPlayed,
@@ -357,6 +407,8 @@ class GameLoopController {
       colorThemeIndex: nextColorThemeIndex,
       isGameOver: isGameOver,
       canUseRewardedRevive: isGameOver ? _isRewardedReviveAvailable() : false,
+      dailyGoals: dailyGoalsAfter,
+      streak: _buildStreakSnapshot(),
       bestScore: nextBestScore,
       movesPlayed: nextMovesPlayed,
       gameOverReason: isGameOver ? 'no_valid_moves' : null,
@@ -512,7 +564,7 @@ class GameLoopController {
   }
 
   Future<void> _maybeShowInterstitialAfterGameEnd() async {
-    final DateTime nowUtc = DateTime.now().toUtc();
+    final DateTime nowUtc = _nowUtc();
     _pruneInterstitialHistory(nowUtc);
 
     final AdGuardrailDecision decision = adGuardrailPolicy.evaluateInterstitial(
@@ -753,6 +805,158 @@ class GameLoopController {
     return value.clamp(2, 40);
   }
 
+  Future<void> _loadAndSyncProgressForCurrentDay() async {
+    final DateTime todayUtc = PlayerProgressState.normalizeDayKeyUtc(_nowUtc());
+    _playerProgressState = await playerProgressRepository.load() ??
+        PlayerProgressState.initialForDay(todayUtc);
+
+    if (!_streakEnabled) {
+      _playerProgressState = _playerProgressState.copyWith(
+        streakCurrentDays: 0,
+        streakBestDays: 0,
+      );
+    }
+
+    await _syncProgressForCurrentDay();
+    await playerProgressRepository.save(_playerProgressState);
+  }
+
+  Future<void> _syncProgressForCurrentDay() async {
+    final DateTime todayUtc = PlayerProgressState.normalizeDayKeyUtc(_nowUtc());
+    if (_playerProgressState.dayKeyUtc == todayUtc) {
+      return;
+    }
+
+    final int dayDelta =
+        todayUtc.difference(_playerProgressState.dayKeyUtc).inDays;
+    int nextStreakCurrent = _playerProgressState.streakCurrentDays;
+    int nextStreakBest = _playerProgressState.streakBestDays;
+    String streakReason = 'same_day';
+
+    if (_streakEnabled) {
+      if (dayDelta == 1) {
+        nextStreakCurrent = (_playerProgressState.streakCurrentDays + 1).clamp(
+          1,
+          10000,
+        );
+        streakReason = 'continued';
+      } else {
+        nextStreakCurrent = 1;
+        streakReason = 'reset_gap';
+      }
+      if (nextStreakCurrent > nextStreakBest) {
+        nextStreakBest = nextStreakCurrent;
+      }
+    } else {
+      nextStreakCurrent = 0;
+      nextStreakBest = 0;
+      streakReason = 'disabled';
+    }
+
+    _playerProgressState = _playerProgressState.copyWith(
+      dayKeyUtc: todayUtc,
+      streakCurrentDays: nextStreakCurrent,
+      streakBestDays: nextStreakBest,
+      dailyMoves: 0,
+      dailyLinesCleared: 0,
+      dailyScoreEarned: 0,
+    );
+    await playerProgressRepository.save(_playerProgressState);
+    await _trackStreakUpdated(reason: streakReason);
+  }
+
+  DailyGoalsSnapshot _buildDailyGoalsSnapshot() {
+    return DailyGoalsSnapshot(
+      movesProgress: _playerProgressState.dailyMoves,
+      movesTarget: _dailyGoalMovesTarget,
+      linesProgress: _playerProgressState.dailyLinesCleared,
+      linesTarget: _dailyGoalLinesTarget,
+      scoreProgress: _playerProgressState.dailyScoreEarned,
+      scoreTarget: _dailyGoalScoreTarget,
+    );
+  }
+
+  StreakSnapshot _buildStreakSnapshot() {
+    return StreakSnapshot(
+      currentDays: _streakEnabled ? _playerProgressState.streakCurrentDays : 0,
+      bestDays: _streakEnabled ? _playerProgressState.streakBestDays : 0,
+    );
+  }
+
+  Future<void> _applyProgressAfterMove({
+    required int clearedLines,
+    required int scoreDelta,
+  }) async {
+    _playerProgressState = _playerProgressState.copyWith(
+      dailyMoves: _playerProgressState.dailyMoves + 1,
+      dailyLinesCleared: _playerProgressState.dailyLinesCleared + clearedLines,
+      dailyScoreEarned: _playerProgressState.dailyScoreEarned + scoreDelta,
+    );
+    await playerProgressRepository.save(_playerProgressState);
+  }
+
+  Future<void> _trackNewGoalCompletions({
+    required DailyGoalsSnapshot before,
+    required DailyGoalsSnapshot after,
+  }) async {
+    if (!before.movesCompleted && after.movesCompleted) {
+      await _trackDailyGoalProgress(
+        goalId: _dailyGoalMoves,
+        progress: after.movesProgress,
+        target: after.movesTarget,
+        completedGoals: after.completedCount,
+      );
+    }
+    if (!before.linesCompleted && after.linesCompleted) {
+      await _trackDailyGoalProgress(
+        goalId: _dailyGoalLines,
+        progress: after.linesProgress,
+        target: after.linesTarget,
+        completedGoals: after.completedCount,
+      );
+    }
+    if (!before.scoreCompleted && after.scoreCompleted) {
+      await _trackDailyGoalProgress(
+        goalId: _dailyGoalScore,
+        progress: after.scoreProgress,
+        target: after.scoreTarget,
+        completedGoals: after.completedCount,
+      );
+    }
+  }
+
+  Future<void> _trackDailyGoalProgress({
+    required String goalId,
+    required int progress,
+    required int target,
+    required int completedGoals,
+  }) async {
+    await analyticsTracker.track(
+      'daily_goal_progress',
+      params: <String, Object?>{
+        'goal_id': goalId,
+        'progress': progress,
+        'target': target,
+        'is_completed': progress >= target,
+        'completed_goals': completedGoals,
+        'total_goals': 3,
+      },
+    );
+  }
+
+  Future<void> _trackStreakUpdated({
+    required String reason,
+  }) async {
+    await analyticsTracker.track(
+      'streak_updated',
+      params: <String, Object?>{
+        'current_streak': _playerProgressState.streakCurrentDays,
+        'best_streak': _playerProgressState.streakBestDays,
+        'reason': reason,
+      },
+    );
+  }
+
   Map<String, String> _collectAbExperimentVariants() {
     return <String, String>{
       'tutorial_onboarding': _readStringConfig(
@@ -919,7 +1123,7 @@ class GameLoopController {
   }) async {
     final int durationSec = _gameStartedAt == null
         ? 0
-        : DateTime.now().toUtc().difference(_gameStartedAt!).inSeconds;
+        : _nowUtc().difference(_gameStartedAt!).inSeconds;
     await analyticsTracker.track(
       'game_end',
       params: <String, Object?>{
@@ -948,8 +1152,7 @@ class GameLoopController {
     if (startedAt == null) {
       return;
     }
-    final int durationSec =
-        DateTime.now().toUtc().difference(startedAt).inSeconds;
+    final int durationSec = _nowUtc().difference(startedAt).inSeconds;
     await analyticsTracker.track(
       'session_end',
       params: <String, Object?>{

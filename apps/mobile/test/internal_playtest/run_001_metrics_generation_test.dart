@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:block_puzzle_mobile/core/logging/app_logger.dart';
 import 'package:block_puzzle_mobile/data/analytics/analytics_tracker.dart';
 import 'package:block_puzzle_mobile/data/remote_config/in_memory_remote_config_repository.dart';
+import 'package:block_puzzle_mobile/data/repositories/in_memory_player_progress_repository.dart';
 import 'package:block_puzzle_mobile/domain/generator/basic_difficulty_tuner.dart';
 import 'package:block_puzzle_mobile/domain/generator/basic_piece_generation_service.dart';
 import 'package:block_puzzle_mobile/domain/gameplay/basic_line_clear_service.dart';
@@ -41,6 +42,7 @@ void main() {
       analyticsTracker: analytics,
       adService: const _NoopAdService(),
       adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+      playerProgressRepository: InMemoryPlayerProgressRepository(),
       logger: AppLogger(),
     );
 

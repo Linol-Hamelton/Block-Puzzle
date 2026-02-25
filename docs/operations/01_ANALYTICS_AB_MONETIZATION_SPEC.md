@@ -15,7 +15,9 @@
 | `ad_rewarded` | факт выдачи награды | reward_type, reward_value |
 | `iap_purchase` | успешная покупка | sku, price, currency, country |
 | `tutorial_step` | шаг туториала | step_id, status, dropoff_reason |
-| `ab_exposure` | вход пользователя в эксперимент | experiment_id, variant_id, assignment_ts |
+| `ab_experiment_exposure` | вход пользователя в эксперимент | experiment_id, variant_id, source |
+| `daily_goal_progress` | прогресс и завершение дневной цели | goal_id, progress, target, is_completed |
+| `streak_updated` | изменение streak статуса | current_streak, best_streak, reason |
 
 ## 3. Data Contract Rules
 - Все события имеют `schema_version`.

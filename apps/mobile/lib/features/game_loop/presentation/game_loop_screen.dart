@@ -250,6 +250,12 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
                               const SizedBox(height: 8),
                               Text('Score: ${state.scoreState.totalScore}'),
                               Text('Best: ${state.bestScore}'),
+                              Text(
+                                'Daily goals: ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}',
+                              ),
+                              Text(
+                                'Streak: ${state.streak.currentDays}d (best ${state.streak.bestDays}d)',
+                              ),
                               const SizedBox(height: 16),
                               if (state.canUseRewardedRevive)
                                 FilledButton.tonalIcon(
@@ -452,41 +458,99 @@ class _HudPanel extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       color: const Color.fromRGBO(255, 255, 255, 0.92),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Expanded(
-              child: _HudMetric(
-                label: 'Score',
-                value: '${state.scoreState.totalScore}',
-              ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _HudMetric(
+                    label: 'Score',
+                    value: '${state.scoreState.totalScore}',
+                  ),
+                ),
+                Expanded(
+                  child: _HudMetric(
+                    label: 'Level',
+                    value: '${state.level}',
+                  ),
+                ),
+                Expanded(
+                  child: _HudMetric(
+                    label: 'Combo',
+                    value: '${state.scoreState.comboStreak}',
+                  ),
+                ),
+                Expanded(
+                  child: _HudMetric(
+                    label: 'Best',
+                    value: '${state.bestScore}',
+                  ),
+                ),
+                Expanded(
+                  child: _HudMetric(
+                    label: 'Moves',
+                    value: '${state.movesPlayed}',
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: _HudMetric(
-                label: 'Level',
-                value: '${state.level}',
-              ),
-            ),
-            Expanded(
-              child: _HudMetric(
-                label: 'Combo',
-                value: '${state.scoreState.comboStreak}',
-              ),
-            ),
-            Expanded(
-              child: _HudMetric(
-                label: 'Best',
-                value: '${state.bestScore}',
-              ),
-            ),
-            Expanded(
-              child: _HudMetric(
-                label: 'Moves',
-                value: '${state.movesPlayed}',
-              ),
-            ),
+            const SizedBox(height: 8),
+            _ProgressSummaryBar(state: state),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProgressSummaryBar extends StatelessWidget {
+  const _ProgressSummaryBar({
+    required this.state,
+  });
+
+  final GameLoopViewState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final String goalsLine =
+        'Goals ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}'
+        '  M ${state.dailyGoals.movesProgress}/${state.dailyGoals.movesTarget}'
+        '  L ${state.dailyGoals.linesProgress}/${state.dailyGoals.linesTarget}'
+        '  S ${state.dailyGoals.scoreProgress}/${state.dailyGoals.scoreTarget}';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFEAF3FA),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              goalsLine,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF365468),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Streak ${state.streak.currentDays}d'
+            '  Best ${state.streak.bestDays}d',
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF21485F),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

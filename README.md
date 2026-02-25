@@ -23,6 +23,7 @@
 - [GitHub Actions Build Setup](docs/operations/07_GITHUB_ACTIONS_SETUP.md)
 - [Ad-Free Mode Strategy](docs/operations/08_AD_FREE_MODE_STRATEGY.md)
 - [IAP Sandbox Scaffold](docs/operations/09_IAP_SANDBOX_SCAFFOLD.md)
+- [Dashboard MVP Contract](docs/operations/10_DASHBOARD_MVP_CONTRACT.md)
 - [Roadmap и Sprint Backlog](docs/roadmap/01_ROADMAP_AND_SPRINTS.md)
 - [Чеклист Этапа 0](docs/roadmap/02_PHASE0_CHECKLIST.md)
 - [Sprint 1 Issue-Ready Backlog](docs/roadmap/03_SPRINT1_ISSUE_READY_BACKLOG.md)

@@ -1,0 +1,91 @@
+{
+  "contract_version": "1.0.0",
+  "owner": "product-data-mobile",
+  "refresh_cadence": "daily",
+  "sources": [
+    {
+      "source_id": "client_analytics_events",
+      "description": "Validated mobile events ingested by analytics pipeline.",
+      "events": [
+        "session_start",
+        "session_end",
+        "game_start",
+        "move_made",
+        "line_clear",
+        "game_end",
+        "ad_impression",
+        "ad_rewarded",
+        "iap_purchase",
+        "tutorial_step",
+        "ab_experiment_exposure",
+        "daily_goal_progress",
+        "streak_updated"
+      ]
+    },
+    {
+      "source_id": "playtest_metrics_json",
+      "description": "Manual/internal playtest compact metrics export used for tuning and dashboard bootstrap.",
+      "path": "data/dashboards/internal_playtest_run_002_metrics.json",
+      "required_fields": [
+        "target_moves_per_run",
+        "observed_early_gameover_rate",
+        "observed_avg_moves_per_run",
+        "avg_session_minutes",
+        "combo_move_rate",
+        "rewarded_opt_in_rate",
+        "sample_size_sessions"
+      ],
+      "optional_fields": [
+        "line_clear_rate",
+        "collection_window_start_utc",
+        "collection_window_end_utc",
+        "notes"
+      ]
+    }
+  ],
+  "dashboard_blocks": [
+    {
+      "block_id": "retention_proxy",
+      "metrics": [
+        "target_moves_per_run",
+        "observed_avg_moves_per_run",
+        "observed_early_gameover_rate"
+      ]
+    },
+    {
+      "block_id": "session_quality",
+      "metrics": [
+        "avg_session_minutes",
+        "combo_move_rate",
+        "line_clear_rate"
+      ]
+    },
+    {
+      "block_id": "monetization_proxy",
+      "metrics": [
+        "rewarded_opt_in_rate",
+        "iap_purchase_count",
+        "arpdau_proxy"
+      ]
+    },
+    {
+      "block_id": "engagement_systems",
+      "metrics": [
+        "daily_goals_completion_rate",
+        "streak_distribution"
+      ]
+    },
+    {
+      "block_id": "experiment_monitoring",
+      "metrics": [
+        "ab_experiment_exposure_count",
+        "variant_split",
+        "guardrail_violations"
+      ]
+    }
+  ],
+  "export": {
+    "script": "scripts/export_dashboard_mvp_snapshot.ps1",
+    "default_output_path": "data/dashboards/dashboard_mvp_snapshot.json"
+  }
+}
