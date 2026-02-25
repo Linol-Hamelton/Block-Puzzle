@@ -52,7 +52,9 @@ Future<void> configureDependencies() async {
     () => DebugAdService(logger: sl()),
   );
   sl.registerLazySingleton<IapStoreService>(
-    DebugIapStoreService.new,
+    () => DebugIapStoreService(
+      includeBundle: false,
+    ),
   );
   sl.registerLazySingleton<AdGuardrailPolicy>(
     BasicAdGuardrailPolicy.new,

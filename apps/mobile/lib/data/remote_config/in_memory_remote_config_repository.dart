@@ -13,6 +13,8 @@ class InMemoryRemoteConfigRepository implements RemoteConfigRepository {
     'ads.interstitial_max_impressions_in_window': 2,
     'ads.rewarded_revive_enabled': false,
     'ads.rewarded_revive_clear_cells': 6,
+    'iap.rollout_strategy': 'cosmetics_first',
+    'iap.bundle_enabled': false,
     'progression.level_score_step': 140,
     'balance.target_moves_per_run': 14,
     'balance.observed_avg_moves_per_run': 12.5,

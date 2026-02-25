@@ -5,9 +5,14 @@ import 'iap_purchase_result.dart';
 import 'iap_store_service.dart';
 
 class DebugIapStoreService implements IapStoreService {
+  DebugIapStoreService({
+    this.includeBundle = false,
+  });
+
+  final bool includeBundle;
   final Set<String> _ownedProductIds = <String>{};
 
-  static const List<IapProduct> _catalog = <IapProduct>[
+  static const List<IapProduct> _cosmeticsCatalog = <IapProduct>[
     IapProduct(
       id: 'skin_pack_neon',
       title: 'Neon Skin Pack',
@@ -27,17 +32,32 @@ class DebugIapStoreService implements IapStoreService {
       currencyCode: 'USD',
       type: IapProductType.nonConsumable,
     ),
-    IapProduct(
-      id: 'premium_starter_bundle',
-      title: 'Starter Bundle',
-      description: 'Premium visual pack + exclusive profile badge.',
-      priceLabel: '\$4.99',
-      priceValue: 4.99,
-      currencyCode: 'USD',
-      type: IapProductType.nonConsumable,
-      badge: 'Best Value',
-    ),
   ];
+
+  static const IapProduct _bundle = IapProduct(
+    id: 'premium_starter_bundle',
+    title: 'Starter Bundle',
+    description: 'Premium visual pack + exclusive profile badge.',
+    priceLabel: '\$4.99',
+    priceValue: 4.99,
+    currencyCode: 'USD',
+    type: IapProductType.nonConsumable,
+    badge: 'Best Value',
+  );
+
+  @override
+  String get rolloutStrategy =>
+      includeBundle ? 'cosmetics_bundle' : 'cosmetics_first';
+
+  List<IapProduct> get _catalog {
+    if (!includeBundle) {
+      return _cosmeticsCatalog;
+    }
+    return <IapProduct>[
+      ..._cosmeticsCatalog,
+      _bundle,
+    ];
+  }
 
   @override
   Future<List<IapProduct>> loadCatalog() async {

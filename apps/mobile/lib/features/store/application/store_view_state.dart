@@ -6,6 +6,7 @@ class StoreViewState {
     required this.isPurchasing,
     required this.products,
     required this.ownedProductIds,
+    required this.rolloutStrategy,
     this.message,
   });
 
@@ -13,6 +14,7 @@ class StoreViewState {
   final bool isPurchasing;
   final List<IapProduct> products;
   final Set<String> ownedProductIds;
+  final String rolloutStrategy;
   final String? message;
 
   factory StoreViewState.initial() {
@@ -21,6 +23,7 @@ class StoreViewState {
       isPurchasing: false,
       products: <IapProduct>[],
       ownedProductIds: <String>{},
+      rolloutStrategy: 'cosmetics_first',
       message: null,
     );
   }
@@ -30,6 +33,7 @@ class StoreViewState {
     bool? isPurchasing,
     List<IapProduct>? products,
     Set<String>? ownedProductIds,
+    String? rolloutStrategy,
     String? message,
     bool resetMessage = false,
   }) {
@@ -38,6 +42,7 @@ class StoreViewState {
       isPurchasing: isPurchasing ?? this.isPurchasing,
       products: products ?? this.products,
       ownedProductIds: ownedProductIds ?? this.ownedProductIds,
+      rolloutStrategy: rolloutStrategy ?? this.rolloutStrategy,
       message: resetMessage ? null : (message ?? this.message),
     );
   }

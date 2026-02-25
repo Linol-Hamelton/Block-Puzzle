@@ -124,6 +124,9 @@ class AnalyticsSchemaValidator {
         'items_count',
         'owned_count',
       },
+      optionalParams: <String>{
+        'strategy',
+      },
     ),
     'game_loop_initialized': AnalyticsEventSchema(
       requiredParams: <String>{},

@@ -92,6 +92,7 @@ class _StoreScreenState extends State<StoreScreen> {
                     children: <Widget>[
                       _StoreHero(
                         ownedCount: state.ownedProductIds.length,
+                        rolloutStrategy: state.rolloutStrategy,
                       ),
                       const SizedBox(height: 16),
                       ...state.products.map(
@@ -120,9 +121,11 @@ class _StoreScreenState extends State<StoreScreen> {
 class _StoreHero extends StatelessWidget {
   const _StoreHero({
     required this.ownedCount,
+    required this.rolloutStrategy,
   });
 
   final int ownedCount;
+  final String rolloutStrategy;
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +173,14 @@ class _StoreHero extends StatelessWidget {
                   'Owned items: $ownedCount',
                   style: const TextStyle(
                     color: Color(0xFFE2F3FF),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'Strategy: ${rolloutStrategy.replaceAll('_', ' ')}',
+                  style: const TextStyle(
+                    color: Color(0xFFD0ECFF),
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

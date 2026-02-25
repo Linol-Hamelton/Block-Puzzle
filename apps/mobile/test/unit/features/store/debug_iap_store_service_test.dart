@@ -4,6 +4,32 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('DebugIapStoreService', () {
+    test('uses cosmetics-first rollout by default', () async {
+      final DebugIapStoreService service = DebugIapStoreService();
+
+      final catalog = await service.loadCatalog();
+
+      expect(service.rolloutStrategy, 'cosmetics_first');
+      expect(
+        catalog.where((product) => product.id == 'premium_starter_bundle'),
+        isEmpty,
+      );
+    });
+
+    test('includes starter bundle only when explicitly enabled', () async {
+      final DebugIapStoreService service = DebugIapStoreService(
+        includeBundle: true,
+      );
+
+      final catalog = await service.loadCatalog();
+
+      expect(service.rolloutStrategy, 'cosmetics_bundle');
+      expect(
+        catalog.where((product) => product.id == 'premium_starter_bundle'),
+        isNotEmpty,
+      );
+    });
+
     test('returns non-empty catalog', () async {
       final DebugIapStoreService service = DebugIapStoreService();
 

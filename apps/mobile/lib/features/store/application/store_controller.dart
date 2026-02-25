@@ -152,6 +152,7 @@ class StoreController {
         isLoading: false,
         products: catalog,
         ownedProductIds: owned,
+        rolloutStrategy: iapStoreService.rolloutStrategy,
       );
 
       if (trackStoreOpen) {
@@ -160,6 +161,7 @@ class StoreController {
           params: <String, Object?>{
             'items_count': catalog.length,
             'owned_count': owned.length,
+            'strategy': iapStoreService.rolloutStrategy,
           },
         );
       }
