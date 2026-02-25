@@ -1,0 +1,9 @@
+{
+  "target_moves_per_run": 14,
+  "observed_early_gameover_rate": 0.29,
+  "observed_avg_moves_per_run": 11.6,
+  "avg_session_minutes": 7.8,
+  "combo_move_rate": 0.24,
+  "rewarded_opt_in_rate": 0.31,
+  "sample_size_sessions": 42
+}

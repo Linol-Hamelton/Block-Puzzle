@@ -1,0 +1,29 @@
+import 'remote_config_repository.dart';
+
+class InMemoryRemoteConfigRepository implements RemoteConfigRepository {
+  static const Map<String, Object?> _defaultConfig = <String, Object?>{
+    'ads.banner_enabled': true,
+    'ads.interstitial_enabled': true,
+    'ads.interstitial_skip_first_rounds': 1,
+    'difficulty.hard_piece_weight': 0.2,
+    'difficulty.max_hard_pieces_per_triplet': 1,
+    'ads.interstitial_cooldown_rounds': 2,
+    'ads.interstitial_window_minutes': 10,
+    'ads.interstitial_max_impressions_in_window': 2,
+    'ads.rewarded_revive_enabled': true,
+    'ads.rewarded_revive_clear_cells': 6,
+    'balance.target_moves_per_run': 14,
+    'balance.observed_avg_moves_per_run': 12.5,
+    'balance.observed_early_gameover_rate': 0.22,
+  };
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return _defaultConfig;
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return _defaultConfig;
+  }
+}

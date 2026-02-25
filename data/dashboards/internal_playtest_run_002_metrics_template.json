@@ -1,0 +1,16 @@
+{
+  "target_moves_per_run": 14,
+  "observed_early_gameover_rate": -1,
+  "observed_avg_moves_per_run": -1,
+  "avg_session_minutes": -1,
+  "combo_move_rate": -1,
+  "line_clear_rate": -1,
+  "rewarded_opt_in_rate": -1,
+  "sample_size_sessions": 0,
+  "collection_window_start_utc": "YYYY-MM-DDTHH:mm:ssZ",
+  "collection_window_end_utc": "YYYY-MM-DDTHH:mm:ssZ",
+  "notes": [
+    "Replace all -1 values with real human cohort metrics before tuning.",
+    "Use at least 30 sessions for strict tuning mode."
+  ]
+}
