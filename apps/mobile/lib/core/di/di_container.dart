@@ -38,6 +38,12 @@ Future<void> configureDependencies() async {
     return;
   }
 
+  final InMemoryRemoteConfigRepository inMemoryRemoteConfigRepository =
+      InMemoryRemoteConfigRepository();
+  final Map<String, Object?> bootstrapRemoteConfig =
+      await inMemoryRemoteConfigRepository.getCached();
+  final bool includeBundle = _resolveIapBundleEnabled(bootstrapRemoteConfig);
+
   sl.registerSingleton<AppConfig>(
     const AppConfig(
       appName: 'Block Puzzle',
@@ -51,17 +57,16 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<AdService>(
     () => DebugAdService(logger: sl()),
   );
+  sl.registerLazySingleton<RemoteConfigRepository>(
+    () => inMemoryRemoteConfigRepository,
+  );
   sl.registerLazySingleton<IapStoreService>(
     () => DebugIapStoreService(
-      includeBundle: false,
+      includeBundle: includeBundle,
     ),
   );
   sl.registerLazySingleton<AdGuardrailPolicy>(
     BasicAdGuardrailPolicy.new,
-  );
-
-  sl.registerLazySingleton<RemoteConfigRepository>(
-    InMemoryRemoteConfigRepository.new,
   );
   sl.registerLazySingleton<AnalyticsTracker>(
     () => DebugAnalyticsTracker(logger: sl()),
@@ -114,4 +119,28 @@ Future<void> configureDependencies() async {
       logger: sl(),
     ),
   );
+}
+
+bool _resolveIapBundleEnabled(Map<String, Object?> config) {
+  final Object? bundleEnabledRaw = config['iap.bundle_enabled'];
+  if (bundleEnabledRaw is bool) {
+    return bundleEnabledRaw;
+  }
+  if (bundleEnabledRaw is num) {
+    return bundleEnabledRaw > 0;
+  }
+  if (bundleEnabledRaw is String) {
+    final String normalized = bundleEnabledRaw.trim().toLowerCase();
+    if (normalized == 'true') {
+      return true;
+    }
+    if (normalized == 'false') {
+      return false;
+    }
+  }
+
+  final String rolloutStrategy =
+      (config['iap.rollout_strategy'] as String?)?.trim() ?? 'cosmetics_first';
+  return rolloutStrategy == 'cosmetics_bundle' ||
+      rolloutStrategy == 'bundle_first';
 }

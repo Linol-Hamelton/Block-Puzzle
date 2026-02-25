@@ -187,6 +187,24 @@ class AnalyticsSchemaValidator {
         'duration_sec',
       },
     ),
+    'tutorial_step': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'step_id',
+        'status',
+      },
+      optionalParams: <String>{
+        'dropoff_reason',
+      },
+    ),
+    'ab_experiment_exposure': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'experiment_id',
+        'variant_id',
+      },
+      optionalParams: <String>{
+        'source',
+      },
+    ),
     'ad_impression': AnalyticsEventSchema(
       requiredParams: <String>{
         'placement',

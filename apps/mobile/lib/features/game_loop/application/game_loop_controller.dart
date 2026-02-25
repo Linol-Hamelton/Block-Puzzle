@@ -93,6 +93,14 @@ class RewardedReviveResult {
 }
 
 class GameLoopController {
+  static const String _tutorialStepWelcome = 'welcome_drag_piece';
+  static const String _tutorialStepClearLine = 'goal_clear_line';
+  static const String _tutorialStepComboChain = 'goal_combo_chain';
+  static const String _tutorialFlow = 'onboarding_v1';
+  static const String _tutorialStatusShown = 'shown';
+  static const String _tutorialStatusCompleted = 'completed';
+  static const String _tutorialStatusSkipped = 'skipped';
+
   GameLoopController({
     required this.placePieceUseCase,
     required this.clearLinesUseCase,
@@ -124,6 +132,9 @@ class GameLoopController {
   SessionState _sessionState = SessionState.initial;
   final List<DateTime> _interstitialImpressionHistoryUtc = <DateTime>[];
   bool _initialized = false;
+  bool _onboardingEnabled = true;
+  bool _onboardingCompleted = false;
+  int _onboardingMoveCount = 0;
   bool _bannerRequestedInSession = false;
   bool _rewardedReviveUsedInCurrentGame = false;
   int _currentGameNumber = 0;
@@ -131,6 +142,8 @@ class GameLoopController {
   DateTime? _sessionStartedAt;
   DateTime? _gameStartedAt;
   String? _sessionId;
+  String _abBucket = 'control';
+  Map<String, String> _abExperimentVariants = <String, String>{};
 
   ValueListenable<GameLoopViewState> get stateListenable => _stateNotifier;
   GameLoopViewState get state => _stateNotifier.value;
@@ -141,6 +154,15 @@ class GameLoopController {
     }
 
     _remoteConfig = await remoteConfigRepository.getCached();
+    _onboardingEnabled = _readBoolConfig(
+      'onboarding.enabled',
+      fallback: true,
+    );
+    _abBucket = _readStringConfig(
+      'ab.bucket',
+      fallback: 'control',
+    );
+    _abExperimentVariants = _collectAbExperimentVariants();
     await adService.preload();
 
     _initialized = true;
@@ -154,9 +176,10 @@ class GameLoopController {
         'session_id': _sessionId,
         'app_version': 'dev-local',
         'platform': defaultTargetPlatform.name,
-        'ab_bucket': 'control',
+        'ab_bucket': _abBucket,
       },
     );
+    await _trackAbExperimentExposures();
     await analyticsTracker.track('game_loop_initialized');
 
     await startNewGame();
@@ -167,6 +190,8 @@ class GameLoopController {
     _gameStartedAt = DateTime.now().toUtc();
     _rewardedReviveUsedInCurrentGame = false;
     final int nextGamesPlayed = state.gamesPlayed + 1;
+    final bool shouldShowOnboarding =
+        _onboardingEnabled && !_onboardingCompleted && nextGamesPlayed == 1;
     final BoardState emptyBoard = GameLoopViewState.initial().boardState;
 
     _sessionState = SessionState(
@@ -181,6 +206,7 @@ class GameLoopController {
       boardState: emptyBoard,
       maxAttempts: 24,
     );
+    _onboardingMoveCount = 0;
 
     _stateNotifier.value = state.copyWith(
       boardState: emptyBoard,
@@ -191,10 +217,24 @@ class GameLoopController {
       isGameOver: false,
       canUseRewardedRevive: false,
       isBannerVisible: adGuardrailPolicy.isBannerEnabled(_remoteConfig),
+      isOnboardingVisible: shouldShowOnboarding,
+      onboardingStepId: shouldShowOnboarding ? _tutorialStepWelcome : null,
+      onboardingTitle: shouldShowOnboarding ? 'Welcome to Classic Mode' : null,
+      onboardingDescription: shouldShowOnboarding
+          ? 'Drag any piece from the rack onto the board to start your run.'
+          : null,
       gamesPlayed: nextGamesPlayed,
       movesPlayed: 0,
+      resetOnboarding: !shouldShowOnboarding,
       resetGameOverReason: true,
     );
+
+    if (shouldShowOnboarding) {
+      await _trackTutorialStep(
+        stepId: _tutorialStepWelcome,
+        status: _tutorialStatusShown,
+      );
+    }
 
     if (state.isBannerVisible && !_bannerRequestedInSession) {
       final AdShowResult bannerResult = await adService.showBanner(
@@ -341,6 +381,11 @@ class GameLoopController {
       },
     );
 
+    await _handleOnboardingAfterMove(
+      clearedLines: lineResult.clearedTotal,
+      comboStreak: nextScore.comboStreak,
+    );
+
     if (levelUp) {
       await analyticsTracker.track(
         'level_up',
@@ -365,6 +410,13 @@ class GameLoopController {
     }
 
     if (isGameOver) {
+      if (state.isOnboardingVisible) {
+        await _completeOnboarding(
+          stepId: state.onboardingStepId ?? _tutorialFlow,
+          status: _tutorialStatusSkipped,
+          dropoffReason: 'game_over',
+        );
+      }
       await _trackGameEnd(
         reason: 'no_valid_moves',
         score: nextScore.totalScore,
@@ -444,6 +496,19 @@ class GameLoopController {
     );
 
     return RewardedReviveResult.success();
+  }
+
+  Future<void> dismissOnboarding({
+    String reason = 'manual_dismiss',
+  }) async {
+    if (!state.isOnboardingVisible) {
+      return;
+    }
+    await _completeOnboarding(
+      stepId: state.onboardingStepId ?? _tutorialFlow,
+      status: _tutorialStatusSkipped,
+      dropoffReason: reason,
+    );
   }
 
   Future<void> _maybeShowInterstitialAfterGameEnd() async {
@@ -548,6 +613,229 @@ class GameLoopController {
       return 0;
     }
     return (level - 1) % paletteCount;
+  }
+
+  Future<void> _handleOnboardingAfterMove({
+    required int clearedLines,
+    required int comboStreak,
+  }) async {
+    if (_onboardingCompleted || !state.isOnboardingVisible) {
+      return;
+    }
+
+    _onboardingMoveCount += 1;
+    final String? currentStep = state.onboardingStepId;
+    if (currentStep == null) {
+      return;
+    }
+
+    if (currentStep == _tutorialStepWelcome) {
+      await _trackTutorialStep(
+        stepId: _tutorialStepWelcome,
+        status: _tutorialStatusCompleted,
+      );
+      await _activateOnboardingStep(
+        stepId: _tutorialStepClearLine,
+        title: 'Clear Your First Line',
+        description:
+            'Fill a full row or column. Line clears give score boosts and open space.',
+      );
+      return;
+    }
+
+    if (currentStep == _tutorialStepClearLine) {
+      if (clearedLines > 0) {
+        await _trackTutorialStep(
+          stepId: _tutorialStepClearLine,
+          status: _tutorialStatusCompleted,
+        );
+        await _activateOnboardingStep(
+          stepId: _tutorialStepComboChain,
+          title: 'Chain a Combo',
+          description:
+              'Try to clear lines in consecutive moves to build combo multipliers.',
+        );
+        return;
+      }
+      if (_onboardingMoveCount >= _onboardingMaxGuidedMoves()) {
+        await _completeOnboarding(
+          stepId: _tutorialStepClearLine,
+          status: _tutorialStatusSkipped,
+          dropoffReason: 'max_guided_moves_reached',
+        );
+      }
+      return;
+    }
+
+    if (currentStep == _tutorialStepComboChain) {
+      if (comboStreak > 1) {
+        await _trackTutorialStep(
+          stepId: _tutorialStepComboChain,
+          status: _tutorialStatusCompleted,
+        );
+        await _completeOnboarding(
+          stepId: _tutorialFlow,
+          status: _tutorialStatusCompleted,
+        );
+        return;
+      }
+      if (_onboardingMoveCount >= _onboardingMaxGuidedMoves()) {
+        await _completeOnboarding(
+          stepId: _tutorialStepComboChain,
+          status: _tutorialStatusSkipped,
+          dropoffReason: 'max_guided_moves_reached',
+        );
+      }
+    }
+  }
+
+  Future<void> _activateOnboardingStep({
+    required String stepId,
+    required String title,
+    required String description,
+  }) async {
+    if (_onboardingCompleted) {
+      return;
+    }
+    _stateNotifier.value = state.copyWith(
+      isOnboardingVisible: true,
+      onboardingStepId: stepId,
+      onboardingTitle: title,
+      onboardingDescription: description,
+    );
+    await _trackTutorialStep(
+      stepId: stepId,
+      status: _tutorialStatusShown,
+    );
+  }
+
+  Future<void> _completeOnboarding({
+    required String stepId,
+    required String status,
+    String? dropoffReason,
+  }) async {
+    if (_onboardingCompleted) {
+      return;
+    }
+    _onboardingCompleted = true;
+    _onboardingMoveCount = 0;
+    _stateNotifier.value = state.copyWith(
+      isOnboardingVisible: false,
+      resetOnboarding: true,
+    );
+    await _trackTutorialStep(
+      stepId: stepId,
+      status: status,
+      dropoffReason: dropoffReason,
+    );
+  }
+
+  Future<void> _trackTutorialStep({
+    required String stepId,
+    required String status,
+    String? dropoffReason,
+  }) async {
+    await analyticsTracker.track(
+      'tutorial_step',
+      params: <String, Object?>{
+        'step_id': stepId,
+        'status': status,
+        if (dropoffReason != null) 'dropoff_reason': dropoffReason,
+      },
+    );
+  }
+
+  int _onboardingMaxGuidedMoves() {
+    final int value = _readIntConfig(
+      'onboarding.max_guided_moves',
+      fallback: 8,
+    );
+    return value.clamp(2, 40);
+  }
+
+  Map<String, String> _collectAbExperimentVariants() {
+    return <String, String>{
+      'tutorial_onboarding': _readStringConfig(
+        'ab.tutorial_variant',
+        fallback: _onboardingEnabled ? 'guided_v1' : 'off',
+      ),
+      'offer_strategy': _readStringConfig(
+        'ab.offer_strategy_variant',
+        fallback: _readStringConfig(
+          'iap.rollout_strategy',
+          fallback: 'cosmetics_first',
+        ),
+      ),
+      'difficulty_curve': _readStringConfig(
+        'ab.difficulty_variant',
+        fallback: 'balanced_v1',
+      ),
+    };
+  }
+
+  Future<void> _trackAbExperimentExposures() async {
+    for (final MapEntry<String, String> entry
+        in _abExperimentVariants.entries) {
+      await analyticsTracker.track(
+        'ab_experiment_exposure',
+        params: <String, Object?>{
+          'experiment_id': entry.key,
+          'variant_id': entry.value,
+          'source': 'remote_config',
+        },
+      );
+    }
+  }
+
+  bool _readBoolConfig(
+    String key, {
+    required bool fallback,
+  }) {
+    final Object? rawValue = _remoteConfig[key];
+    if (rawValue is bool) {
+      return rawValue;
+    }
+    if (rawValue is String) {
+      final String normalized = rawValue.trim().toLowerCase();
+      if (normalized == 'true') {
+        return true;
+      }
+      if (normalized == 'false') {
+        return false;
+      }
+    }
+    if (rawValue is num) {
+      return rawValue > 0;
+    }
+    return fallback;
+  }
+
+  int _readIntConfig(
+    String key, {
+    required int fallback,
+  }) {
+    final Object? rawValue = _remoteConfig[key];
+    if (rawValue is int) {
+      return rawValue;
+    }
+    if (rawValue is num) {
+      return rawValue.toInt();
+    }
+    if (rawValue is String) {
+      return int.tryParse(rawValue) ?? fallback;
+    }
+    return fallback;
+  }
+
+  String _readStringConfig(
+    String key, {
+    required String fallback,
+  }) {
+    final Object? rawValue = _remoteConfig[key];
+    if (rawValue is String && rawValue.trim().isNotEmpty) {
+      return rawValue.trim();
+    }
+    return fallback;
   }
 
   bool _isRewardedReviveAvailable() {

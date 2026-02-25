@@ -27,6 +27,7 @@
 - [Чеклист Этапа 0](docs/roadmap/02_PHASE0_CHECKLIST.md)
 - [Sprint 1 Issue-Ready Backlog](docs/roadmap/03_SPRINT1_ISSUE_READY_BACKLOG.md)
 - [Sprint 1 GitHub Issues](docs/roadmap/04_SPRINT1_GITHUB_ISSUES.md)
+- [Implementation Status](docs/roadmap/05_IMPLEMENTATION_STATUS.md)
 
 ## Каркас Репозитория
 - `apps/mobile` - Flutter + Flame клиент (игра, UI, оффлайн слой, SDK интеграции).

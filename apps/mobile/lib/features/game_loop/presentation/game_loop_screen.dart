@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -199,6 +201,33 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
                   ),
                 ),
               ),
+              if (state.isOnboardingVisible)
+                Positioned(
+                  top: 122,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: _surfaceMaxWidth,
+                        ),
+                        child: _OnboardingOverlayCard(
+                          title:
+                              state.onboardingTitle ?? 'Classic Mode Tutorial',
+                          description: state.onboardingDescription ??
+                              'Place pieces to fill lines and build combos.',
+                          onDismiss: () {
+                            unawaited(
+                              _controller.dismissOnboarding(),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               if (state.isGameOver)
                 Positioned.fill(
                   child: Container(
@@ -279,6 +308,71 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
         ),
       );
     }
+  }
+}
+
+class _OnboardingOverlayCard extends StatelessWidget {
+  const _OnboardingOverlayCard({
+    required this.title,
+    required this.description,
+    required this.onDismiss,
+  });
+
+  final String title;
+  final String description;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xF5243348),
+      borderRadius: BorderRadius.circular(14),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.tips_and_updates_outlined,
+              color: Color(0xFFFDE68A),
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      color: Color(0xFFDCE7F2),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            TextButton(
+              onPressed: onDismiss,
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFBAE6FD),
+              ),
+              child: const Text('Hide'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
