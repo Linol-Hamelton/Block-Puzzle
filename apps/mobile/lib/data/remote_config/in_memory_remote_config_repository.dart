@@ -2,15 +2,16 @@ import 'remote_config_repository.dart';
 
 class InMemoryRemoteConfigRepository implements RemoteConfigRepository {
   static const Map<String, Object?> _defaultConfig = <String, Object?>{
-    'ads.banner_enabled': true,
-    'ads.interstitial_enabled': true,
+    'ads.ad_free_mode': true,
+    'ads.banner_enabled': false,
+    'ads.interstitial_enabled': false,
     'ads.interstitial_skip_first_rounds': 1,
     'difficulty.hard_piece_weight': 0.2,
     'difficulty.max_hard_pieces_per_triplet': 1,
     'ads.interstitial_cooldown_rounds': 2,
     'ads.interstitial_window_minutes': 10,
     'ads.interstitial_max_impressions_in_window': 2,
-    'ads.rewarded_revive_enabled': true,
+    'ads.rewarded_revive_enabled': false,
     'ads.rewarded_revive_clear_cells': 6,
     'progression.level_score_step': 140,
     'balance.target_moves_per_run': 14,

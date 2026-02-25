@@ -4,8 +4,18 @@ import 'ad_guardrail_policy.dart';
 class BasicAdGuardrailPolicy implements AdGuardrailPolicy {
   const BasicAdGuardrailPolicy();
 
+  bool _isAdFreeMode(Map<String, Object?> remoteConfig) {
+    return _readBool(
+      remoteConfig['ads.ad_free_mode'],
+      fallback: false,
+    );
+  }
+
   @override
   bool isBannerEnabled(Map<String, Object?> remoteConfig) {
+    if (_isAdFreeMode(remoteConfig)) {
+      return false;
+    }
     return _readBool(
       remoteConfig['ads.banner_enabled'],
       fallback: true,
@@ -14,6 +24,9 @@ class BasicAdGuardrailPolicy implements AdGuardrailPolicy {
 
   @override
   bool isRewardedReviveEnabled(Map<String, Object?> remoteConfig) {
+    if (_isAdFreeMode(remoteConfig)) {
+      return false;
+    }
     return _readBool(
       remoteConfig['ads.rewarded_revive_enabled'],
       fallback: true,
@@ -36,6 +49,10 @@ class BasicAdGuardrailPolicy implements AdGuardrailPolicy {
     required DateTime nowUtc,
     required List<DateTime> interstitialHistoryUtc,
   }) {
+    if (_isAdFreeMode(remoteConfig)) {
+      return AdGuardrailDecision.deny('ad_free_mode');
+    }
+
     final bool enabled = _readBool(
       remoteConfig['ads.interstitial_enabled'],
       fallback: true,

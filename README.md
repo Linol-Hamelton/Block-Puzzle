@@ -21,6 +21,7 @@
 - [Run 002 Input Template](docs/operations/05_RUN_002_INPUT_TEMPLATE.md)
 - [QA Smoke Pack v1](docs/operations/06_QA_SMOKE_PACK_V1.md)
 - [GitHub Actions Build Setup](docs/operations/07_GITHUB_ACTIONS_SETUP.md)
+- [Ad-Free Mode Strategy](docs/operations/08_AD_FREE_MODE_STRATEGY.md)
 - [Roadmap и Sprint Backlog](docs/roadmap/01_ROADMAP_AND_SPRINTS.md)
 - [Чеклист Этапа 0](docs/roadmap/02_PHASE0_CHECKLIST.md)
 - [Sprint 1 Issue-Ready Backlog](docs/roadmap/03_SPRINT1_ISSUE_READY_BACKLOG.md)
