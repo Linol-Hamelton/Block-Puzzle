@@ -119,6 +119,12 @@ class AnalyticsSchemaValidator {
         'rounds_played',
       },
     ),
+    'store_open': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'items_count',
+        'owned_count',
+      },
+    ),
     'game_loop_initialized': AnalyticsEventSchema(
       requiredParams: <String>{},
     ),
@@ -192,6 +198,26 @@ class AnalyticsSchemaValidator {
       requiredParams: <String>{
         'reward_type',
         'reward_value',
+      },
+    ),
+    'iap_purchase_attempt': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'sku',
+        'price',
+        'currency',
+      },
+    ),
+    'iap_purchase': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'sku',
+        'price',
+        'currency',
+        'country',
+      },
+    ),
+    'iap_restore': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'restored_count',
       },
     ),
     'revive_applied': AnalyticsEventSchema(

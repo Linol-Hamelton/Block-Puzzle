@@ -24,7 +24,10 @@ import '../../features/game_loop/presentation/block_puzzle_game.dart';
 import '../../features/monetization/ad_guardrail_policy.dart';
 import '../../features/monetization/ad_service.dart';
 import '../../features/monetization/basic_ad_guardrail_policy.dart';
+import '../../features/monetization/debug_iap_store_service.dart';
 import '../../features/monetization/debug_ad_service.dart';
+import '../../features/monetization/iap_store_service.dart';
+import '../../features/store/application/store_controller.dart';
 import '../config/app_config.dart';
 import '../logging/app_logger.dart';
 
@@ -47,6 +50,9 @@ Future<void> configureDependencies() async {
   );
   sl.registerLazySingleton<AdService>(
     () => DebugAdService(logger: sl()),
+  );
+  sl.registerLazySingleton<IapStoreService>(
+    DebugIapStoreService.new,
   );
   sl.registerLazySingleton<AdGuardrailPolicy>(
     BasicAdGuardrailPolicy.new,
@@ -96,6 +102,14 @@ Future<void> configureDependencies() async {
     () => BlockPuzzleGame(
       controller: sl(),
       sfxPlayer: sl(),
+    ),
+  );
+
+  sl.registerFactory<StoreController>(
+    () => StoreController(
+      iapStoreService: sl(),
+      analyticsTracker: sl(),
+      logger: sl(),
     ),
   );
 }

@@ -1,0 +1,71 @@
+import 'dart:async';
+
+import 'iap_product.dart';
+import 'iap_purchase_result.dart';
+import 'iap_store_service.dart';
+
+class DebugIapStoreService implements IapStoreService {
+  final Set<String> _ownedProductIds = <String>{};
+
+  static const List<IapProduct> _catalog = <IapProduct>[
+    IapProduct(
+      id: 'skin_pack_neon',
+      title: 'Neon Skin Pack',
+      description: 'Vibrant board and block colors for high-energy sessions.',
+      priceLabel: '\$1.99',
+      priceValue: 1.99,
+      currencyCode: 'USD',
+      type: IapProductType.nonConsumable,
+      badge: 'Popular',
+    ),
+    IapProduct(
+      id: 'skin_pack_mono',
+      title: 'Mono Elegance',
+      description: 'Minimal high-contrast theme tuned for long focus play.',
+      priceLabel: '\$2.99',
+      priceValue: 2.99,
+      currencyCode: 'USD',
+      type: IapProductType.nonConsumable,
+    ),
+    IapProduct(
+      id: 'premium_starter_bundle',
+      title: 'Starter Bundle',
+      description: 'Premium visual pack + exclusive profile badge.',
+      priceLabel: '\$4.99',
+      priceValue: 4.99,
+      currencyCode: 'USD',
+      type: IapProductType.nonConsumable,
+      badge: 'Best Value',
+    ),
+  ];
+
+  @override
+  Future<List<IapProduct>> loadCatalog() async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return _catalog;
+  }
+
+  @override
+  Future<Set<String>> loadOwnedProductIds() async {
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    return Set<String>.from(_ownedProductIds);
+  }
+
+  @override
+  Future<IapPurchaseResult> purchase({
+    required IapProduct product,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 240));
+    if (_ownedProductIds.contains(product.id)) {
+      return IapPurchaseResult.cancelled('already_owned');
+    }
+    _ownedProductIds.add(product.id);
+    return IapPurchaseResult.success();
+  }
+
+  @override
+  Future<Set<String>> restorePurchases() async {
+    await Future<void>.delayed(const Duration(milliseconds: 140));
+    return Set<String>.from(_ownedProductIds);
+  }
+}
