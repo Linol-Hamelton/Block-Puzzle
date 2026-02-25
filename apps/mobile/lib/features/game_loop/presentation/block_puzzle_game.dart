@@ -31,6 +31,13 @@ class BlockPuzzleGame extends FlameGame {
   bool _dropInProgress = false;
 
   static const double _rackCellSize = 24;
+  static const double _boardMaxPixels = 420;
+  static const double _boardTopOffset = 108;
+  static const double _boardBottomReserved = 190;
+  static const double _layoutHorizontalPadding = 20;
+
+  @override
+  Color backgroundColor() => const Color(0xFFF2F6FB);
 
   @override
   Future<void> onLoad() async {
@@ -145,12 +152,27 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   void _recalculateLayout() {
-    final double boardPixels = math.min(
-      size.x - 32,
-      360,
+    final double availableWidth = math.max(
+      120,
+      size.x - (_layoutHorizontalPadding * 2),
     );
+    final double availableHeight = math.max(
+      120,
+      size.y - _boardTopOffset - _boardBottomReserved,
+    );
+
+    double boardPixels = math.min(availableWidth, availableHeight);
+    boardPixels = math.min(boardPixels, _boardMaxPixels);
+    boardPixels = math.max(boardPixels, 220);
+    if (boardPixels > availableWidth) {
+      boardPixels = availableWidth;
+    }
+    if (boardPixels > availableHeight) {
+      boardPixels = availableHeight;
+    }
+
     _boardCellSize = boardPixels / 8;
-    _boardOrigin = Vector2((size.x - boardPixels) / 2, 42);
+    _boardOrigin = Vector2((size.x - boardPixels) / 2, _boardTopOffset);
 
     _boardComponent
       ..position = _boardOrigin
@@ -163,11 +185,13 @@ class BlockPuzzleGame extends FlameGame {
     }
     _rackComponents.clear();
 
+    final List<Vector2> homePositions = _rackPositionsForPieces(pieces);
+
     for (int i = 0; i < pieces.length; i++) {
       final RackPieceComponent component = RackPieceComponent(
         piece: pieces[i],
         cellSize: _rackCellSize,
-        homePosition: _rackPositionFor(index: i, piece: pieces[i]),
+        homePosition: homePositions[i],
         onDragMoved: onRackPieceDragged,
         onDropped: onRackPieceDropped,
       );
@@ -177,28 +201,55 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   void _positionRackPieces() {
+    final List<Piece> pieces =
+        _rackComponents.map((RackPieceComponent item) => item.piece).toList();
+    final List<Vector2> homePositions = _rackPositionsForPieces(pieces);
+
     for (int i = 0; i < _rackComponents.length; i++) {
       final RackPieceComponent component = _rackComponents[i];
-      component.updateHome(
-        _rackPositionFor(
-          index: i,
-          piece: component.piece,
-        ),
-      );
+      component.updateHome(homePositions[i]);
     }
   }
 
-  Vector2 _rackPositionFor({
-    required int index,
-    required Piece piece,
-  }) {
-    final Vector2 pieceSize = RackPieceComponent.visualSize(
-      piece: piece,
-      cellSize: _rackCellSize,
-    );
-    final double rackY = _boardOrigin.y + (_boardCellSize * 8) + 28;
-    final double slotCenterX = size.x * ((index + 1) / 4);
-    return Vector2(slotCenterX - (pieceSize.x / 2), rackY);
+  List<Vector2> _rackPositionsForPieces(List<Piece> pieces) {
+    if (pieces.isEmpty) {
+      return <Vector2>[];
+    }
+
+    const double spacing = 16;
+    final List<Vector2> pieceSizes = pieces
+        .map(
+          (Piece piece) => RackPieceComponent.visualSize(
+            piece: piece,
+            cellSize: _rackCellSize,
+          ),
+        )
+        .toList();
+    final double maxHeight = pieceSizes
+        .map((Vector2 value) => value.y)
+        .fold<double>(0, (double prev, double current) {
+      return current > prev ? current : prev;
+    });
+
+    final double totalWidth = pieceSizes
+            .map((Vector2 value) => value.x)
+            .fold<double>(0, (double sum, double value) => sum + value) +
+        (spacing * (pieceSizes.length - 1));
+    final double startX = (size.x - totalWidth) / 2;
+    final double rackTop = _boardOrigin.y + (_boardCellSize * 8) + 28;
+
+    double cursorX = startX;
+    final List<Vector2> result = <Vector2>[];
+    for (final Vector2 pieceSize in pieceSizes) {
+      result.add(
+        Vector2(
+          cursorX,
+          rackTop + ((maxHeight - pieceSize.y) / 2),
+        ),
+      );
+      cursorX += pieceSize.x + spacing;
+    }
+    return result;
   }
 
   _BoardAnchor? _anchorForPiecePosition(RackPieceComponent pieceComponent) {

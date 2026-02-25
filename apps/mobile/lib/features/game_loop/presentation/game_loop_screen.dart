@@ -15,6 +15,8 @@ class GameLoopScreen extends StatefulWidget {
 }
 
 class _GameLoopScreenState extends State<GameLoopScreen> {
+  static const double _surfaceMaxWidth = 920;
+
   late final GameLoopController _controller;
   late final GameSfxPlayer _sfxPlayer;
   late final BlockPuzzleGame _game;
@@ -127,21 +129,55 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
           return Stack(
             children: <Widget>[
               Positioned.fill(
-                child: GameWidget(
-                  game: _game,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: _surfaceMaxWidth,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: GameWidget(
+                        game: _game,
+                      ),
+                    ),
+                  ),
                 ),
               ),
               Positioned(
-                left: 12,
-                right: 12,
                 top: 8,
-                child: _HudPanel(state: state),
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: _surfaceMaxWidth,
+                      ),
+                      child: _HudPanel(state: state),
+                    ),
+                  ),
+                ),
               ),
               Positioned(
                 top: 66,
-                right: 12,
-                child: _ComboStackOverlay(
-                  entries: _comboToasts,
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: _surfaceMaxWidth,
+                      ),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: _ComboStackOverlay(
+                          entries: _comboToasts,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               if (state.isGameOver)
@@ -187,11 +223,21 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
                   ),
                 ),
               if (state.isBannerVisible)
-                const Positioned(
-                  left: 12,
-                  right: 12,
+                Positioned(
                   bottom: 12,
-                  child: _BannerAdPlaceholder(),
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: _surfaceMaxWidth,
+                        ),
+                        child: const _BannerAdPlaceholder(),
+                      ),
+                    ),
+                  ),
                 ),
             ],
           );
