@@ -291,7 +291,7 @@ class _HudPanel extends StatelessWidget {
     return Material(
       elevation: 2,
       borderRadius: BorderRadius.circular(12),
-      color: Colors.white.withOpacity(0.92),
+      color: const Color.fromRGBO(255, 255, 255, 0.92),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
