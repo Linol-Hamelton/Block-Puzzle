@@ -22,9 +22,9 @@ class BlockPuzzleGame extends FlameGame {
   final GameLoopController controller;
   final GameSfxPlayer sfxPlayer;
 
-  late final BoardComponent _boardComponent;
+  final BoardComponent _boardComponent = BoardComponent();
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
-  late final VoidCallback _stateListener;
+  VoidCallback? _stateListener;
 
   double _boardCellSize = 36;
   Vector2 _boardOrigin = Vector2.zero();
@@ -37,11 +37,10 @@ class BlockPuzzleGame extends FlameGame {
     await sfxPlayer.preload();
     await controller.initialize();
 
-    _boardComponent = BoardComponent();
     add(_boardComponent);
 
     _stateListener = _syncWithState;
-    controller.stateListenable.addListener(_stateListener);
+    controller.stateListenable.addListener(_stateListener!);
     _syncWithState();
 
     await super.onLoad();
@@ -56,7 +55,11 @@ class BlockPuzzleGame extends FlameGame {
 
   @override
   void onRemove() {
-    controller.stateListenable.removeListener(_stateListener);
+    final VoidCallback? listener = _stateListener;
+    if (listener != null) {
+      controller.stateListenable.removeListener(listener);
+      _stateListener = null;
+    }
     super.onRemove();
   }
 
