@@ -174,6 +174,8 @@ class GameLoopController {
       currentScore: 0,
       movesPlayed: 0,
     );
+    final int level = _resolveLevel(totalScore: 0);
+    final int colorThemeIndex = _resolveColorThemeIndex(level);
 
     final List<Piece> rack = _nextRackPieces(
       boardState: emptyBoard,
@@ -184,6 +186,8 @@ class GameLoopController {
       boardState: emptyBoard,
       scoreState: ScoreState.initial,
       rackPieces: rack,
+      level: level,
+      colorThemeIndex: colorThemeIndex,
       isGameOver: false,
       canUseRewardedRevive: false,
       isBannerVisible: adGuardrailPolicy.isBannerEnabled(_remoteConfig),
@@ -214,6 +218,7 @@ class GameLoopController {
         'config_version': 'in_memory_v1',
         'board_size': state.boardState.size,
         'rack_size': rack.length,
+        'level': level,
       },
     );
   }
@@ -291,6 +296,10 @@ class GameLoopController {
         ? nextScore.totalScore
         : state.bestScore;
     final int nextMovesPlayed = state.movesPlayed + 1;
+    final int previousLevel = state.level;
+    final int nextLevel = _resolveLevel(totalScore: nextScore.totalScore);
+    final bool levelUp = nextLevel > previousLevel;
+    final int nextColorThemeIndex = _resolveColorThemeIndex(nextLevel);
     final double boardFillPct = lineResult.boardState.occupiedCells.length /
         (lineResult.boardState.size * lineResult.boardState.size);
 
@@ -304,6 +313,8 @@ class GameLoopController {
       boardState: lineResult.boardState,
       scoreState: nextScore,
       rackPieces: nextRack,
+      level: nextLevel,
+      colorThemeIndex: nextColorThemeIndex,
       isGameOver: isGameOver,
       canUseRewardedRevive: isGameOver ? _isRewardedReviveAvailable() : false,
       bestScore: nextBestScore,
@@ -329,6 +340,18 @@ class GameLoopController {
         'board_fill_pct': boardFillPct,
       },
     );
+
+    if (levelUp) {
+      await analyticsTracker.track(
+        'level_up',
+        params: <String, Object?>{
+          'round_id': _currentGameNumber,
+          'from_level': previousLevel,
+          'to_level': nextLevel,
+          'score_total': nextScore.totalScore,
+        },
+      );
+    }
 
     if (lineResult.clearedTotal > 0) {
       await analyticsTracker.track(
@@ -508,6 +531,23 @@ class GameLoopController {
           profile: difficultyProfile,
         )
         .pieces;
+  }
+
+  int _resolveLevel({
+    required int totalScore,
+  }) {
+    final int levelScoreStep =
+        (_remoteConfig['progression.level_score_step'] as num?)?.toInt() ?? 140;
+    final int clampedStep = levelScoreStep.clamp(60, 2000);
+    return 1 + (totalScore ~/ clampedStep);
+  }
+
+  int _resolveColorThemeIndex(int level) {
+    const int paletteCount = 6;
+    if (level <= 1) {
+      return 0;
+    }
+    return (level - 1) % paletteCount;
   }
 
   bool _isRewardedReviveAvailable() {

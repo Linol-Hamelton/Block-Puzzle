@@ -59,6 +59,10 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
       _enqueueComboToast('Combo x${current.scoreState.comboStreak}');
     }
 
+    if (current.level > previous.level) {
+      _enqueueComboToast('Level ${current.level}');
+    }
+
     if (current.isGameOver && !previous.isGameOver && _comboToasts.isNotEmpty) {
       setState(() {
         _comboToasts.clear();
@@ -128,6 +132,21 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
             (BuildContext context, GameLoopViewState state, Widget? child) {
           return Stack(
             children: <Widget>[
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        Color(0xFFF6FBFF),
+                        Color(0xFFE9F2FA),
+                        Color(0xFFDDEAF6),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               Positioned.fill(
                 child: Center(
                   child: ConstrainedBox(
@@ -335,29 +354,42 @@ class _HudPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 2,
-      borderRadius: BorderRadius.circular(12),
+      elevation: 3,
+      borderRadius: BorderRadius.circular(14),
       color: const Color.fromRGBO(255, 255, 255, 0.92),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            _HudMetric(
-              label: 'Score',
-              value: '${state.scoreState.totalScore}',
+            Expanded(
+              child: _HudMetric(
+                label: 'Score',
+                value: '${state.scoreState.totalScore}',
+              ),
             ),
-            _HudMetric(
-              label: 'Combo',
-              value: '${state.scoreState.comboStreak}',
+            Expanded(
+              child: _HudMetric(
+                label: 'Level',
+                value: '${state.level}',
+              ),
             ),
-            _HudMetric(
-              label: 'Best',
-              value: '${state.bestScore}',
+            Expanded(
+              child: _HudMetric(
+                label: 'Combo',
+                value: '${state.scoreState.comboStreak}',
+              ),
             ),
-            _HudMetric(
-              label: 'Moves',
-              value: '${state.movesPlayed}',
+            Expanded(
+              child: _HudMetric(
+                label: 'Best',
+                value: '${state.bestScore}',
+              ),
+            ),
+            Expanded(
+              child: _HudMetric(
+                label: 'Moves',
+                value: '${state.movesPlayed}',
+              ),
             ),
           ],
         ),

@@ -204,5 +204,13 @@ class AnalyticsSchemaValidator {
         'moves_played',
       },
     ),
+    'level_up': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'from_level',
+        'to_level',
+        'score_total',
+      },
+    ),
   };
 }

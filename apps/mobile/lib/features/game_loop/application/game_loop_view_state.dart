@@ -7,6 +7,8 @@ class GameLoopViewState {
     required this.boardState,
     required this.scoreState,
     required this.rackPieces,
+    required this.level,
+    required this.colorThemeIndex,
     required this.isGameOver,
     required this.canUseRewardedRevive,
     required this.isBannerVisible,
@@ -19,6 +21,8 @@ class GameLoopViewState {
   final BoardState boardState;
   final ScoreState scoreState;
   final List<Piece> rackPieces;
+  final int level;
+  final int colorThemeIndex;
   final bool isGameOver;
   final bool canUseRewardedRevive;
   final bool isBannerVisible;
@@ -32,6 +36,8 @@ class GameLoopViewState {
       boardState: BoardState(size: 8, occupiedCells: <BoardCell>{}),
       scoreState: ScoreState.initial,
       rackPieces: <Piece>[],
+      level: 1,
+      colorThemeIndex: 0,
       isGameOver: false,
       canUseRewardedRevive: false,
       isBannerVisible: false,
@@ -45,6 +51,8 @@ class GameLoopViewState {
     BoardState? boardState,
     ScoreState? scoreState,
     List<Piece>? rackPieces,
+    int? level,
+    int? colorThemeIndex,
     bool? isGameOver,
     bool? canUseRewardedRevive,
     bool? isBannerVisible,
@@ -58,6 +66,8 @@ class GameLoopViewState {
       boardState: boardState ?? this.boardState,
       scoreState: scoreState ?? this.scoreState,
       rackPieces: rackPieces ?? this.rackPieces,
+      level: level ?? this.level,
+      colorThemeIndex: colorThemeIndex ?? this.colorThemeIndex,
       isGameOver: isGameOver ?? this.isGameOver,
       canUseRewardedRevive: canUseRewardedRevive ?? this.canUseRewardedRevive,
       isBannerVisible: isBannerVisible ?? this.isBannerVisible,

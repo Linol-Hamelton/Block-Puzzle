@@ -35,9 +35,51 @@ class BlockPuzzleGame extends FlameGame {
   static const double _boardTopOffset = 108;
   static const double _boardBottomReserved = 190;
   static const double _layoutHorizontalPadding = 20;
+  static const List<_BoardPalette> _palettes = <_BoardPalette>[
+    _BoardPalette(
+      boardBackground: Color(0xFFEAF0F5),
+      occupiedColor: Color(0xFF0A4D68),
+      rackColor: Color(0xFF18536E),
+      rackDragColor: Color(0xFF1A759F),
+    ),
+    _BoardPalette(
+      boardBackground: Color(0xFFEFF5EC),
+      occupiedColor: Color(0xFF2A6F3D),
+      rackColor: Color(0xFF347E48),
+      rackDragColor: Color(0xFF4DA866),
+    ),
+    _BoardPalette(
+      boardBackground: Color(0xFFF8EFE8),
+      occupiedColor: Color(0xFF9C4A1A),
+      rackColor: Color(0xFFB35A24),
+      rackDragColor: Color(0xFFD17A3F),
+    ),
+    _BoardPalette(
+      boardBackground: Color(0xFFECECF9),
+      occupiedColor: Color(0xFF39448E),
+      rackColor: Color(0xFF4553A5),
+      rackDragColor: Color(0xFF6371C7),
+    ),
+    _BoardPalette(
+      boardBackground: Color(0xFFF7EAF1),
+      occupiedColor: Color(0xFF8D2A5E),
+      rackColor: Color(0xFFA13670),
+      rackDragColor: Color(0xFFC0548F),
+    ),
+    _BoardPalette(
+      boardBackground: Color(0xFFE9F7F9),
+      occupiedColor: Color(0xFF0E6672),
+      rackColor: Color(0xFF157A88),
+      rackDragColor: Color(0xFF2A9BAC),
+    ),
+  ];
 
   @override
   Color backgroundColor() => const Color(0xFFF2F6FB);
+
+  int _activePaletteIndex = 0;
+  int _previousPaletteIndex = 0;
+  double _paletteTransition = 1;
 
   @override
   Future<void> onLoad() async {
@@ -58,6 +100,16 @@ class BlockPuzzleGame extends FlameGame {
     super.onGameResize(size);
     _recalculateLayout();
     _positionRackPieces();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (_paletteTransition >= 1) {
+      return;
+    }
+    _paletteTransition = (_paletteTransition + (dt * 2.1)).clamp(0, 1);
+    _applyCurrentPalette();
   }
 
   @override
@@ -147,6 +199,7 @@ class BlockPuzzleGame extends FlameGame {
   void _syncWithState() {
     final state = controller.state;
     _recalculateLayout();
+    _setPaletteFromState(state.colorThemeIndex);
     _boardComponent.setBoardState(state.boardState);
     _rebuildRackPieces(state.rackPieces);
   }
@@ -186,12 +239,15 @@ class BlockPuzzleGame extends FlameGame {
     _rackComponents.clear();
 
     final List<Vector2> homePositions = _rackPositionsForPieces(pieces);
+    final _BoardPalette palette = _currentPalette;
 
     for (int i = 0; i < pieces.length; i++) {
       final RackPieceComponent component = RackPieceComponent(
         piece: pieces[i],
         cellSize: _rackCellSize,
         homePosition: homePositions[i],
+        baseColor: palette.rackColor,
+        dragColor: palette.rackDragColor,
         onDragMoved: onRackPieceDragged,
         onDropped: onRackPieceDropped,
       );
@@ -276,6 +332,36 @@ class BlockPuzzleGame extends FlameGame {
     return _BoardAnchor(anchorX, anchorY);
   }
 
+  void _setPaletteFromState(int index) {
+    final int normalized = index % _palettes.length;
+    if (normalized != _activePaletteIndex) {
+      _previousPaletteIndex = _activePaletteIndex;
+      _activePaletteIndex = normalized;
+      _paletteTransition = 0;
+    }
+    _applyCurrentPalette();
+  }
+
+  _BoardPalette get _currentPalette {
+    final _BoardPalette from = _palettes[_previousPaletteIndex];
+    final _BoardPalette to = _palettes[_activePaletteIndex];
+    return _BoardPalette.lerp(from, to, _paletteTransition);
+  }
+
+  void _applyCurrentPalette() {
+    final _BoardPalette palette = _currentPalette;
+    _boardComponent.setPalette(
+      boardBackgroundColor: palette.boardBackground,
+      occupiedColor: palette.occupiedColor,
+    );
+    for (final RackPieceComponent component in _rackComponents) {
+      component.updatePalette(
+        baseColor: palette.rackColor,
+        dragColor: palette.rackDragColor,
+      );
+    }
+  }
+
   void _playLineClearAnimation({
     required int strength,
     required Set<BoardCell> clearedCells,
@@ -320,6 +406,8 @@ class BlockPuzzleGame extends FlameGame {
 class BoardComponent extends PositionComponent {
   BoardState _boardState = BoardState.empty(size: 8);
   _PreviewState? _previewState;
+  Color _boardBackgroundColor = const Color(0xFFEAF0F5);
+  Color _occupiedColor = const Color(0xFF0A4D68);
 
   void setBoardState(BoardState boardState) {
     _boardState = boardState;
@@ -343,17 +431,25 @@ class BoardComponent extends PositionComponent {
     _previewState = null;
   }
 
+  void setPalette({
+    required Color boardBackgroundColor,
+    required Color occupiedColor,
+  }) {
+    _boardBackgroundColor = boardBackgroundColor;
+    _occupiedColor = occupiedColor;
+  }
+
   @override
   void render(Canvas canvas) {
     super.render(canvas);
 
     final double cellSize = size.x / _boardState.size;
-    final Paint boardBackground = Paint()..color = const Color(0xFFEAF0F5);
+    final Paint boardBackground = Paint()..color = _boardBackgroundColor;
     final Paint gridPaint = Paint()
       ..color = const Color(0xFFC7D4E0)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    final Paint occupiedPaint = Paint()..color = const Color(0xFF0A4D68);
+    final Paint occupiedPaint = Paint()..color = _occupiedColor;
     final Paint previewValidPaint = Paint()..color = const Color(0x8021A179);
     final Paint previewInvalidPaint = Paint()..color = const Color(0x80D64545);
 
@@ -421,9 +517,13 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     required this.piece,
     required this.cellSize,
     required Vector2 homePosition,
+    required Color baseColor,
+    required Color dragColor,
     required this.onDragMoved,
     required this.onDropped,
-  }) : _homePosition = homePosition.clone() {
+  })  : _homePosition = homePosition.clone(),
+        _baseColor = baseColor,
+        _dragColor = dragColor {
     size = visualSize(
       piece: piece,
       cellSize: cellSize,
@@ -436,6 +536,8 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   final void Function(RackPieceComponent component) onDragMoved;
   final Future<void> Function(RackPieceComponent component) onDropped;
   Vector2 _homePosition;
+  Color _baseColor;
+  Color _dragColor;
   bool _dragging = false;
 
   static Vector2 visualSize({
@@ -469,11 +571,18 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     priority = 0;
   }
 
+  void updatePalette({
+    required Color baseColor,
+    required Color dragColor,
+  }) {
+    _baseColor = baseColor;
+    _dragColor = dragColor;
+  }
+
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final Paint paint = Paint()
-      ..color = _dragging ? const Color(0xFF1A759F) : const Color(0xFF18536E);
+    final Paint paint = Paint()..color = _dragging ? _dragColor : _baseColor;
 
     for (final PieceCellOffset cell in piece.cells) {
       final Rect rect = Rect.fromLTWH(
@@ -537,6 +646,36 @@ class _PreviewState {
   final int anchorX;
   final int anchorY;
   final bool valid;
+}
+
+class _BoardPalette {
+  const _BoardPalette({
+    required this.boardBackground,
+    required this.occupiedColor,
+    required this.rackColor,
+    required this.rackDragColor,
+  });
+
+  final Color boardBackground;
+  final Color occupiedColor;
+  final Color rackColor;
+  final Color rackDragColor;
+
+  factory _BoardPalette.lerp(
+    _BoardPalette a,
+    _BoardPalette b,
+    double t,
+  ) {
+    return _BoardPalette(
+      boardBackground: Color.lerp(a.boardBackground, b.boardBackground, t) ??
+          b.boardBackground,
+      occupiedColor:
+          Color.lerp(a.occupiedColor, b.occupiedColor, t) ?? b.occupiedColor,
+      rackColor: Color.lerp(a.rackColor, b.rackColor, t) ?? b.rackColor,
+      rackDragColor:
+          Color.lerp(a.rackDragColor, b.rackDragColor, t) ?? b.rackDragColor,
+    );
+  }
 }
 
 class LineClearFlashComponent extends PositionComponent {
