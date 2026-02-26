@@ -1,63 +1,38 @@
-# UI/UX и Art Direction (Hypnotic Gameplay)
+﻿# UI/UX and Art Direction (Hypnotic Gameplay)
 
-## 1. Дизайн-цель
-Создать визуально "чистую", премиальную и эмоционально насыщенную игру, где:
-- интерфейс не отвлекает от поля;
-- каждый успешный ход вызывает микро-удовлетворение;
-- прогресс и награды читаются мгновенно.
+## 1. Design Goal
+Deliver premium, readable, high-feedback gameplay where visual polish amplifies decisions and never blocks clarity.
 
-## 2. Принципы UX
-1. One-screen focus: во время раунда только важные элементы.
-2. Zero-friction loop: максимум 1-2 действия до следующего раунда.
-3. Predictable controls: drag behavior без сюрпризов.
-4. Layered feedback: визуал + звук + haptic.
-5. Respectful monetization UX: реклама не должна ломать flow.
+## 2. UX Principles
+1. One-screen focus during active gameplay.
+2. Fast loop with minimal taps to replay.
+3. Predictable drag behavior and stable touch ergonomics.
+4. Layered feedback (visual + audio + optional haptics).
+5. Monetization UX must remain non-disruptive (current ad-free runtime).
 
-## 3. Визуальное направление
-- Стиль: минималистичный premium casual, высокая читаемость.
-- Палитра:
-  - базовые нейтральные тона для поля;
-  - акцентные цвета для комбинаций и high-value действий;
-  - отдельная семантика цветов для валидной/невалидной постановки.
-- Формы:
-  - мягкие скругления;
-  - контрастные тени/подсветки для depth;
-  - четкая иерархия размера элементов.
+## 3. Visual Direction
+- Dark premium gradient base.
+- Neon glass blocks aligned with Lumina branding.
+- Strong board readability and contrast-safe HUD.
+- Minimal noise outside gameplay-critical elements.
 
-## 4. Motion/Animation принципы
-- Input response: <= 120 ms на drag/placement feedback.
-- Line clear: каскад с нарастающим импактом при multi-line clear.
-- Combo: на каждом шаге возрастает интенсивность VFX/SFX.
-- Game Over: короткая драматургия + быстрый переход к replay.
+## 4. Motion Principles
+- Fast input response.
+- Clear line-clear/combo emphasis.
+- Lightweight transitions for restart and end-of-round.
 
-## 5. Audio/Feel
-- Минимум 3 слоя звука:
-  - базовый placement;
-  - clear impact;
-  - combo escalation.
-- Аудио должно усиливать ритм, но не утомлять при длинной сессии.
+## 5. Audio Principles
+- Distinct cues for place/invalid/clear/combo/game-over.
+- No fatigue in long sessions.
 
-## 6. Design System (v1)
-- Typography: 1 display + 1 UI font, строгая шкала размеров.
-- Components:
-  - Buttons (primary/secondary/ghost)
-  - HUD counters
-  - Modal templates (game over, reward)
-  - Shop cards
-- Tokens:
-  - color tokens
-  - spacing scale
-  - animation durations
+## 6. Design System
+- Consistent spacing/typography scale.
+- Reusable HUD, buttons, modal patterns.
+- Contrast and touch-target compliance across DPI classes.
 
-## 7. UX-метрики качества
-- Tutorial completion rate.
-- Time-to-first-move.
-- Restart latency после game over.
-- Rage-quit rate в первые 3 сессии.
-- Повторные сессии в первые 24 часа.
-
-## 8. Арт-пайплайн
-- Этап 1: graybox + style probes.
-- Этап 2: beta visual kit (основные ассеты поля и блоков).
-- Этап 3: polish pass (VFX, transitions, micro-animations).
-- Этап 4: seasonal skin pipeline для LiveOps.
+## 7. UX Quality Metrics
+- Time to first move.
+- Tutorial completion.
+- Restart latency.
+- Early quit rate.
+- Repeat sessions in first 24h.

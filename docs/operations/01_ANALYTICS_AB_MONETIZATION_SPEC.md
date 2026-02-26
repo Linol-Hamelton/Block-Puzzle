@@ -1,86 +1,74 @@
-# Спецификация Аналитики, A/B и Монетизации
+﻿# Analytics, AB, and Monetization Spec
 
-## 1. Цель
-Обеспечить управляемый рост retention и ARPDAU через стандартизированные события, контролируемые эксперименты и не-токсичную ad политику.
+## 1. Goal
+Provide a stable event and experiment contract for retention, UX quality, and monetization decisions.
 
-## 2. Event Taxonomy (v1)
-| Event | Когда отправлять | Обязательные параметры |
-|---|---|---|
-| `session_start` | старт сессии | session_id, app_version, platform, ab_bucket |
-| `session_end` | конец сессии | session_id, duration_sec, rounds_played |
-| `game_start` | старт раунда | round_id, mode, config_version |
-| `move_made` | каждый валидный ход | round_id, piece_type, lines_cleared, combo_index, board_fill_pct |
-| `game_end` | окончание раунда | round_id, end_reason, score, duration_sec |
-| `ad_impression` | факт показа рекламы | placement, ad_type, network, eCPM(if available) |
-| `ad_rewarded` | факт выдачи награды | reward_type, reward_value |
-| `iap_purchase` | успешная покупка | sku, price, currency, country |
-| `tutorial_step` | шаг туториала | step_id, status, dropoff_reason |
-| `ab_experiment_exposure` | вход пользователя в эксперимент | experiment_id, variant_id, source |
-| `daily_goal_progress` | прогресс и завершение дневной цели | goal_id, progress, target, is_completed |
-| `streak_updated` | изменение streak статуса | current_streak, best_streak, reason |
+## 2. Product Mode (Current)
+- Runtime strategy: **ad-free by default**.
+- Monetization baseline: cosmetics + utility entitlements.
+- Ad events remain in schema as optional/future-compatible fields and must not be assumed active.
 
-## 3. Data Contract Rules
-- Все события имеют `schema_version`.
-- Неизвестные параметры не ломают ingestion, но помечаются warning.
-- Обязательные поля отсутствуют -> событие в quarantine stream.
-- Время события всегда в UTC + device timestamp.
+## 3. Core Event Taxonomy (v1)
+Required operational/gameplay events:
+- `session_start`
+- `session_end`
+- `game_start`
+- `move_made`
+- `game_end`
+- `ab_experiment_exposure`
+- `daily_goal_progress`
+- `streak_updated`
+- `rewarded_hint_used`
+- `rewarded_undo_used`
+- `rewarded_tools_credits_earned`
+- `store_open`
+- `iap_purchase_attempt`
+- `iap_purchase`
+- `iap_restore`
+- `offer_targeting_exposure`
+- `share_score_tapped`
+- `share_score_result`
+- `tutorial_step`
 
-## 4. A/B Framework
+Operational observability events:
+- `ops_session_snapshot`
+- `ops_alert_triggered`
+- `ops_error`
 
-### 4.1 Обязательные поля эксперимента
+Optional/future ad events:
+- `ad_impression`
+- `ad_rewarded`
+
+## 4. Contract Rules
+1. Every event includes `schema_version`.
+2. Missing required fields route to validation failure/quarantine.
+3. Unknown extra fields are tolerated but logged.
+4. Timestamps are UTC-based.
+
+## 5. AB Framework
+Mandatory experiment metadata:
 - `experiment_id`
 - `hypothesis`
 - `primary_metric`
-- `secondary_metrics`
 - `guardrails`
 - `target_population`
-- `sample_ratio`
-- `start_criteria`
 - `stop_criteria`
 
-### 4.2 Приоритеты тестов
-1. Gameplay retention tests (сложность, генератор фигур).
-2. Onboarding tests.
-3. Monetization pressure tests.
-4. Visual/theme tests.
+Priority test areas:
+1. gameplay fairness and difficulty
+2. HUD/readability UX
+3. store offer strategy
+4. visual presets and polish
 
-### 4.3 Стоп-критерии
-- D1 падает > 2 п.п. против контроля.
-- Crash rate растет > 0.3 п.п.
-- Session length падает > 10% при незначимом росте ARPDAU.
+## 6. Dashboard Blocks
+1. retention proxy
+2. session quality
+3. monetization proxy
+4. engagement systems
+5. experiment monitoring
+6. observability and alerting
 
-## 5. Монетизация (v1 -> v2)
-
-### 5.1 Плейсменты v1
-- Banner: ограниченные экраны, без перекрытия критичного UI.
-- Interstitial: конец раунда/выход в меню, минимум 1 ad-free cooldown между показами.
-- Rewarded: revive, hint/undo, optional bonus.
-
-### 5.2 Плейсменты v2
-- Dynamic offer walls (только после проверки на retention impact).
-- Персонализированные rewarded offers по сегментам.
-- Cross-promo в low-pressure слотах.
-
-### 5.3 Guardrails для ad pressure
-- Не более X interstitial за N минут (значение через remote config).
-- Не показывать interstitial при первых Y раундах нового игрока.
-- Rewarded только opt-in.
-
-## 6. KPI Dashboard Blocks
-- Cohort retention (D1/D3/D7/D14/D30).
-- Session metrics (length, frequency, abort rate).
-- Monetization (ARPDAU, impressions/DAU, rewarded opt-in, fill rate).
-- Gameplay health (avg lines cleared, game_over cause distribution, difficulty pain index).
-- Experiment outcomes (uplift, confidence, guardrail violations).
-
-## 7. Основные продуктовые сегменты
-- New users (0-2 дня)
-- Early retained (3-7 дней)
-- Mid-term retained (8-30 дней)
-- Whales / high ad-engagers
-- At-risk churn users
-
-## 8. Минимальный cadence управления
-- Ежедневно: KPI pulse + критические алерты.
-- Еженедельно: experiment readout + roadmap reprioritization.
-- Ежемесячно: экономика, UA/LTV коррекция, content/liveops план.
+## 7. Operational Cadence
+- Daily: KPI pulse + alert triage.
+- Weekly: AB readout + reprioritization.
+- Per cohort window: Sprint 8 rollout gate evaluation.

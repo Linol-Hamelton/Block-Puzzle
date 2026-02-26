@@ -1,20 +1,19 @@
-# Карта Связей Системы
+﻿# System Relation Map
 
 ## 1. System Context
 ```mermaid
 flowchart LR
-  Player[Игрок] --> MobileApp[Mobile App\nFlutter + Flame]
-  MobileApp --> ConfigAPI[Config API\nRemote Config + A/B]
+  Player[Player] --> MobileApp[Mobile App\nFlutter + Flame]
+  MobileApp --> ConfigAPI[Config API\nRemote Config + AB]
   MobileApp --> AnalyticsIngest[Analytics Ingestion]
-  MobileApp --> AdNetworks[Ad Networks]
-  MobileApp --> IAPStore[App Store / Play Billing]
+  MobileApp --> StoreBilling[Store Billing / Entitlements]
   AnalyticsIngest --> BI[BI Dashboards]
   ConfigAPI --> BI
-  BI --> ProductTeam[Product/Data Team]
+  BI --> ProductTeam[Product and Data Team]
   ProductTeam --> ConfigAPI
 ```
 
-## 2. Внутренние связи клиента
+## 2. Client Internal Links
 ```mermaid
 flowchart TD
   UI[UI Layer] --> GameLoop[Feature: Game Loop]
@@ -24,10 +23,10 @@ flowchart TD
   GameLoop --> Generator[Domain: PieceGenerationService]
   GameLoop --> Difficulty[Domain: DifficultyTuner]
 
-  Difficulty --> RemoteConfigRepo[Data: RemoteConfigRepo]
-  GameLoop --> AnalyticsRepo[Data: AnalyticsRepo]
-  GameLoop --> Monetization[Feature: Monetization]
-  Monetization --> AdAdapter[SDK Adapter: Ads]
+  Difficulty --> RemoteConfigRepo[Data: Remote Config]
+  GameLoop --> AnalyticsRepo[Data: Analytics]
+  UI --> StoreFeature[Feature: Store]
+  StoreFeature --> BillingAdapter[Adapter: Billing]
   UI --> LocalState[Data: Local Storage]
 ```
 
@@ -41,34 +40,26 @@ sequenceDiagram
   participant E as Events API
   participant B as BI
 
-  A->>RC: Fetch config + AB assignments
-  RC-->>A: difficulty/ad flags
-  P->>A: drag & drop piece
-  A->>D: validate + apply move
+  A->>RC: Fetch config + experiment assignments
+  RC-->>A: config snapshot
+  P->>A: drag and drop piece
+  A->>D: validate and apply move
   D-->>A: board update + score + combo
-  A->>E: emit move_made/game_state events
-  A->>A: optional ad trigger by policy
-  E-->>B: aggregated KPIs
+  A->>E: emit gameplay and ops events
+  E-->>B: aggregate cohort metrics
 ```
 
-## 4. Monetization decision chain
+## 4. Store Personalization Chain
 ```mermaid
 flowchart LR
-  Trigger[Game Trigger\nGameOver/MenuReturn/Hint] --> Policy[Ad Policy Resolver]
-  Policy --> Guardrails[Guardrails\nfrequency cap\nretention-safe]
-  Guardrails -->|allow| ShowAd[Show Ad]
-  Guardrails -->|deny| SkipAd[Skip Ad]
-  ShowAd --> RewardFlow[Reward / Resume Flow]
-  RewardFlow --> Analytics[ad_impression/ad_rewarded]
+  Snapshot[Player Snapshot] --> Segment[Segment Resolver]
+  Segment --> Strategy[Offer Strategy Variant]
+  Strategy --> Catalog[Catalog Ordering]
+  Catalog --> Recommendation[Recommended SKU]
+  Recommendation --> Analytics[offer_targeting_exposure]
 ```
 
-## 5. Зоны ответственности
-- Gameplay zone: игровая логика и UX.
-- Monetization zone: правила показа и ad adapters.
-- Data zone: аналитические события, схемы, агрегация.
-- Experimentation zone: remote config, feature flags, AB assignments.
-
-## 6. Критичные точки контроля
-- Перед любым ad показом: проверка guardrails.
-- Перед применением config: schema validation + fallback.
-- Перед выпуском: smoke сценарии полного игрового цикла.
+## 5. Control Points
+- Before config apply: schema validation + fallback.
+- Before rollout increase: hard/soft gate evaluation.
+- Before publish: smoke + release checks.

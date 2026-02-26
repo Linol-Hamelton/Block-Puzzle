@@ -1,26 +1,45 @@
-# Mobile App Scaffold
+﻿# apps/mobile
 
-Flutter + Flame project scaffold for Block Puzzle.
+Flutter + Flame client for **Lumina Blocks**.
 
-## What is included
-- Real Flutter project structure (`android`, `ios`, `web`, `lib`, `test`).
-- DI container (`GetIt`) with stub service registrations.
-- Domain contracts for gameplay/generator/scoring/session.
-- Flame game screen skeleton and bootstrap flow.
-- Minimal widget test and static analysis baseline.
+## Implemented Scope
+- Playable classic mode core loop:
+  - piece drag/drop
+  - move validation
+  - line clear
+  - score/combo
+  - game over/restart
+- HUD with goals/streak/progression widgets.
+- Store/IAP sandbox layer (debug purchase flow, targeting logic).
+- Remote-config driven variants (difficulty, UX, visual block preset `soft` / `crystal`).
+- Observability hooks (`ops_session_snapshot`, `ops_alert_triggered`, `ops_error`).
 
-## Run locally
+## Platforms
+- Android (debug + release)
+- Web (release build)
+- Windows desktop (release package)
+- iOS folder exists, but publication is out of current go-to-market scope.
+
+## Run Locally
 ```bash
 flutter pub get
 flutter run
 ```
 
-## Quality checks
+## Quality Checks
 ```bash
 flutter analyze
 flutter test
 ```
 
-## Current status
-- This is a production-oriented scaffold, not full gameplay implementation.
-- Core-loop logic is intentionally not implemented yet (domain interfaces + stubs only).
+## Release Builds
+```bash
+flutter build apk --release
+flutter build appbundle --release
+flutter build web --release
+flutter build windows --release
+```
+
+## Notes
+- Current product strategy is **ad-free in-app UX** with IAP/cosmetics/utility path.
+- Some SDK integrations are sandbox/debug implementations by design and are marked in corresponding docs.

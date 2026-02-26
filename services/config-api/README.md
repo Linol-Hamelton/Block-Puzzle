@@ -1,9 +1,10 @@
-# services/config-api
+﻿# services/config-api
 
-Сервис управления:
-- remote config;
-- feature flags;
-- A/B assignment;
-- аудит изменений конфигов.
+Planned service boundary for:
+- remote config
+- feature flags
+- AB assignment
+- config audit history
 
-На этапе 0 определяется API-контракт и схема данных.
+In current repository state, client-side in-memory config is used for development/test loops.
+Service implementation can be introduced without breaking client module boundaries.

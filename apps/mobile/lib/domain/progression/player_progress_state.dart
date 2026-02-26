@@ -6,6 +6,7 @@ class PlayerProgressState {
     required this.dailyMoves,
     required this.dailyLinesCleared,
     required this.dailyScoreEarned,
+    required this.rewardedToolsCredits,
   });
 
   final DateTime dayKeyUtc;
@@ -14,8 +15,12 @@ class PlayerProgressState {
   final int dailyMoves;
   final int dailyLinesCleared;
   final int dailyScoreEarned;
+  final int rewardedToolsCredits;
 
-  factory PlayerProgressState.initialForDay(DateTime dayKeyUtc) {
+  factory PlayerProgressState.initialForDay(
+    DateTime dayKeyUtc, {
+    int initialRewardedToolsCredits = 0,
+  }) {
     final DateTime normalizedDay = normalizeDayKeyUtc(dayKeyUtc);
     return PlayerProgressState(
       dayKeyUtc: normalizedDay,
@@ -24,6 +29,7 @@ class PlayerProgressState {
       dailyMoves: 0,
       dailyLinesCleared: 0,
       dailyScoreEarned: 0,
+      rewardedToolsCredits: initialRewardedToolsCredits,
     );
   }
 
@@ -34,6 +40,7 @@ class PlayerProgressState {
     int? dailyMoves,
     int? dailyLinesCleared,
     int? dailyScoreEarned,
+    int? rewardedToolsCredits,
   }) {
     return PlayerProgressState(
       dayKeyUtc: dayKeyUtc ?? this.dayKeyUtc,
@@ -42,6 +49,7 @@ class PlayerProgressState {
       dailyMoves: dailyMoves ?? this.dailyMoves,
       dailyLinesCleared: dailyLinesCleared ?? this.dailyLinesCleared,
       dailyScoreEarned: dailyScoreEarned ?? this.dailyScoreEarned,
+      rewardedToolsCredits: rewardedToolsCredits ?? this.rewardedToolsCredits,
     );
   }
 

@@ -1,9 +1,8 @@
-# infra
+﻿# infra
 
-Инфраструктурный слой:
-- окружения (dev/stage/prod);
-- IaC;
-- CI/CD;
-- секреты и observability.
+Infrastructure and operations layer:
+- environment setup patterns
+- CI/CD workflows
+- release and observability process docs
 
-Пока содержит только организационный каркас.
+Current implementation includes GitHub Actions workflows in `.github/workflows` and release/checklist docs in `docs/release`.

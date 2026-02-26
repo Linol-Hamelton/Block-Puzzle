@@ -19,7 +19,10 @@
         "tutorial_step",
         "ab_experiment_exposure",
         "daily_goal_progress",
-        "streak_updated"
+        "streak_updated",
+        "ops_session_snapshot",
+        "ops_alert_triggered",
+        "ops_error"
       ]
     },
     {
@@ -37,6 +40,10 @@
       ],
       "optional_fields": [
         "line_clear_rate",
+        "ops_alert_count",
+        "ops_alert_critical_count",
+        "ops_runtime_error_sessions",
+        "ops_early_gameover_alert_rate",
         "collection_window_start_utc",
         "collection_window_end_utc",
         "notes"
@@ -81,6 +88,15 @@
         "ab_experiment_exposure_count",
         "variant_split",
         "guardrail_violations"
+      ]
+    },
+    {
+      "block_id": "observability_alerting",
+      "metrics": [
+        "ops_alert_count",
+        "ops_alert_critical_count",
+        "ops_runtime_error_sessions",
+        "ops_early_gameover_alert_rate"
       ]
     }
   ],

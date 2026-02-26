@@ -1,11 +1,13 @@
-# data
+﻿# data
 
-Слой данных и контрактов:
-- schemas (event/config);
-- dictionaries (метаданные, enum, атрибуты);
-- dashboards (описания KPI-витрин).
+Data contracts and operational snapshots:
+- event/config schemas
+- dictionaries and enums
+- dashboard contracts and run exports
 
-Ключевой артефакт Sprint 5:
-- `dashboards/dashboard_mvp_contract_v1.json` (источники и блоки dashboard MVP).
+Key files:
+- `dashboards/dashboard_mvp_contract_v1.json`
+- `dashboards/internal_playtest_run_002_metrics_template.json`
+- `dashboards/rollout_gates_thresholds_v1.json`
 
-Используется как single source of truth для продуктовой аналитики.
+This folder is the canonical source for analytics contract artifacts used by scripts.

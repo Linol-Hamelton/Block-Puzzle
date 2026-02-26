@@ -6,14 +6,18 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/text.dart';
+import 'package:flutter/material.dart';
 
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
+import '../application/game_loop_view_state.dart';
 
 class BlockPuzzleGame extends FlameGame {
+  static const double _touchDragLiftPixels = 50;
+
   BlockPuzzleGame({
     required this.controller,
     required this.sfxPlayer,
@@ -30,52 +34,60 @@ class BlockPuzzleGame extends FlameGame {
   Vector2 _boardOrigin = Vector2.zero();
   bool _dropInProgress = false;
 
-  static const double _rackCellSize = 24;
-  static const double _boardMaxPixels = 420;
-  static const double _boardTopOffset = 108;
-  static const double _boardBottomReserved = 190;
-  static const double _layoutHorizontalPadding = 20;
+  double _rackCellSize = 24;
+  double _rackMinTouchTargetSize = 48;
+  double _dragActivationDistance = 9;
+  double _boardMaxPixels = 420;
+  double _boardMinPixels = 220;
+  double _boardToRackGap = 18;
+  double _layoutHorizontalPadding = 20;
+  double _layoutTopInset = 124;
+  double _layoutBottomInset = 120;
+  double _rackTop = 0;
+  double _rackReservedHeight = 108;
+  bool _pendingRackRebuild = false;
+  BlockVisualPreset _visualPreset = BlockVisualPreset.soft;
   static const List<_BoardPalette> _palettes = <_BoardPalette>[
     _BoardPalette(
-      boardBackground: Color(0xFFEAF0F5),
-      occupiedColor: Color(0xFF0A4D68),
-      rackColor: Color(0xFF18536E),
-      rackDragColor: Color(0xFF1A759F),
+      boardBackground: Color(0xFF0C1B36),
+      occupiedColor: Color(0xFF55CEFF),
+      rackColor: Color(0xFF4ABEEA),
+      rackDragColor: Color(0xFF77DEFF),
     ),
     _BoardPalette(
-      boardBackground: Color(0xFFEFF5EC),
-      occupiedColor: Color(0xFF2A6F3D),
-      rackColor: Color(0xFF347E48),
-      rackDragColor: Color(0xFF4DA866),
+      boardBackground: Color(0xFF101E3C),
+      occupiedColor: Color(0xFF9580FF),
+      rackColor: Color(0xFF8570EE),
+      rackDragColor: Color(0xFFB2A5FF),
     ),
     _BoardPalette(
-      boardBackground: Color(0xFFF8EFE8),
-      occupiedColor: Color(0xFF9C4A1A),
-      rackColor: Color(0xFFB35A24),
-      rackDragColor: Color(0xFFD17A3F),
+      boardBackground: Color(0xFF102241),
+      occupiedColor: Color(0xFFFFA369),
+      rackColor: Color(0xFFF19356),
+      rackDragColor: Color(0xFFFFBD90),
     ),
     _BoardPalette(
-      boardBackground: Color(0xFFECECF9),
-      occupiedColor: Color(0xFF39448E),
-      rackColor: Color(0xFF4553A5),
-      rackDragColor: Color(0xFF6371C7),
+      boardBackground: Color(0xFF0E1E3A),
+      occupiedColor: Color(0xFF70D8FF),
+      rackColor: Color(0xFF5CC9F0),
+      rackDragColor: Color(0xFF8EE5FF),
     ),
     _BoardPalette(
-      boardBackground: Color(0xFFF7EAF1),
-      occupiedColor: Color(0xFF8D2A5E),
-      rackColor: Color(0xFFA13670),
-      rackDragColor: Color(0xFFC0548F),
+      boardBackground: Color(0xFF121F3F),
+      occupiedColor: Color(0xFFAA8CFF),
+      rackColor: Color(0xFF9575F3),
+      rackDragColor: Color(0xFFC6B4FF),
     ),
     _BoardPalette(
-      boardBackground: Color(0xFFE9F7F9),
-      occupiedColor: Color(0xFF0E6672),
-      rackColor: Color(0xFF157A88),
-      rackDragColor: Color(0xFF2A9BAC),
+      boardBackground: Color(0xFF0E1E3B),
+      occupiedColor: Color(0xFFFFB071),
+      rackColor: Color(0xFFF79D62),
+      rackDragColor: Color(0xFFFFCCA0),
     ),
   ];
 
   @override
-  Color backgroundColor() => const Color(0xFFF2F6FB);
+  Color backgroundColor() => const Color(0xFF0A1730);
 
   int _activePaletteIndex = 0;
   int _previousPaletteIndex = 0;
@@ -95,10 +107,93 @@ class BlockPuzzleGame extends FlameGame {
     await super.onLoad();
   }
 
+  void configureViewportInsets({
+    required double topInset,
+    required double bottomInset,
+    double? horizontalPadding,
+    double? boardMaxPixels,
+    double? boardMinPixels,
+    double? rackCellSize,
+    double? boardToRackGap,
+    double? rackMinTouchTargetSize,
+    double? dragActivationDistance,
+  }) {
+    final double normalizedTop = topInset.clamp(84, 300);
+    final double normalizedBottom = bottomInset.clamp(84, 320);
+    final double normalizedHorizontalPadding =
+        (horizontalPadding ?? _layoutHorizontalPadding).clamp(10, 44);
+    final double normalizedBoardMax =
+        (boardMaxPixels ?? _boardMaxPixels).clamp(260, 700);
+    final double normalizedBoardMin =
+        (boardMinPixels ?? _boardMinPixels).clamp(160, normalizedBoardMax - 16);
+    final double normalizedRackCell =
+        (rackCellSize ?? _rackCellSize).clamp(18, 36).toDouble();
+    final double normalizedBoardToRackGap =
+        (boardToRackGap ?? _boardToRackGap).clamp(10, 36);
+    final double normalizedRackMinTouchTargetSize =
+        (rackMinTouchTargetSize ?? _rackMinTouchTargetSize)
+            .clamp(48, 72)
+            .toDouble();
+    final double normalizedDragActivationDistance =
+        (dragActivationDistance ?? _dragActivationDistance)
+            .clamp(4, 20)
+            .toDouble();
+    final bool rackCellChanged =
+        (_rackCellSize - normalizedRackCell).abs() > 0.01;
+    final bool dragConfigChanged =
+        (_rackMinTouchTargetSize - normalizedRackMinTouchTargetSize).abs() >
+                0.01 ||
+            (_dragActivationDistance - normalizedDragActivationDistance).abs() >
+                0.01;
+
+    if ((_layoutTopInset - normalizedTop).abs() < 0.5 &&
+        (_layoutBottomInset - normalizedBottom).abs() < 0.5 &&
+        (_layoutHorizontalPadding - normalizedHorizontalPadding).abs() < 0.5 &&
+        (_boardMaxPixels - normalizedBoardMax).abs() < 0.5 &&
+        (_boardMinPixels - normalizedBoardMin).abs() < 0.5 &&
+        !rackCellChanged &&
+        !dragConfigChanged &&
+        (_boardToRackGap - normalizedBoardToRackGap).abs() < 0.5) {
+      return;
+    }
+
+    _layoutTopInset = normalizedTop;
+    _layoutBottomInset = normalizedBottom;
+    _layoutHorizontalPadding = normalizedHorizontalPadding;
+    _boardMaxPixels = normalizedBoardMax;
+    _boardMinPixels = normalizedBoardMin;
+    _rackCellSize = normalizedRackCell;
+    _boardToRackGap = normalizedBoardToRackGap;
+    _rackMinTouchTargetSize = normalizedRackMinTouchTargetSize;
+    _dragActivationDistance = normalizedDragActivationDistance;
+    if (!hasLayout) {
+      if ((rackCellChanged || dragConfigChanged) &&
+          _rackComponents.isNotEmpty) {
+        _pendingRackRebuild = true;
+      }
+      return;
+    }
+    _recalculateLayout();
+    if ((rackCellChanged || dragConfigChanged) && _rackComponents.isNotEmpty) {
+      _rebuildRackPieces(controller.state.rackPieces);
+      return;
+    }
+    _positionRackPieces();
+  }
+
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     _recalculateLayout();
+    if (_pendingRackRebuild && _rackComponents.isNotEmpty) {
+      _pendingRackRebuild = false;
+      _rebuildRackPieces(
+        _rackComponents
+            .map((RackPieceComponent component) => component.piece)
+            .toList(),
+      );
+      return;
+    }
     _positionRackPieces();
   }
 
@@ -198,38 +293,83 @@ class BlockPuzzleGame extends FlameGame {
 
   void _syncWithState() {
     final state = controller.state;
-    _recalculateLayout();
+    _visualPreset = _blockVisualPresetFromString(controller.blocksVisualPreset);
+    _boardComponent.setVisualPreset(_visualPreset);
     _setPaletteFromState(state.colorThemeIndex);
     _boardComponent.setBoardState(state.boardState);
+    final HintSuggestion? hintSuggestion = state.hintSuggestion;
+    if (hintSuggestion == null) {
+      _boardComponent.clearHint();
+    } else {
+      _boardComponent.setHint(
+        piece: hintSuggestion.piece,
+        anchorX: hintSuggestion.anchorX,
+        anchorY: hintSuggestion.anchorY,
+      );
+    }
     _rebuildRackPieces(state.rackPieces);
+    _recalculateLayout();
+    _positionRackPieces();
   }
 
   void _recalculateLayout() {
+    if (!hasLayout) {
+      return;
+    }
+    if (size.x <= 0 || size.y <= 0) {
+      return;
+    }
+
     final double availableWidth = math.max(
       120,
       size.x - (_layoutHorizontalPadding * 2),
     );
-    final double availableHeight = math.max(
-      120,
-      size.y - _boardTopOffset - _boardBottomReserved,
+    final double contentTop = _layoutTopInset;
+    final double contentBottom = math.max(
+      contentTop + 240,
+      size.y - _layoutBottomInset,
+    );
+    final double contentHeight = math.max(
+      240,
+      contentBottom - contentTop,
+    );
+    _rackReservedHeight = _estimateRackReservedHeight();
+    final double maxBoardByHeight = math.max(
+      170,
+      contentHeight - _boardToRackGap - _rackReservedHeight,
     );
 
-    double boardPixels = math.min(availableWidth, availableHeight);
+    double boardPixels = math.min(availableWidth, maxBoardByHeight);
     boardPixels = math.min(boardPixels, _boardMaxPixels);
-    boardPixels = math.max(boardPixels, 220);
+    boardPixels = math.max(boardPixels, _boardMinPixels);
     if (boardPixels > availableWidth) {
       boardPixels = availableWidth;
     }
-    if (boardPixels > availableHeight) {
-      boardPixels = availableHeight;
+    if (boardPixels > maxBoardByHeight) {
+      boardPixels = maxBoardByHeight;
+    }
+    if (boardPixels < _boardMinPixels && maxBoardByHeight < _boardMinPixels) {
+      boardPixels = maxBoardByHeight;
     }
 
+    final double usedHeight =
+        boardPixels + _boardToRackGap + _rackReservedHeight;
+    final double freeHeight = math.max(0, contentHeight - usedHeight);
+    final double boardTop = contentTop + (freeHeight * 0.5);
+
     _boardCellSize = boardPixels / 8;
-    _boardOrigin = Vector2((size.x - boardPixels) / 2, _boardTopOffset);
+    _boardOrigin = Vector2((size.x - boardPixels) / 2, boardTop);
+    _rackTop = _boardOrigin.y + boardPixels + _boardToRackGap;
 
     _boardComponent
       ..position = _boardOrigin
       ..size = Vector2.all(boardPixels);
+  }
+
+  double _estimateRackReservedHeight() {
+    // Keep board scale stable independent of current rack piece shapes.
+    final double targetHeight = (_rackCellSize * 3) + 26;
+    return targetHeight.clamp(96, 136).toDouble();
   }
 
   void _rebuildRackPieces(List<Piece> pieces) {
@@ -245,6 +385,10 @@ class BlockPuzzleGame extends FlameGame {
       final RackPieceComponent component = RackPieceComponent(
         piece: pieces[i],
         cellSize: _rackCellSize,
+        minTouchTargetSize: _rackMinTouchTargetSize,
+        dragActivationDistance: _dragActivationDistance,
+        touchDragLiftPixels: _touchDragLiftPixels,
+        visualPreset: _visualPreset,
         homePosition: homePositions[i],
         baseColor: palette.rackColor,
         dragColor: palette.rackDragColor,
@@ -257,6 +401,9 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   void _positionRackPieces() {
+    if (!hasLayout) {
+      return;
+    }
     final List<Piece> pieces =
         _rackComponents.map((RackPieceComponent item) => item.piece).toList();
     final List<Vector2> homePositions = _rackPositionsForPieces(pieces);
@@ -271,8 +418,37 @@ class BlockPuzzleGame extends FlameGame {
     if (pieces.isEmpty) {
       return <Vector2>[];
     }
+    if (!hasLayout) {
+      double cursorX = _layoutHorizontalPadding;
+      final List<Vector2> fallback = <Vector2>[];
+      for (final Piece piece in pieces) {
+        final Vector2 pieceSize = RackPieceComponent.visualSize(
+          piece: piece,
+          cellSize: _rackCellSize,
+        );
+        fallback.add(Vector2(cursorX, _layoutTopInset + 140));
+        cursorX += pieceSize.x + 12;
+      }
+      return fallback;
+    }
 
-    const double spacing = 16;
+    final double sumWidths = pieces
+        .map(
+          (Piece piece) => RackPieceComponent.visualSize(
+            piece: piece,
+            cellSize: _rackCellSize,
+          ).x,
+        )
+        .fold<double>(0, (double sum, double value) => sum + value);
+
+    double spacing = 16;
+    final double maxRackWidth = size.x - (_layoutHorizontalPadding * 2);
+    if (pieces.length > 1) {
+      final double maxSpacing =
+          (maxRackWidth - sumWidths) / (pieces.length - 1).toDouble();
+      spacing = maxSpacing.clamp(8, 16);
+    }
+
     final List<Vector2> pieceSizes = pieces
         .map(
           (Piece piece) => RackPieceComponent.visualSize(
@@ -287,12 +463,12 @@ class BlockPuzzleGame extends FlameGame {
       return current > prev ? current : prev;
     });
 
-    final double totalWidth = pieceSizes
-            .map((Vector2 value) => value.x)
-            .fold<double>(0, (double sum, double value) => sum + value) +
-        (spacing * (pieceSizes.length - 1));
-    final double startX = (size.x - totalWidth) / 2;
-    final double rackTop = _boardOrigin.y + (_boardCellSize * 8) + 28;
+    final double totalWidth = sumWidths + (spacing * (pieceSizes.length - 1));
+    final double centeredStartX = (size.x - totalWidth) / 2;
+    final double startX = math.max(_layoutHorizontalPadding, centeredStartX);
+    final double rackTopPadding =
+        ((_rackReservedHeight - maxHeight) / 2).clamp(0, 24).toDouble();
+    final double rackTop = _rackTop + rackTopPadding;
 
     double cursorX = startX;
     final List<Vector2> result = <Vector2>[];
@@ -354,11 +530,13 @@ class BlockPuzzleGame extends FlameGame {
       boardBackgroundColor: palette.boardBackground,
       occupiedColor: palette.occupiedColor,
     );
+    _boardComponent.setVisualPreset(_visualPreset);
     for (final RackPieceComponent component in _rackComponents) {
       component.updatePalette(
         baseColor: palette.rackColor,
         dragColor: palette.rackDragColor,
       );
+      component.updateVisualPreset(_visualPreset);
     }
   }
 
@@ -403,11 +581,164 @@ class BlockPuzzleGame extends FlameGame {
   }
 }
 
+enum BlockVisualPreset {
+  soft,
+  crystal,
+}
+
+BlockVisualPreset _blockVisualPresetFromString(String rawValue) {
+  switch (rawValue.trim().toLowerCase()) {
+    case 'crystal':
+      return BlockVisualPreset.crystal;
+    case 'soft':
+    default:
+      return BlockVisualPreset.soft;
+  }
+}
+
+Color _mixColor(
+  Color from,
+  Color to,
+  double t,
+) {
+  return Color.lerp(from, to, t) ?? to;
+}
+
+Color _adjustLightness(
+  Color color,
+  double delta,
+) {
+  final HSLColor hsl = HSLColor.fromColor(color);
+  return hsl
+      .withLightness((hsl.lightness + delta).clamp(0, 1).toDouble())
+      .toColor();
+}
+
+void _drawGlassBlockCell(
+  Canvas canvas, {
+  required Rect rect,
+  required Color tint,
+  required BlockVisualPreset preset,
+  double opacity = 1,
+  bool intenseGlow = false,
+}) {
+  final double radius = (rect.width * 0.16).clamp(4, 8).toDouble();
+  final RRect rr = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+  final bool isCrystal = preset == BlockVisualPreset.crystal;
+
+  final Color topTint = _adjustLightness(tint, isCrystal ? 0.28 : 0.24)
+      .withOpacity((isCrystal ? 0.54 : 0.66) * opacity);
+  final Color bottomTint = _mixColor(
+    _adjustLightness(tint, isCrystal ? -0.08 : -0.1),
+    const Color(0xFF0D1731),
+    isCrystal ? 0.48 : 0.42,
+  ).withOpacity((isCrystal ? 0.44 : 0.58) * opacity);
+  final Color outlineTint = _mixColor(tint, const Color(0xFFF2FAFF), 0.56)
+      .withOpacity(0.95 * opacity);
+  final Color prismTop = _mixColor(tint, const Color(0xFF9FE7FF), 0.62);
+  final Color prismBottom = _mixColor(tint, const Color(0xFFCBA2FF), 0.56);
+
+  final Paint glowPaint = Paint()
+    ..color = tint.withOpacity(
+      (intenseGlow ? (isCrystal ? 0.6 : 0.5) : (isCrystal ? 0.44 : 0.34)) *
+          opacity,
+    )
+    ..maskFilter = MaskFilter.blur(
+      BlurStyle.normal,
+      isCrystal ? 7.4 : 6.2,
+    );
+  canvas.drawRRect(rr.inflate(0.7), glowPaint);
+
+  final Paint bodyPaint = Paint()
+    ..shader = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        topTint,
+        bottomTint,
+      ],
+    ).createShader(rect);
+  canvas.drawRRect(rr, bodyPaint);
+
+  final Paint prismPaint = Paint()
+    ..shader = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        prismTop.withOpacity((isCrystal ? 0.26 : 0.2) * opacity),
+        Colors.white.withOpacity((isCrystal ? 0.14 : 0.08) * opacity),
+        prismBottom.withOpacity((isCrystal ? 0.28 : 0.22) * opacity),
+      ],
+      stops: const <double>[0, 0.45, 1],
+    ).createShader(rect);
+  canvas.drawRRect(rr, prismPaint);
+
+  final Paint coreGlowPaint = Paint()
+    ..shader = RadialGradient(
+      center: const Alignment(0, 0),
+      radius: 0.72,
+      colors: <Color>[
+        Colors.white.withOpacity(
+          (intenseGlow
+                  ? (isCrystal ? 0.62 : 0.46)
+                  : (isCrystal ? 0.48 : 0.34)) *
+              opacity,
+        ),
+        tint.withOpacity(
+          (intenseGlow
+                  ? (isCrystal ? 0.48 : 0.36)
+                  : (isCrystal ? 0.36 : 0.26)) *
+              opacity,
+        ),
+        Colors.transparent,
+      ],
+      stops: const <double>[0, 0.35, 1],
+    ).createShader(rect);
+  canvas.drawRRect(rr, coreGlowPaint);
+
+  final Paint sheenPaint = Paint()
+    ..shader = RadialGradient(
+      center: const Alignment(-0.25, -0.35),
+      radius: 1.1,
+      colors: <Color>[
+        Colors.white.withOpacity((isCrystal ? 0.56 : 0.44) * opacity),
+        Colors.white.withOpacity((isCrystal ? 0.18 : 0.12) * opacity),
+        Colors.transparent,
+      ],
+      stops: const <double>[0, 0.56, 1],
+    ).createShader(rect);
+  canvas.drawRRect(rr, sheenPaint);
+
+  final Paint edgePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.35
+    ..color = outlineTint;
+  canvas.drawRRect(rr, edgePaint);
+
+  final Paint innerEdgePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.9
+    ..color = Colors.white.withOpacity(0.22 * opacity);
+  canvas.drawRRect(rr.deflate(0.9), innerEdgePaint);
+
+  final Paint cornerSparkPaint = Paint()
+    ..color = Colors.white.withOpacity((isCrystal ? 0.58 : 0.46) * opacity)
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.6);
+  final double spark = rect.width * 0.07;
+  canvas.drawCircle(
+    Offset(rect.left + (rect.width * 0.18), rect.top + (rect.height * 0.2)),
+    spark,
+    cornerSparkPaint,
+  );
+}
+
 class BoardComponent extends PositionComponent {
   BoardState _boardState = BoardState.empty(size: 8);
   _PreviewState? _previewState;
-  Color _boardBackgroundColor = const Color(0xFFEAF0F5);
-  Color _occupiedColor = const Color(0xFF0A4D68);
+  _HintState? _hintState;
+  Color _boardBackgroundColor = const Color(0xFF0C1B36);
+  Color _occupiedColor = const Color(0xFF55CEFF);
+  BlockVisualPreset _visualPreset = BlockVisualPreset.soft;
 
   void setBoardState(BoardState boardState) {
     _boardState = boardState;
@@ -431,6 +762,22 @@ class BoardComponent extends PositionComponent {
     _previewState = null;
   }
 
+  void setHint({
+    required Piece piece,
+    required int anchorX,
+    required int anchorY,
+  }) {
+    _hintState = _HintState(
+      piece: piece,
+      anchorX: anchorX,
+      anchorY: anchorY,
+    );
+  }
+
+  void clearHint() {
+    _hintState = null;
+  }
+
   void setPalette({
     required Color boardBackgroundColor,
     required Color occupiedColor,
@@ -439,39 +786,84 @@ class BoardComponent extends PositionComponent {
     _occupiedColor = occupiedColor;
   }
 
+  void setVisualPreset(BlockVisualPreset preset) {
+    _visualPreset = preset;
+  }
+
   @override
   void render(Canvas canvas) {
     super.render(canvas);
 
     final double cellSize = size.x / _boardState.size;
-    final Paint boardBackground = Paint()..color = _boardBackgroundColor;
-    final Paint gridPaint = Paint()
-      ..color = const Color(0xFFC7D4E0)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final Paint occupiedPaint = Paint()..color = _occupiedColor;
-    final Paint previewValidPaint = Paint()..color = const Color(0x8021A179);
-    final Paint previewInvalidPaint = Paint()..color = const Color(0x80D64545);
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.x, size.y),
-        const Radius.circular(14),
-      ),
-      boardBackground,
+    final Rect boardRect = Rect.fromLTWH(0, 0, size.x, size.y);
+    final RRect boardRRect = RRect.fromRectAndRadius(
+      boardRect,
+      const Radius.circular(14),
     );
+    final Color boardTop =
+        _mixColor(_boardBackgroundColor, const Color(0xFF304F84), 0.26);
+    final Color boardBottom =
+        _mixColor(_boardBackgroundColor, const Color(0xFF061025), 0.4);
 
-    for (int y = 0; y < _boardState.size; y++) {
-      for (int x = 0; x < _boardState.size; x++) {
-        final Rect cellRect = Rect.fromLTWH(
-          x * cellSize,
-          y * cellSize,
-          cellSize,
-          cellSize,
-        );
-        canvas.drawRect(cellRect, gridPaint);
-      }
+    final Paint boardBackground = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: <Color>[boardTop, boardBottom],
+      ).createShader(boardRect);
+    final Paint boardGlow = Paint()
+      ..shader = const RadialGradient(
+        center: Alignment(0, -0.25),
+        radius: 1.05,
+        colors: <Color>[
+          Color(0x2E58B7FF),
+          Colors.transparent,
+        ],
+      ).createShader(boardRect);
+    final Paint boardPrismGlow = Paint()
+      ..shader = const RadialGradient(
+        center: Alignment(0.36, 0.28),
+        radius: 1.1,
+        colors: <Color>[
+          Color(0x1FA574FF),
+          Colors.transparent,
+        ],
+      ).createShader(boardRect);
+    final Paint borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = const Color(0x668DC3FF);
+    final Paint minorGridPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = const Color(0x296FB4E6);
+    final Paint majorGridPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.15
+      ..color = const Color(0x3B8ECAFF);
+
+    canvas.drawRRect(boardRRect, boardBackground);
+    canvas.drawRRect(boardRRect, boardGlow);
+    canvas.drawRRect(boardRRect, boardPrismGlow);
+
+    canvas.save();
+    canvas.clipRRect(boardRRect);
+    for (int i = 0; i <= _boardState.size; i++) {
+      final double lineOffset = i * cellSize;
+      final Paint paint = (i % 2 == 0) ? majorGridPaint : minorGridPaint;
+      canvas.drawLine(
+        Offset(lineOffset, 0),
+        Offset(lineOffset, size.y),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(0, lineOffset),
+        Offset(size.x, lineOffset),
+        paint,
+      );
     }
+    canvas.restore();
+    canvas.drawRRect(boardRRect, borderPaint);
 
     for (final BoardCell cell in _boardState.occupiedCells) {
       final Rect occupiedRect = Rect.fromLTWH(
@@ -480,16 +872,44 @@ class BoardComponent extends PositionComponent {
         cellSize - 4,
         cellSize - 4,
       );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(occupiedRect, const Radius.circular(6)),
-        occupiedPaint,
+      _drawGlassBlockCell(
+        canvas,
+        rect: occupiedRect,
+        tint: _occupiedColor,
+        preset: _visualPreset,
+        opacity: 1,
+        intenseGlow: true,
       );
+    }
+
+    final _HintState? hint = _hintState;
+    if (hint != null) {
+      for (final PieceCellOffset offset in hint.piece.cells) {
+        final int x = hint.anchorX + offset.dx;
+        final int y = hint.anchorY + offset.dy;
+        if (x < 0 || y < 0 || x >= _boardState.size || y >= _boardState.size) {
+          continue;
+        }
+        final Rect hintRect = Rect.fromLTWH(
+          x * cellSize + 4,
+          y * cellSize + 4,
+          cellSize - 8,
+          cellSize - 8,
+        );
+        _drawGlassBlockCell(
+          canvas,
+          rect: hintRect,
+          tint: const Color(0xFF7EC8FF),
+          preset: _visualPreset,
+          opacity: 0.42,
+        );
+      }
     }
 
     final _PreviewState? preview = _previewState;
     if (preview != null) {
-      final Paint previewPaint =
-          preview.valid ? previewValidPaint : previewInvalidPaint;
+      final Color previewTint =
+          preview.valid ? const Color(0xFF7EC8FF) : const Color(0xFFFF6B7E);
       for (final PieceCellOffset offset in preview.piece.cells) {
         final int x = preview.anchorX + offset.dx;
         final int y = preview.anchorY + offset.dy;
@@ -503,9 +923,13 @@ class BoardComponent extends PositionComponent {
           cellSize - 6,
           cellSize - 6,
         );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(previewRect, const Radius.circular(6)),
-          previewPaint,
+        _drawGlassBlockCell(
+          canvas,
+          rect: previewRect,
+          tint: previewTint,
+          preset: _visualPreset,
+          opacity: preview.valid ? 0.58 : 0.54,
+          intenseGlow: preview.valid,
         );
       }
     }
@@ -516,6 +940,10 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   RackPieceComponent({
     required this.piece,
     required this.cellSize,
+    required this.minTouchTargetSize,
+    required this.dragActivationDistance,
+    required this.touchDragLiftPixels,
+    required BlockVisualPreset visualPreset,
     required Vector2 homePosition,
     required Color baseColor,
     required Color dragColor,
@@ -523,7 +951,8 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     required this.onDropped,
   })  : _homePosition = homePosition.clone(),
         _baseColor = baseColor,
-        _dragColor = dragColor {
+        _dragColor = dragColor,
+        _visualPreset = visualPreset {
     size = visualSize(
       piece: piece,
       cellSize: cellSize,
@@ -533,12 +962,21 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
 
   final Piece piece;
   final double cellSize;
+  final double minTouchTargetSize;
+  final double dragActivationDistance;
+  final double touchDragLiftPixels;
   final void Function(RackPieceComponent component) onDragMoved;
   final Future<void> Function(RackPieceComponent component) onDropped;
   Vector2 _homePosition;
   Color _baseColor;
   Color _dragColor;
+  BlockVisualPreset _visualPreset;
   bool _dragging = false;
+  bool _dragPending = false;
+  final Vector2 _pendingDelta = Vector2.zero();
+  double _pendingDistance = 0;
+  double _dragLiftPixels = 0;
+  double _dragVisualProgress = 0;
 
   static Vector2 visualSize({
     required Piece piece,
@@ -567,8 +1005,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
 
   void resetToHome() {
     position = _homePosition.clone();
-    _dragging = false;
-    priority = 0;
+    _clearDragState();
   }
 
   void updatePalette({
@@ -579,34 +1016,107 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     _dragColor = dragColor;
   }
 
+  void updateVisualPreset(BlockVisualPreset preset) {
+    _visualPreset = preset;
+  }
+
+  @override
+  bool containsLocalPoint(Vector2 point) {
+    final double targetWidth = math.max(size.x, minTouchTargetSize);
+    final double targetHeight = math.max(size.y, minTouchTargetSize);
+    final double left = (size.x - targetWidth) / 2;
+    final double top = (size.y - targetHeight) / 2;
+    final Rect hitRect = Rect.fromLTWH(left, top, targetWidth, targetHeight);
+    return hitRect.contains(Offset(point.x, point.y));
+  }
+
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final Paint paint = Paint()..color = _dragging ? _dragColor : _baseColor;
+    final Color tint = _dragging ? _dragColor : _baseColor;
+    final double scale = lerpDouble(1, 1.035, _dragVisualProgress) ?? 1;
+    if ((scale - 1).abs() > 0.0001) {
+      canvas.save();
+      final double cx = size.x * 0.5;
+      final double cy = size.y * 0.5;
+      canvas.translate(cx, cy);
+      canvas.scale(scale, scale);
+      canvas.translate(-cx, -cy);
+    }
 
     for (final PieceCellOffset cell in piece.cells) {
       final Rect rect = Rect.fromLTWH(
-        (cell.dx * cellSize) + 1,
-        (cell.dy * cellSize) + 1,
-        cellSize - 2,
-        cellSize - 2,
+        (cell.dx * cellSize) + 2,
+        (cell.dy * cellSize) + 2,
+        cellSize - 4,
+        cellSize - 4,
       );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(5)),
-        paint,
+      _drawGlassBlockCell(
+        canvas,
+        rect: rect,
+        tint: tint,
+        preset: _visualPreset,
+        opacity: 1,
+        intenseGlow: true,
       );
+    }
+    if ((scale - 1).abs() > 0.0001) {
+      canvas.restore();
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    final double targetVisual = _dragging ? 1 : 0;
+    if ((_dragVisualProgress - targetVisual).abs() > 0.001) {
+      final double step = dt * 10;
+      _dragVisualProgress = _dragVisualProgress < targetVisual
+          ? (_dragVisualProgress + step).clamp(0, targetVisual).toDouble()
+          : (_dragVisualProgress - step).clamp(targetVisual, 1).toDouble();
     }
   }
 
   @override
   void onDragStart(DragStartEvent event) {
-    _dragging = true;
-    priority = 100;
+    _dragPending = true;
+    _pendingDistance = 0;
+    _pendingDelta.setZero();
+    _dragLiftPixels = 0;
+    final PointerDeviceKind kind = event.deviceKind;
+    final bool isTouchLike = kind != PointerDeviceKind.mouse;
+    if (isTouchLike) {
+      _dragLiftPixels = touchDragLiftPixels;
+      // Keep the dragged piece above finger from the very first touch frame.
+      position.y -= _dragLiftPixels;
+    }
+    onDragMoved(this);
     super.onDragStart(event);
   }
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
+    if (!_dragging && _dragPending) {
+      _pendingDelta.add(event.localDelta);
+      _pendingDistance += event.localDelta.length;
+      if (_pendingDistance < dragActivationDistance) {
+        super.onDragUpdate(event);
+        return;
+      }
+      _dragging = true;
+      _dragPending = false;
+      priority = 100;
+      position += _pendingDelta;
+      _pendingDelta.setZero();
+      onDragMoved(this);
+      super.onDragUpdate(event);
+      return;
+    }
+    if (!_dragging) {
+      super.onDragUpdate(event);
+      return;
+    }
     position += event.localDelta;
     onDragMoved(this);
     super.onDragUpdate(event);
@@ -614,8 +1124,13 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
 
   @override
   void onDragEnd(DragEndEvent event) {
-    _dragging = false;
-    priority = 0;
+    if (!_dragging) {
+      resetToHome();
+      onDragMoved(this);
+      super.onDragEnd(event);
+      return;
+    }
+    _clearDragState();
     unawaited(onDropped(this));
     super.onDragEnd(event);
   }
@@ -623,7 +1138,17 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   @override
   void onDragCancel(DragCancelEvent event) {
     resetToHome();
+    onDragMoved(this);
     super.onDragCancel(event);
+  }
+
+  void _clearDragState() {
+    _dragging = false;
+    _dragPending = false;
+    _pendingDistance = 0;
+    _pendingDelta.setZero();
+    _dragLiftPixels = 0;
+    priority = 0;
   }
 }
 
@@ -646,6 +1171,18 @@ class _PreviewState {
   final int anchorX;
   final int anchorY;
   final bool valid;
+}
+
+class _HintState {
+  const _HintState({
+    required this.piece,
+    required this.anchorX,
+    required this.anchorY,
+  });
+
+  final Piece piece;
+  final int anchorX;
+  final int anchorY;
 }
 
 class _BoardPalette {

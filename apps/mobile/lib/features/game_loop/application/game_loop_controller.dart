@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/observability/guardrail_alert_evaluator.dart';
+import '../../../core/observability/session_observability_tracker.dart';
 import '../../../data/analytics/analytics_tracker.dart';
 import '../../../data/remote_config/remote_config_repository.dart';
 import '../../../domain/generator/difficulty_tuner.dart';
@@ -20,6 +22,7 @@ import '../../monetization/ad_guardrail_policy.dart';
 import '../../monetization/ad_placement.dart';
 import '../../monetization/ad_service.dart';
 import '../../monetization/ad_show_result.dart';
+import '../../monetization/iap_store_service.dart';
 import 'game_loop_view_state.dart';
 import 'use_cases/clear_lines_use_case.dart';
 import 'use_cases/compute_score_use_case.dart';
@@ -95,6 +98,53 @@ class RewardedReviveResult {
   }
 }
 
+class RewardedHintResult {
+  const RewardedHintResult({
+    required this.isSuccess,
+    this.hintSuggestion,
+    this.failureReason,
+  });
+
+  final bool isSuccess;
+  final HintSuggestion? hintSuggestion;
+  final String? failureReason;
+
+  factory RewardedHintResult.success(HintSuggestion hintSuggestion) {
+    return RewardedHintResult(
+      isSuccess: true,
+      hintSuggestion: hintSuggestion,
+    );
+  }
+
+  factory RewardedHintResult.failure(String reason) {
+    return RewardedHintResult(
+      isSuccess: false,
+      failureReason: reason,
+    );
+  }
+}
+
+class RewardedUndoResult {
+  const RewardedUndoResult({
+    required this.isSuccess,
+    this.failureReason,
+  });
+
+  final bool isSuccess;
+  final String? failureReason;
+
+  factory RewardedUndoResult.success() {
+    return const RewardedUndoResult(isSuccess: true);
+  }
+
+  factory RewardedUndoResult.failure(String reason) {
+    return RewardedUndoResult(
+      isSuccess: false,
+      failureReason: reason,
+    );
+  }
+}
+
 class GameLoopController {
   static const String _tutorialStepWelcome = 'welcome_drag_piece';
   static const String _tutorialStepClearLine = 'goal_clear_line';
@@ -106,6 +156,9 @@ class GameLoopController {
   static const String _dailyGoalMoves = 'daily_moves';
   static const String _dailyGoalLines = 'daily_lines_cleared';
   static const String _dailyGoalScore = 'daily_score';
+  static const String _hintCostSourceEarned = 'earned_credits';
+  static const String _hintCostSourceIap = 'iap_unlimited';
+  static const String _defaultShareHashtag = '#BlockPuzzle';
 
   GameLoopController({
     required this.placePieceUseCase,
@@ -117,10 +170,17 @@ class GameLoopController {
     required this.analyticsTracker,
     required this.adService,
     required this.adGuardrailPolicy,
+    required this.iapStoreService,
     required this.playerProgressRepository,
     required this.logger,
+    GuardrailAlertEvaluator? guardrailAlertEvaluator,
+    SessionObservabilityTracker? observabilityTracker,
     DateTime Function()? nowUtcProvider,
-  }) : _nowUtc = nowUtcProvider ?? (() => DateTime.now().toUtc());
+  })  : _guardrailAlertEvaluator =
+            guardrailAlertEvaluator ?? const GuardrailAlertEvaluator(),
+        _observabilityTracker =
+            observabilityTracker ?? SessionObservabilityTracker(),
+        _nowUtc = nowUtcProvider ?? (() => DateTime.now().toUtc());
 
   final PlacePieceUseCase placePieceUseCase;
   final ClearLinesUseCase clearLinesUseCase;
@@ -131,8 +191,11 @@ class GameLoopController {
   final AnalyticsTracker analyticsTracker;
   final AdService adService;
   final AdGuardrailPolicy adGuardrailPolicy;
+  final IapStoreService iapStoreService;
   final PlayerProgressRepository playerProgressRepository;
   final AppLogger logger;
+  final GuardrailAlertEvaluator _guardrailAlertEvaluator;
+  final SessionObservabilityTracker _observabilityTracker;
   final DateTime Function() _nowUtc;
 
   final ValueNotifier<GameLoopViewState> _stateNotifier =
@@ -149,6 +212,12 @@ class GameLoopController {
   int _dailyGoalMovesTarget = 18;
   int _dailyGoalLinesTarget = 6;
   int _dailyGoalScoreTarget = 350;
+  int _dailyGoalRewardCredits = 1;
+  int _rewardedToolsHintCost = 1;
+  int _rewardedToolsUndoCost = 1;
+  int _undoHistoryLimit = 1;
+  bool _rewardedToolsIapEnabled = true;
+  String _rewardedToolsUnlimitedSku = 'utility_tools_pass';
   bool _bannerRequestedInSession = false;
   bool _rewardedReviveUsedInCurrentGame = false;
   int _currentGameNumber = 0;
@@ -157,13 +226,20 @@ class GameLoopController {
   DateTime? _gameStartedAt;
   String? _sessionId;
   String _abBucket = 'control';
+  String _uxVariant = 'hud_standard_v1';
+  String _difficultyVariant = 'balanced_v1';
+  bool _shareFlowEnabled = true;
+  String _shareHashtag = _defaultShareHashtag;
   Map<String, String> _abExperimentVariants = <String, String>{};
+  Set<String> _ownedIapProductIds = <String>{};
+  final List<_UndoSnapshot> _undoHistory = <_UndoSnapshot>[];
   PlayerProgressState _playerProgressState = PlayerProgressState.initialForDay(
     DateTime.utc(1970, 1, 1),
   );
 
   ValueListenable<GameLoopViewState> get stateListenable => _stateNotifier;
   GameLoopViewState get state => _stateNotifier.value;
+  String get blocksVisualPreset => _resolveBlocksVisualPreset();
 
   Future<void> initialize() async {
     if (_initialized) {
@@ -191,17 +267,63 @@ class GameLoopController {
       'progression.daily_goal_score_target',
       fallback: 350,
     ).clamp(20, 50000);
+    _dailyGoalRewardCredits = _readIntConfig(
+      'progression.daily_goal_reward_credits',
+      fallback: 1,
+    ).clamp(0, 50);
+    _rewardedToolsHintCost = _readIntConfig(
+      'progression.rewarded_tools_hint_cost',
+      fallback: 1,
+    ).clamp(1, 20);
+    _rewardedToolsUndoCost = _readIntConfig(
+      'progression.rewarded_tools_undo_cost',
+      fallback: 1,
+    ).clamp(1, 20);
+    _undoHistoryLimit = _readIntConfig(
+      'progression.undo_history_limit',
+      fallback: 1,
+    ).clamp(1, 5);
+    _rewardedToolsIapEnabled = _readBoolConfig(
+      'iap.rewarded_tools_unlimited_enabled',
+      fallback: true,
+    );
+    _rewardedToolsUnlimitedSku = _readStringConfig(
+      'iap.rewarded_tools_unlimited_sku',
+      fallback: 'utility_tools_pass',
+    );
     _abBucket = _readStringConfig(
       'ab.bucket',
       fallback: 'control',
     );
+    _uxVariant = _readStringConfig(
+      'ab.ux_variant',
+      fallback: 'hud_standard_v1',
+    );
+    _difficultyVariant = _readStringConfig(
+      'ab.difficulty_variant',
+      fallback: 'balanced_v1',
+    );
+    _shareFlowEnabled = _readBoolConfig(
+      'social.share_enabled',
+      fallback: true,
+    );
+    _shareHashtag = _normalizeShareHashtag(
+      _readStringConfig(
+        'social.share_score_hashtag',
+        fallback: _defaultShareHashtag,
+      ),
+    );
     _abExperimentVariants = _collectAbExperimentVariants();
     await _loadAndSyncProgressForCurrentDay();
+    await _refreshOwnedIapProducts();
     await adService.preload();
 
     _initialized = true;
     _sessionStartedAt = _nowUtc();
     _sessionId = 'session_${_sessionStartedAt!.millisecondsSinceEpoch}';
+    _observabilityTracker.startSession(
+      sessionId: _sessionId!,
+    );
 
     logger.info('Game loop initialized with config: $_remoteConfig');
     await analyticsTracker.track(
@@ -211,6 +333,8 @@ class GameLoopController {
         'app_version': 'dev-local',
         'platform': defaultTargetPlatform.name,
         'ab_bucket': _abBucket,
+        'ux_variant': _uxVariant,
+        'difficulty_variant': _difficultyVariant,
       },
     );
     await _trackAbExperimentExposures();
@@ -221,10 +345,13 @@ class GameLoopController {
 
   Future<void> startNewGame() async {
     await _syncProgressForCurrentDay();
+    await _refreshOwnedIapProducts();
 
     _currentGameNumber += 1;
+    _observabilityTracker.onRoundStarted();
     _gameStartedAt = _nowUtc();
     _rewardedReviveUsedInCurrentGame = false;
+    _undoHistory.clear();
     final int nextGamesPlayed = state.gamesPlayed + 1;
     final bool shouldShowOnboarding =
         _onboardingEnabled && !_onboardingCompleted && nextGamesPlayed == 1;
@@ -250,8 +377,17 @@ class GameLoopController {
       rackPieces: rack,
       level: level,
       colorThemeIndex: colorThemeIndex,
+      uxVariant: _uxVariant,
+      isShareFlowEnabled: _shareFlowEnabled,
       isGameOver: false,
       canUseRewardedRevive: false,
+      canUseRewardedHint: _canUseRewardedHintForState(
+        isGameOver: false,
+        rackPieces: rack,
+      ),
+      canUseRewardedUndo: _canUseRewardedUndoForState(),
+      rewardedToolsCredits: _playerProgressState.rewardedToolsCredits,
+      hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
       isBannerVisible: adGuardrailPolicy.isBannerEnabled(_remoteConfig),
       isOnboardingVisible: shouldShowOnboarding,
       dailyGoals: _buildDailyGoalsSnapshot(),
@@ -261,6 +397,7 @@ class GameLoopController {
       onboardingDescription: shouldShowOnboarding
           ? 'Drag any piece from the rack onto the board to start your run.'
           : null,
+      resetHintSuggestion: true,
       gamesPlayed: nextGamesPlayed,
       movesPlayed: 0,
       resetOnboarding: !shouldShowOnboarding,
@@ -297,6 +434,8 @@ class GameLoopController {
         'board_size': state.boardState.size,
         'rack_size': rack.length,
         'level': level,
+        'ux_variant': _uxVariant,
+        'difficulty_variant': _difficultyVariant,
       },
     );
   }
@@ -322,9 +461,12 @@ class GameLoopController {
       return MoveProcessingResult.failure('game_over');
     }
 
+    _observabilityTracker.onMoveAttempt();
+
     final bool pieceExistsInRack =
         state.rackPieces.any((Piece piece) => piece.id == move.piece.id);
     if (!pieceExistsInRack) {
+      _observabilityTracker.onMoveRejected();
       return MoveProcessingResult.failure('piece_not_in_rack');
     }
 
@@ -334,6 +476,7 @@ class GameLoopController {
     );
 
     if (!placeResult.isSuccess) {
+      _observabilityTracker.onMoveRejected();
       await analyticsTracker.track(
         'move_rejected',
         params: <String, Object?>{
@@ -347,6 +490,8 @@ class GameLoopController {
         placeResult.failureReason ?? 'invalid_move',
       );
     }
+
+    _pushUndoSnapshot();
 
     final lineResult = clearLinesUseCase.execute(
       boardState: placeResult.boardState,
@@ -407,11 +552,19 @@ class GameLoopController {
       colorThemeIndex: nextColorThemeIndex,
       isGameOver: isGameOver,
       canUseRewardedRevive: isGameOver ? _isRewardedReviveAvailable() : false,
+      canUseRewardedHint: _canUseRewardedHintForState(
+        isGameOver: isGameOver,
+        rackPieces: nextRack,
+      ),
+      canUseRewardedUndo: _canUseRewardedUndoForState(),
+      rewardedToolsCredits: _playerProgressState.rewardedToolsCredits,
+      hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
       dailyGoals: dailyGoalsAfter,
       streak: _buildStreakSnapshot(),
       bestScore: nextBestScore,
       movesPlayed: nextMovesPlayed,
       gameOverReason: isGameOver ? 'no_valid_moves' : null,
+      resetHintSuggestion: true,
       resetGameOverReason: !isGameOver,
     );
 
@@ -533,7 +686,15 @@ class GameLoopController {
       rackPieces: reviveSnapshot.rackPieces,
       isGameOver: false,
       canUseRewardedRevive: false,
+      canUseRewardedHint: _canUseRewardedHintForState(
+        isGameOver: false,
+        rackPieces: reviveSnapshot.rackPieces,
+      ),
+      canUseRewardedUndo: _canUseRewardedUndoForState(),
+      rewardedToolsCredits: _playerProgressState.rewardedToolsCredits,
+      hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
       gameOverReason: null,
+      resetHintSuggestion: true,
       resetGameOverReason: true,
     );
 
@@ -548,6 +709,167 @@ class GameLoopController {
     );
 
     return RewardedReviveResult.success();
+  }
+
+  Future<RewardedHintResult> useRewardedHint() async {
+    await _refreshOwnedIapProducts();
+    if (state.isGameOver) {
+      return RewardedHintResult.failure('round_over');
+    }
+    if (!_hasRewardedToolsForCost(_rewardedToolsHintCost)) {
+      return RewardedHintResult.failure('insufficient_tools_credits');
+    }
+
+    final HintSuggestion? suggestion = _findHintSuggestion(
+      boardState: state.boardState,
+      rackPieces: state.rackPieces,
+    );
+    if (suggestion == null) {
+      return RewardedHintResult.failure('no_valid_move');
+    }
+
+    final String source = await _consumeRewardedToolsCreditsIfNeeded(
+      cost: _rewardedToolsHintCost,
+    );
+
+    _stateNotifier.value = state.copyWith(
+      hintSuggestion: suggestion,
+      canUseRewardedHint: _canUseRewardedHintForState(
+        isGameOver: state.isGameOver,
+        rackPieces: state.rackPieces,
+      ),
+      canUseRewardedUndo: _canUseRewardedUndoForState(),
+      rewardedToolsCredits: _playerProgressState.rewardedToolsCredits,
+      hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
+    );
+
+    await analyticsTracker.track(
+      'rewarded_hint_used',
+      params: <String, Object?>{
+        'round_id': _currentGameNumber,
+        'cost': _rewardedToolsHintCost,
+        'source': source,
+        'credits_after': _playerProgressState.rewardedToolsCredits,
+        'piece_id': suggestion.piece.id,
+        'anchor_x': suggestion.anchorX,
+        'anchor_y': suggestion.anchorY,
+      },
+    );
+
+    return RewardedHintResult.success(suggestion);
+  }
+
+  Future<RewardedUndoResult> useRewardedUndo() async {
+    await _refreshOwnedIapProducts();
+    if (_undoHistory.isEmpty) {
+      return RewardedUndoResult.failure('undo_not_available');
+    }
+    if (!_hasRewardedToolsForCost(_rewardedToolsUndoCost)) {
+      return RewardedUndoResult.failure('insufficient_tools_credits');
+    }
+
+    final _UndoSnapshot snapshot = _undoHistory.removeLast();
+    final String source = await _consumeRewardedToolsCreditsIfNeeded(
+      cost: _rewardedToolsUndoCost,
+    );
+
+    _sessionState = SessionState(
+      roundsPlayed: state.gamesPlayed,
+      currentScore: snapshot.scoreState.totalScore,
+      movesPlayed: snapshot.movesPlayed,
+    );
+
+    _stateNotifier.value = state.copyWith(
+      boardState: snapshot.boardState,
+      scoreState: snapshot.scoreState,
+      rackPieces: snapshot.rackPieces,
+      level: snapshot.level,
+      colorThemeIndex: snapshot.colorThemeIndex,
+      isGameOver: false,
+      canUseRewardedRevive: false,
+      canUseRewardedHint: _canUseRewardedHintForState(
+        isGameOver: false,
+        rackPieces: snapshot.rackPieces,
+      ),
+      canUseRewardedUndo: _canUseRewardedUndoForState(),
+      rewardedToolsCredits: _playerProgressState.rewardedToolsCredits,
+      hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
+      movesPlayed: snapshot.movesPlayed,
+      gameOverReason: null,
+      resetHintSuggestion: true,
+      resetGameOverReason: true,
+    );
+
+    await analyticsTracker.track(
+      'rewarded_undo_used',
+      params: <String, Object?>{
+        'round_id': _currentGameNumber,
+        'cost': _rewardedToolsUndoCost,
+        'source': source,
+        'credits_after': _playerProgressState.rewardedToolsCredits,
+        'moves_after': snapshot.movesPlayed,
+      },
+    );
+
+    return RewardedUndoResult.success();
+  }
+
+  String buildShareScoreText() {
+    final int score = state.scoreState.totalScore;
+    final int best = state.bestScore;
+    final int level = state.level;
+    final int moves = state.movesPlayed;
+    final int goalsCompleted = state.dailyGoals.completedCount;
+    final int goalsTotal = state.dailyGoals.totalCount;
+
+    return 'I scored $score in Lumina Blocks! '
+        'Best: $best, Level: $level, Moves: $moves, '
+        'Daily goals: $goalsCompleted/$goalsTotal. '
+        'Can you beat it? $_shareHashtag';
+  }
+
+  Future<void> trackShareScoreTapped({
+    required String channel,
+  }) async {
+    await analyticsTracker.track(
+      'share_score_tapped',
+      params: <String, Object?>{
+        'round_id': _currentGameNumber,
+        'channel': channel,
+        'score_total': state.scoreState.totalScore,
+        'best_score': state.bestScore,
+        'level': state.level,
+        'moves_played': state.movesPlayed,
+        'daily_goals_completed': state.dailyGoals.completedCount,
+        'daily_goals_total': state.dailyGoals.totalCount,
+        'ux_variant': _uxVariant,
+        'difficulty_variant': _difficultyVariant,
+      },
+    );
+  }
+
+  Future<void> trackShareScoreResult({
+    required String channel,
+    required bool success,
+    String? failureReason,
+  }) async {
+    await analyticsTracker.track(
+      'share_score_result',
+      params: <String, Object?>{
+        'round_id': _currentGameNumber,
+        'channel': channel,
+        'success': success,
+        if (failureReason != null) 'failure_reason': failureReason,
+        'score_total': state.scoreState.totalScore,
+        'best_score': state.bestScore,
+        'level': state.level,
+        'moves_played': state.movesPlayed,
+        'daily_goals_completed': state.dailyGoals.completedCount,
+        'daily_goals_total': state.dailyGoals.totalCount,
+        'ux_variant': _uxVariant,
+        'difficulty_variant': _difficultyVariant,
+      },
+    );
   }
 
   Future<void> dismissOnboarding({
@@ -665,6 +987,117 @@ class GameLoopController {
       return 0;
     }
     return (level - 1) % paletteCount;
+  }
+
+  void _pushUndoSnapshot() {
+    _undoHistory.add(
+      _UndoSnapshot(
+        boardState: state.boardState,
+        scoreState: state.scoreState,
+        rackPieces: List<Piece>.from(state.rackPieces),
+        level: state.level,
+        colorThemeIndex: state.colorThemeIndex,
+        movesPlayed: state.movesPlayed,
+      ),
+    );
+
+    if (_undoHistory.length > _undoHistoryLimit) {
+      _undoHistory.removeAt(0);
+    }
+  }
+
+  HintSuggestion? _findHintSuggestion({
+    required BoardState boardState,
+    required List<Piece> rackPieces,
+  }) {
+    HintSuggestion? bestSuggestion;
+    int bestRank = -999999;
+
+    for (final Piece piece in rackPieces) {
+      for (int y = 0; y < boardState.size; y++) {
+        for (int x = 0; x < boardState.size; x++) {
+          final PlacePieceResult placement = placePieceUseCase.execute(
+            boardState: boardState,
+            move: Move(
+              piece: piece,
+              anchorX: x,
+              anchorY: y,
+            ),
+          );
+          if (!placement.isSuccess) {
+            continue;
+          }
+
+          final clearResult = clearLinesUseCase.execute(
+            boardState: placement.boardState,
+          );
+          final int occupiedAfter = clearResult.boardState.occupiedCells.length;
+          final int rank = (clearResult.clearedTotal * 1000) - occupiedAfter;
+
+          if (rank > bestRank) {
+            bestRank = rank;
+            bestSuggestion = HintSuggestion(
+              piece: piece,
+              anchorX: x,
+              anchorY: y,
+              estimatedClearedLines: clearResult.clearedTotal,
+            );
+          }
+        }
+      }
+    }
+
+    return bestSuggestion;
+  }
+
+  bool get _hasUnlimitedRewardedToolsAccess {
+    if (!_rewardedToolsIapEnabled) {
+      return false;
+    }
+    return _ownedIapProductIds.contains(_rewardedToolsUnlimitedSku);
+  }
+
+  bool _hasRewardedToolsForCost(int cost) {
+    if (_hasUnlimitedRewardedToolsAccess) {
+      return true;
+    }
+    return _playerProgressState.rewardedToolsCredits >= cost;
+  }
+
+  bool _canUseRewardedHintForState({
+    required bool isGameOver,
+    required List<Piece> rackPieces,
+  }) {
+    if (isGameOver) {
+      return false;
+    }
+    if (!_hasRewardedToolsForCost(_rewardedToolsHintCost)) {
+      return false;
+    }
+    return rackPieces.isNotEmpty;
+  }
+
+  bool _canUseRewardedUndoForState() {
+    if (!_hasRewardedToolsForCost(_rewardedToolsUndoCost)) {
+      return false;
+    }
+    return _undoHistory.isNotEmpty;
+  }
+
+  Future<String> _consumeRewardedToolsCreditsIfNeeded({
+    required int cost,
+  }) async {
+    if (_hasUnlimitedRewardedToolsAccess) {
+      return _hintCostSourceIap;
+    }
+
+    final int nextCredits =
+        (_playerProgressState.rewardedToolsCredits - cost).clamp(0, 100000);
+    _playerProgressState = _playerProgressState.copyWith(
+      rewardedToolsCredits: nextCredits,
+    );
+    await playerProgressRepository.save(_playerProgressState);
+    return _hintCostSourceEarned;
   }
 
   Future<void> _handleOnboardingAfterMove({
@@ -807,8 +1240,15 @@ class GameLoopController {
 
   Future<void> _loadAndSyncProgressForCurrentDay() async {
     final DateTime todayUtc = PlayerProgressState.normalizeDayKeyUtc(_nowUtc());
+    final int initialRewardedToolsCredits = _readIntConfig(
+      'progression.rewarded_tools_initial_credits',
+      fallback: 3,
+    ).clamp(0, 500);
     _playerProgressState = await playerProgressRepository.load() ??
-        PlayerProgressState.initialForDay(todayUtc);
+        PlayerProgressState.initialForDay(
+          todayUtc,
+          initialRewardedToolsCredits: initialRewardedToolsCredits,
+        );
 
     if (!_streakEnabled) {
       _playerProgressState = _playerProgressState.copyWith(
@@ -899,7 +1339,9 @@ class GameLoopController {
     required DailyGoalsSnapshot before,
     required DailyGoalsSnapshot after,
   }) async {
+    int newlyCompletedGoals = 0;
     if (!before.movesCompleted && after.movesCompleted) {
+      newlyCompletedGoals += 1;
       await _trackDailyGoalProgress(
         goalId: _dailyGoalMoves,
         progress: after.movesProgress,
@@ -908,6 +1350,7 @@ class GameLoopController {
       );
     }
     if (!before.linesCompleted && after.linesCompleted) {
+      newlyCompletedGoals += 1;
       await _trackDailyGoalProgress(
         goalId: _dailyGoalLines,
         progress: after.linesProgress,
@@ -916,6 +1359,7 @@ class GameLoopController {
       );
     }
     if (!before.scoreCompleted && after.scoreCompleted) {
+      newlyCompletedGoals += 1;
       await _trackDailyGoalProgress(
         goalId: _dailyGoalScore,
         progress: after.scoreProgress,
@@ -923,6 +1367,27 @@ class GameLoopController {
         completedGoals: after.completedCount,
       );
     }
+
+    if (newlyCompletedGoals <= 0 || _dailyGoalRewardCredits <= 0) {
+      return;
+    }
+
+    final int creditsEarned = newlyCompletedGoals * _dailyGoalRewardCredits;
+    _playerProgressState = _playerProgressState.copyWith(
+      rewardedToolsCredits:
+          _playerProgressState.rewardedToolsCredits + creditsEarned,
+    );
+    await playerProgressRepository.save(_playerProgressState);
+
+    await analyticsTracker.track(
+      'rewarded_tools_credits_earned',
+      params: <String, Object?>{
+        'source': 'daily_goals',
+        'goals_completed_now': newlyCompletedGoals,
+        'credits_earned': creditsEarned,
+        'credits_balance': _playerProgressState.rewardedToolsCredits,
+      },
+    );
   }
 
   Future<void> _trackDailyGoalProgress({
@@ -972,7 +1437,11 @@ class GameLoopController {
       ),
       'difficulty_curve': _readStringConfig(
         'ab.difficulty_variant',
-        fallback: 'balanced_v1',
+        fallback: _difficultyVariant,
+      ),
+      'hud_ux': _readStringConfig(
+        'ab.ux_variant',
+        fallback: _uxVariant,
       ),
     };
   }
@@ -988,6 +1457,26 @@ class GameLoopController {
           'source': 'remote_config',
         },
       );
+    }
+  }
+
+  Future<void> _refreshOwnedIapProducts() async {
+    try {
+      _ownedIapProductIds = await iapStoreService.loadOwnedProductIds();
+    } catch (error) {
+      _observabilityTracker.onRuntimeError();
+      logger.warn('Failed to refresh IAP ownership: $error');
+      unawaited(
+        analyticsTracker.track(
+          'ops_error',
+          params: <String, Object?>{
+            'source': 'game_loop_controller',
+            'error_type': 'iap_ownership_refresh_failed',
+            'message': '$error',
+          },
+        ),
+      );
+      _ownedIapProductIds = <String>{};
     }
   }
 
@@ -1040,6 +1529,28 @@ class GameLoopController {
       return rawValue.trim();
     }
     return fallback;
+  }
+
+  String _normalizeShareHashtag(String rawValue) {
+    final String trimmed = rawValue.trim();
+    if (trimmed.isEmpty) {
+      return _defaultShareHashtag;
+    }
+    if (trimmed.startsWith('#')) {
+      return trimmed;
+    }
+    return '#$trimmed';
+  }
+
+  String _resolveBlocksVisualPreset() {
+    final String value = _readStringConfig(
+      'visual.blocks_preset',
+      fallback: 'soft',
+    ).trim().toLowerCase();
+    if (value == 'crystal') {
+      return 'crystal';
+    }
+    return 'soft';
   }
 
   bool _isRewardedReviveAvailable() {
@@ -1124,6 +1635,10 @@ class GameLoopController {
     final int durationSec = _gameStartedAt == null
         ? 0
         : _nowUtc().difference(_gameStartedAt!).inSeconds;
+    _observabilityTracker.onGameEnded(
+      reason: reason,
+      durationSec: durationSec,
+    );
     await analyticsTracker.track(
       'game_end',
       params: <String, Object?>{
@@ -1131,6 +1646,8 @@ class GameLoopController {
         'end_reason': reason,
         'score': score,
         'duration_sec': durationSec,
+        'ux_variant': _uxVariant,
+        'difficulty_variant': _difficultyVariant,
       },
     );
   }
@@ -1153,6 +1670,43 @@ class GameLoopController {
       return;
     }
     final int durationSec = _nowUtc().difference(startedAt).inSeconds;
+    final sessionSnapshot = _observabilityTracker.buildSnapshot(
+      sessionDurationSec: durationSec,
+      roundsPlayed: state.gamesPlayed,
+    );
+    final alerts = _guardrailAlertEvaluator.evaluate(
+      snapshot: sessionSnapshot,
+      remoteConfig: _remoteConfig,
+    );
+    await analyticsTracker.track(
+      'ops_session_snapshot',
+      params: sessionSnapshot.toAnalyticsPayload(
+        alertCount: alerts.length,
+      ),
+    );
+    for (final alert in alerts) {
+      logger.warn(
+        'Guardrail alert: ${alert.alertId} '
+        '${alert.metricName} ${alert.comparator} '
+        '${alert.threshold.toStringAsFixed(4)} (observed=${alert.observedValue.toStringAsFixed(4)})',
+      );
+      await analyticsTracker.track(
+        'ops_alert_triggered',
+        params: <String, Object?>{
+          'session_id': _sessionId ?? 'unknown_session',
+          'alert_id': alert.alertId,
+          'severity': alert.severityWireName,
+          'metric_name': alert.metricName,
+          'comparator': alert.comparator,
+          'threshold': alert.threshold,
+          'observed_value': alert.observedValue,
+          'rounds_played': state.gamesPlayed,
+          'ux_variant': _uxVariant,
+          'difficulty_variant': _difficultyVariant,
+          'message': alert.message,
+        },
+      );
+    }
     await analyticsTracker.track(
       'session_end',
       params: <String, Object?>{
@@ -1177,4 +1731,22 @@ class _ReviveSnapshot {
 
   final BoardState boardState;
   final List<Piece> rackPieces;
+}
+
+class _UndoSnapshot {
+  const _UndoSnapshot({
+    required this.boardState,
+    required this.scoreState,
+    required this.rackPieces,
+    required this.level,
+    required this.colorThemeIndex,
+    required this.movesPlayed,
+  });
+
+  final BoardState boardState;
+  final ScoreState scoreState;
+  final List<Piece> rackPieces;
+  final int level;
+  final int colorThemeIndex;
+  final int movesPlayed;
 }

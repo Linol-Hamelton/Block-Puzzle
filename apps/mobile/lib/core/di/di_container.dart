@@ -45,10 +45,15 @@ Future<void> configureDependencies() async {
   final Map<String, Object?> bootstrapRemoteConfig =
       await inMemoryRemoteConfigRepository.getCached();
   final bool includeBundle = _resolveIapBundleEnabled(bootstrapRemoteConfig);
+  final bool includeUtilityPass = _readBoolConfig(
+    bootstrapRemoteConfig,
+    key: 'iap.rewarded_tools_unlimited_enabled',
+    fallback: true,
+  );
 
   sl.registerSingleton<AppConfig>(
     const AppConfig(
-      appName: 'Block Puzzle',
+      appName: 'Lumina Blocks',
       environment: 'dev',
     ),
   );
@@ -68,6 +73,7 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<IapStoreService>(
     () => DebugIapStoreService(
       includeBundle: includeBundle,
+      includeUtilityPass: includeUtilityPass,
     ),
   );
   sl.registerLazySingleton<AdGuardrailPolicy>(
@@ -106,6 +112,7 @@ Future<void> configureDependencies() async {
       analyticsTracker: sl(),
       adService: sl(),
       adGuardrailPolicy: sl(),
+      iapStoreService: sl(),
       playerProgressRepository: sl(),
       logger: sl(),
     ),
@@ -121,6 +128,8 @@ Future<void> configureDependencies() async {
   sl.registerFactory<StoreController>(
     () => StoreController(
       iapStoreService: sl(),
+      remoteConfigRepository: sl(),
+      playerProgressRepository: sl(),
       analyticsTracker: sl(),
       logger: sl(),
     ),
@@ -149,4 +158,28 @@ bool _resolveIapBundleEnabled(Map<String, Object?> config) {
       (config['iap.rollout_strategy'] as String?)?.trim() ?? 'cosmetics_first';
   return rolloutStrategy == 'cosmetics_bundle' ||
       rolloutStrategy == 'bundle_first';
+}
+
+bool _readBoolConfig(
+  Map<String, Object?> config, {
+  required String key,
+  required bool fallback,
+}) {
+  final Object? raw = config[key];
+  if (raw is bool) {
+    return raw;
+  }
+  if (raw is num) {
+    return raw > 0;
+  }
+  if (raw is String) {
+    final String normalized = raw.trim().toLowerCase();
+    if (normalized == 'true') {
+      return true;
+    }
+    if (normalized == 'false') {
+      return false;
+    }
+  }
+  return fallback;
 }

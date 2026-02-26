@@ -1,0 +1,19 @@
+Lumina Blocks: Puzzle Flow is a modern block puzzle built for fast sessions and deep score mastery.
+
+Core features:
+- Instant start and clean controls
+- Tactical placement, line clears, and combo rhythm
+- Daily goals and streak progression
+- Hint and undo tools via in-game credits
+- Smooth visuals and clear gameplay feedback
+
+Who it is for:
+- Casual players who enjoy “one more round”
+- Score-chasers who want long-term mastery
+
+Why players stay:
+- UX-first gameplay loop
+- Fair difficulty tuning with ongoing updates
+- Mobile and tablet friendly layout
+
+Build momentum, chain combos, and keep beating your best run.

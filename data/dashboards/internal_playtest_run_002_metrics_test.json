@@ -1,0 +1,19 @@
+{
+  "target_moves_per_run": 14,
+  "observed_early_gameover_rate": 0.24,
+  "observed_avg_moves_per_run": 13.3,
+  "avg_session_minutes": 7.4,
+  "combo_move_rate": 0.23,
+  "line_clear_rate": 0.31,
+  "rewarded_opt_in_rate": 0.28,
+  "ops_alert_count": 5,
+  "ops_alert_critical_count": 0,
+  "ops_runtime_error_sessions": 0,
+  "ops_early_gameover_alert_rate": 0.06,
+  "sample_size_sessions": 42,
+  "collection_window_start_utc": "2026-02-24T00:00:00Z",
+  "collection_window_end_utc": "2026-02-25T00:00:00Z",
+  "notes": [
+    "Synthetic test metrics for Sprint 8 pipeline verification."
+  ]
+}

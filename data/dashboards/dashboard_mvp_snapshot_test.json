@@ -1,0 +1,52 @@
+﻿{
+    "generated_at_utc":  "2026-02-25T17:26:10.6990680Z",
+    "contract_version":  "1.0.0",
+    "source":  {
+                   "metrics_path":  "data/dashboards/internal_playtest_run_002_metrics_test.json",
+                   "contract_path":  "data/dashboards/dashboard_mvp_contract_v1.json",
+                   "sample_size_sessions":  42,
+                   "collection_window_start_utc":  "2026-02-24T00:00:00Z",
+                   "collection_window_end_utc":  "2026-02-25T00:00:00Z"
+               },
+    "blocks":  {
+                   "retention_proxy":  {
+                                           "target_moves_per_run":  14,
+                                           "observed_avg_moves_per_run":  13.3,
+                                           "gap_to_target_moves":  0.7,
+                                           "target_attainment_pct":  95,
+                                           "observed_early_gameover_rate":  0.24
+                                       },
+                   "session_quality":  {
+                                           "avg_session_minutes":  7.4,
+                                           "combo_move_rate":  0.23,
+                                           "line_clear_rate":  0.31,
+                                           "session_quality_composite_score":  54
+                                       },
+                   "monetization_proxy":  {
+                                              "rewarded_opt_in_rate":  0.28,
+                                              "ad_mode":  "ad_free",
+                                              "iap_rollout_strategy":  "cosmetics_first"
+                                          },
+                   "engagement_systems":  {
+                                              "daily_goals_completion_rate":  null,
+                                              "streak_distribution":  null,
+                                              "note":  "Populate from daily_goal_progress and streak_updated events in analytics pipeline."
+                                          },
+                   "experiment_monitoring":  {
+                                                 "ab_experiment_exposure_count":  null,
+                                                 "variant_split":  null,
+                                                 "note":  "Populate from ab_experiment_exposure event aggregates."
+                                             },
+                   "observability_alerting":  {
+                                                  "ops_alert_count":  5,
+                                                  "ops_alert_critical_count":  0,
+                                                  "ops_runtime_error_sessions":  0,
+                                                  "ops_early_gameover_alert_rate":  0.06,
+                                                  "note":  "Populate from ops_session_snapshot + ops_alert_triggered aggregates."
+                                              }
+               },
+    "notes":  [
+                  "Dashboard MVP snapshot generated from compact playtest metrics.",
+                  "Retention/session/monetization blocks are numeric; engagement/experiment blocks are source-ready placeholders until pipeline aggregation is attached."
+              ]
+}

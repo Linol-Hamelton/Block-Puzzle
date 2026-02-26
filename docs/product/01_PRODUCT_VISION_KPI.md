@@ -1,67 +1,46 @@
-# Product Vision и KPI
+﻿# Product Vision and KPI
 
-## 1. Product Vision
-Создать мобильный block puzzle, который:
-- легко понимается за 10-15 секунд;
-- дает "еще один раунд" эффект в каждой сессии;
-- масштабируется как рекламный F2P-бизнес с устойчивой юнит-экономикой;
-- визуально и эмоционально выглядит премиально, несмотря на простую механику.
+## 1. Vision
+Build a premium-feel block puzzle that:
+1. is understood in seconds,
+2. creates strong "one more round" behavior,
+3. scales through data-driven iteration,
+4. monetizes via ad-free-first economy (cosmetics + utility + bundles).
 
-## 2. Целевая аудитория
-- Primary: 18-44, casual игроки, короткие сессии 2-8 минут, игра "между делом".
-- Secondary: игроки, любящие score-chase и челлендж "побей рекорд".
-- Гео фокус по этапам:
-1. Soft Launch: Tier-2/Tier-3 рынки для балансировки retention/ads.
-2. Scale: Tier-1 + масштаб по UA с LTV-driven закупкой.
+## 2. Audience
+- Primary: casual puzzle players, short sessions (2-10 min).
+- Secondary: score-chase players with mastery motivation.
+- Launch focus: Android markets with RU-ready distribution and soft-launch cohorts.
 
-## 3. Конкурентная стратегия
-- Не копировать один-в-один конкурента, а усиливать:
-1. UX скорость (минимум кликов до старта партии).
-2. Фидбек цикла (глубокий juice: звук, particles, комбо ритм).
-3. Персонализация сложности через data-driven generator.
-4. Метагейм и коллекционирование, которые не ломают core-loop.
+## 3. North Star
+`Quality-Adjusted Session Minutes per DAU`.
 
-## 4. North Star и KPI-дерево
-North Star Metric:
-- `Quality-Adjusted Session Minutes per DAU` (QSM/DAU): суммарные минуты качественной игры, исключая фрустрирующие сессии с ранним quit.
-
-Бизнес KPI:
+## 4. KPI Tree
+Retention and engagement:
 - D1 >= 45%
 - D7 >= 15%
 - D30 >= 5%
 - DAU/MAU >= 22%
-- ARPDAU (global blended) >= $0.04 на этапе масштабирования
-- Ad LTV payback <= 120 дней на основных GEO
+- Sessions per DAU >= 3
 
-Качество продукта:
-- Средняя длительность сессии: 8-15 минут
-- Сессий на DAU в день: >= 3
-- Crash-free sessions: >= 99.5%
-- ANR rate (Android): < 0.47%
-- Mean FPS на бюджетных Android: >= 55
+Quality and reliability:
+- Crash-free sessions >= 99.5%
+- ANR (Android) < 0.47%
+- Mean FPS on target devices >= 55
 
-Монетизация guardrails:
-- Interstitial show rate за сессию: в рамках контролируемого cap
-- Rewarded opt-in rate: 25-40%
-- Ad churn risk: не допускать падения D1 > 2 п.п. из-за экспериментов рекламы
+Monetization (current ad-free model):
+- IAP conversion rate and SKU mix growth by segment
+- Utility tool engagement without gameplay frustration growth
+- ARPDAU target corridor validated on real cohorts
 
-## 5. Продуктовые принципы
-- "Game first": сначала удовольствие и контроль игрока, потом монетизация.
-- "Fast to fun": до первого осмысленного хода <= 8 секунд после запуска.
-- "Experiment everything": все важные решения через A/B, но с жесткими стоп-критериями.
-- "No black box pain": если алгоритм сложности меняется, он логируется и анализируется.
+## 5. Product Principles
+1. Gameplay first.
+2. Fast to fun.
+3. Experiment everything with guardrails.
+4. Observable changes only (no black-box tuning).
+5. Monetization must not degrade core UX.
 
-## 6. Ценность для игрока
-- Простые правила, сложные решения.
-- Видимый прогресс (рекорды, streak, коллекции).
-- Честная монетизация: rewarded за реальную ценность, а не за блокировку базовой игры.
-
-## 7. Ценность для бизнеса
-- Высокий ad inventory при коротком цикле партии.
-- Масштабируемая A/B инфраструктура для постоянного uplift.
-- Многоуровневая монетизация: ads + cosmetics + ad-free + limited bundles.
-
-## 8. Что считаем провалом
-- Рост ARPDAU ценой заметного падения retention.
-- Переусложненный UI/навигация.
-- Отсутствие системы экспериментов и медленный цикл релизов.
+## 6. Failure Conditions
+1. Revenue growth that significantly harms retention.
+2. UI complexity that slows first meaningful move.
+3. No repeatable experiment cadence.

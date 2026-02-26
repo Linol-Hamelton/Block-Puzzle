@@ -29,7 +29,7 @@ class AnalyticsValidationResult {
 
 class AnalyticsSchemaValidator {
   const AnalyticsSchemaValidator({
-    this.schemaVersion = '1.0.0',
+    this.schemaVersion = '1.1.0',
     Map<String, AnalyticsEventSchema>? schemas,
   }) : _schemas = schemas ?? _defaultSchemas;
 
@@ -111,6 +111,10 @@ class AnalyticsSchemaValidator {
         'platform',
         'ab_bucket',
       },
+      optionalParams: <String>{
+        'ux_variant',
+        'difficulty_variant',
+      },
     ),
     'session_end': AnalyticsEventSchema(
       requiredParams: <String>{
@@ -126,6 +130,19 @@ class AnalyticsSchemaValidator {
       },
       optionalParams: <String>{
         'strategy',
+        'offer_strategy_variant',
+        'user_segment',
+        'recommended_sku',
+      },
+    ),
+    'offer_targeting_exposure': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'segment',
+        'strategy_variant',
+        'recommended_sku',
+      },
+      optionalParams: <String>{
+        'targeted_skus',
       },
     ),
     'game_loop_initialized': AnalyticsEventSchema(
@@ -140,6 +157,8 @@ class AnalyticsSchemaValidator {
       optionalParams: <String>{
         'board_size',
         'rack_size',
+        'ux_variant',
+        'difficulty_variant',
       },
     ),
     'move_made': AnalyticsEventSchema(
@@ -186,6 +205,44 @@ class AnalyticsSchemaValidator {
         'score',
         'duration_sec',
       },
+      optionalParams: <String>{
+        'ux_variant',
+        'difficulty_variant',
+      },
+    ),
+    'share_score_tapped': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'channel',
+        'score_total',
+        'best_score',
+        'level',
+        'moves_played',
+      },
+      optionalParams: <String>{
+        'daily_goals_completed',
+        'daily_goals_total',
+        'ux_variant',
+        'difficulty_variant',
+      },
+    ),
+    'share_score_result': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'channel',
+        'success',
+      },
+      optionalParams: <String>{
+        'failure_reason',
+        'score_total',
+        'best_score',
+        'level',
+        'moves_played',
+        'daily_goals_completed',
+        'daily_goals_total',
+        'ux_variant',
+        'difficulty_variant',
+      },
     ),
     'tutorial_step': AnalyticsEventSchema(
       requiredParams: <String>{
@@ -224,6 +281,38 @@ class AnalyticsSchemaValidator {
         'reason',
       },
     ),
+    'rewarded_hint_used': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'cost',
+        'source',
+        'credits_after',
+      },
+      optionalParams: <String>{
+        'piece_id',
+        'anchor_x',
+        'anchor_y',
+      },
+    ),
+    'rewarded_undo_used': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'cost',
+        'source',
+        'credits_after',
+      },
+      optionalParams: <String>{
+        'moves_after',
+      },
+    ),
+    'rewarded_tools_credits_earned': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'source',
+        'goals_completed_now',
+        'credits_earned',
+        'credits_balance',
+      },
+    ),
     'ad_impression': AnalyticsEventSchema(
       requiredParams: <String>{
         'placement',
@@ -246,6 +335,12 @@ class AnalyticsSchemaValidator {
         'price',
         'currency',
       },
+      optionalParams: <String>{
+        'user_segment',
+        'offer_strategy_variant',
+        'is_recommended_offer',
+        'position_index',
+      },
     ),
     'iap_purchase': AnalyticsEventSchema(
       requiredParams: <String>{
@@ -253,6 +348,12 @@ class AnalyticsSchemaValidator {
         'price',
         'currency',
         'country',
+      },
+      optionalParams: <String>{
+        'user_segment',
+        'offer_strategy_variant',
+        'is_recommended_offer',
+        'position_index',
       },
     ),
     'iap_restore': AnalyticsEventSchema(
@@ -276,6 +377,50 @@ class AnalyticsSchemaValidator {
         'from_level',
         'to_level',
         'score_total',
+      },
+    ),
+    'ops_session_snapshot': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'session_id',
+        'rounds_played',
+        'rounds_ended',
+        'session_duration_sec',
+        'early_gameover_rate',
+        'move_rejected_rate',
+        'avg_round_duration_sec',
+        'runtime_error_count',
+      },
+      optionalParams: <String>{
+        'move_attempts',
+        'move_rejected_count',
+        'no_valid_moves_game_over_count',
+        'alert_count',
+      },
+    ),
+    'ops_alert_triggered': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'alert_id',
+        'severity',
+        'metric_name',
+        'comparator',
+        'threshold',
+        'observed_value',
+      },
+      optionalParams: <String>{
+        'session_id',
+        'rounds_played',
+        'ux_variant',
+        'difficulty_variant',
+        'message',
+      },
+    ),
+    'ops_error': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'source',
+        'error_type',
+      },
+      optionalParams: <String>{
+        'message',
       },
     ),
   };

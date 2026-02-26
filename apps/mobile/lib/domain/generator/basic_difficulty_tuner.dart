@@ -5,6 +5,10 @@ import 'difficulty_tuner.dart';
 class BasicDifficultyTuner implements DifficultyTuner {
   const BasicDifficultyTuner();
 
+  static const String _variantBalanced = 'balanced_v1';
+  static const String _variantFairnessBias = 'fairness_bias_v1';
+  static const String _variantChallengeBias = 'challenge_bias_v1';
+
   @override
   DifficultyProfile resolve({
     required SessionState sessionState,
@@ -31,6 +35,10 @@ class BasicDifficultyTuner implements DifficultyTuner {
       remoteConfig['balance.observed_avg_moves_per_run'],
       fallback: targetMovesPerRun.toDouble(),
     );
+    final String difficultyVariant = _readString(
+      remoteConfig['ab.difficulty_variant'],
+      fallback: _variantBalanced,
+    );
 
     double adjustedHardWeight = baseHardWeight;
     int adjustedMaxHard = baseMaxHard;
@@ -52,6 +60,20 @@ class BasicDifficultyTuner implements DifficultyTuner {
 
     if (sessionState.movesPlayed >= 16) {
       adjustedHardWeight += 0.03;
+    }
+
+    if (difficultyVariant == _variantFairnessBias) {
+      adjustedHardWeight -= 0.04;
+      if (sessionState.movesPlayed <= 10) {
+        adjustedHardWeight -= 0.02;
+      }
+      adjustedMaxHard -= 1;
+    } else if (difficultyVariant == _variantChallengeBias) {
+      adjustedHardWeight += 0.04;
+      if (sessionState.currentScore >= 250 || sessionState.movesPlayed >= 12) {
+        adjustedHardWeight += 0.02;
+      }
+      adjustedMaxHard += 1;
     }
 
     adjustedHardWeight = adjustedHardWeight.clamp(0.05, 0.85);
@@ -79,6 +101,16 @@ class BasicDifficultyTuner implements DifficultyTuner {
   }) {
     if (value is num) {
       return value.toInt();
+    }
+    return fallback;
+  }
+
+  String _readString(
+    Object? value, {
+    required String fallback,
+  }) {
+    if (value is String && value.trim().isNotEmpty) {
+      return value.trim();
     }
     return fallback;
   }

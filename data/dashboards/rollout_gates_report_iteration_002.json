@@ -1,0 +1,127 @@
+﻿{
+    "generated_at_utc":  "2026-02-25T19:37:27.0384585Z",
+    "thresholds_version":  "1.0.0",
+    "input":  {
+                  "metrics_path":  "data/dashboards/internal_playtest_run_002_metrics.json",
+                  "thresholds_path":  "data/dashboards/rollout_gates_thresholds_v1.json"
+              },
+    "summary":  {
+                    "hard_gates_total":  5,
+                    "hard_gates_passed":  3,
+                    "soft_gates_total":  5,
+                    "soft_gates_passed":  1,
+                    "decision":  "hold_and_iterate",
+                    "decision_reason":  "One or more hard gates failed."
+                },
+    "derived_metrics":  {
+                            "target_attainment_pct":  -7.143,
+                            "ops_alert_rate":  null,
+                            "ops_runtime_error_session_rate":  null
+                        },
+    "gates":  [
+                  {
+                      "gate_id":  "sample_size_sessions_min",
+                      "severity":  "hard",
+                      "metric":  "sample_size_sessions",
+                      "comparator":  "\u003e=",
+                      "threshold":  30,
+                      "observed":  0,
+                      "status":  "fail",
+                      "reason":  "observed value is below threshold"
+                  },
+                  {
+                      "gate_id":  "observed_early_gameover_rate_max",
+                      "severity":  "hard",
+                      "metric":  "observed_early_gameover_rate",
+                      "comparator":  "\u003c=",
+                      "threshold":  0.3,
+                      "observed":  -1,
+                      "status":  "pass",
+                      "reason":  "ok"
+                  },
+                  {
+                      "gate_id":  "ops_alert_critical_count_max",
+                      "severity":  "hard",
+                      "metric":  "ops_alert_critical_count",
+                      "comparator":  "\u003c=",
+                      "threshold":  0,
+                      "observed":  -1,
+                      "status":  "pass",
+                      "reason":  "ok"
+                  },
+                  {
+                      "gate_id":  "ops_runtime_error_session_rate_max",
+                      "severity":  "hard",
+                      "metric":  "ops_runtime_error_session_rate",
+                      "comparator":  "\u003c=",
+                      "threshold":  0.02,
+                      "observed":  null,
+                      "status":  "fail",
+                      "reason":  "missing metric value"
+                  },
+                  {
+                      "gate_id":  "ops_early_gameover_alert_rate_max",
+                      "severity":  "hard",
+                      "metric":  "ops_early_gameover_alert_rate",
+                      "comparator":  "\u003c=",
+                      "threshold":  0.1,
+                      "observed":  -1,
+                      "status":  "pass",
+                      "reason":  "ok"
+                  },
+                  {
+                      "gate_id":  "avg_session_minutes_min",
+                      "severity":  "soft",
+                      "metric":  "avg_session_minutes",
+                      "comparator":  "\u003e=",
+                      "threshold":  6,
+                      "observed":  -1,
+                      "status":  "fail",
+                      "reason":  "observed value is below threshold"
+                  },
+                  {
+                      "gate_id":  "combo_move_rate_min",
+                      "severity":  "soft",
+                      "metric":  "combo_move_rate",
+                      "comparator":  "\u003e=",
+                      "threshold":  0.2,
+                      "observed":  -1,
+                      "status":  "fail",
+                      "reason":  "observed value is below threshold"
+                  },
+                  {
+                      "gate_id":  "target_attainment_pct_min",
+                      "severity":  "soft",
+                      "metric":  "target_attainment_pct",
+                      "comparator":  "\u003e=",
+                      "threshold":  92,
+                      "observed":  -7.142857,
+                      "status":  "fail",
+                      "reason":  "observed value is below threshold"
+                  },
+                  {
+                      "gate_id":  "target_attainment_pct_max",
+                      "severity":  "soft",
+                      "metric":  "target_attainment_pct",
+                      "comparator":  "\u003c=",
+                      "threshold":  123,
+                      "observed":  -7.142857,
+                      "status":  "pass",
+                      "reason":  "ok"
+                  },
+                  {
+                      "gate_id":  "ops_alert_rate_max",
+                      "severity":  "soft",
+                      "metric":  "ops_alert_rate",
+                      "comparator":  "\u003c=",
+                      "threshold":  0.25,
+                      "observed":  null,
+                      "status":  "fail",
+                      "reason":  "missing metric value"
+                  }
+              ],
+    "next_actions":  [
+                         "Block rollout increase and run config rollback review.",
+                         "Fix failed hard gates before next soft launch wave."
+                     ]
+}

@@ -1,9 +1,12 @@
-# apps/mobile/assets
+﻿# apps/mobile/assets
 
-Будущие игровые ассеты:
-- audio
-- sprites
-- shaders
-- themes
+Game assets used by the mobile client.
 
-В этапе 0 используются временные заглушки.
+Main folders:
+- `audio`
+- `branding`
+- `sprites`
+- `shaders`
+- `themes`
+
+Some assets remain temporary placeholders and are marked in local README files.

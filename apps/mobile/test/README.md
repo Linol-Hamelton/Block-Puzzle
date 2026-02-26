@@ -1,6 +1,11 @@
-# apps/mobile/test
+﻿# apps/mobile/test
 
-Тестовые пакеты:
-- unit: доменная логика
-- widget: UI поведение
-- integration: end-to-end сценарии core-loop
+Test suites:
+- `unit`: domain and application logic
+- `widget`: UI behavior and composition
+- `integration`: end-to-end gameplay flows (as added)
+
+Run all tests from `apps/mobile` with:
+```bash
+flutter test
+```

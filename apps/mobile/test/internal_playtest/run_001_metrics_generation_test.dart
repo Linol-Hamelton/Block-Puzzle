@@ -21,6 +21,7 @@ import 'package:block_puzzle_mobile/features/monetization/ad_guardrail_policy.da
 import 'package:block_puzzle_mobile/features/monetization/ad_placement.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_service.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_show_result.dart';
+import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -42,6 +43,7 @@ void main() {
       analyticsTracker: analytics,
       adService: const _NoopAdService(),
       adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+      iapStoreService: DebugIapStoreService(),
       playerProgressRepository: InMemoryPlayerProgressRepository(),
       logger: AppLogger(),
     );

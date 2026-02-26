@@ -1,43 +1,43 @@
-# Риски и Guardrails
+﻿# Risks and Guardrails
 
-## 1. Ключевые риски
-1. Агрессивная реклама ломает retention.
-2. Плохой генератор фигур вызывает ощущение "игра жульничает".
-3. Неточность аналитики -> ошибочные продуктовые решения.
-4. Производительность на слабых Android снижает D1.
-5. Отсутствие системного LiveOps приводит к стагнации после soft launch.
+## 1. Key Risks
+1. Difficulty unfairness reduces retention.
+2. Weak analytics quality causes wrong product decisions.
+3. Performance regressions on low/mid Android devices.
+4. LiveOps iteration lag after soft launch.
+5. Store UX overload from poor offer strategy.
 
-## 2. Риск-матрица (высокий приоритет)
-| Риск | Вероятность | Влияние | Митигирующие действия |
+## 2. High-Priority Risk Matrix
+| Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
-| Ad pressure overload | High | High | cap + A/B + guardrails + early-user protection |
-| Generator unfairness | Medium | High | explainable tuning + telemetry + fairness constraints |
-| Event schema drift | Medium | High | versioned schema + contract tests + quarantine stream |
-| FPS drop on low devices | High | Medium | perf budget + profiling + asset compression |
-| Content fatigue | Medium | Medium | roadmap liveops, seasonal drops, streak updates |
+| Generator unfairness | Medium | High | telemetry + fairness constraints + AB rollback |
+| Event schema drift | Medium | High | versioned schema + validation + quarantine |
+| FPS drop | High | Medium | perf budget + profiling + asset optimization |
+| Runtime stability | Medium | High | observability alerts + hotfix flow |
+| Offer fatigue | Medium | Medium | segment targeting + frequency controls |
 
 ## 3. Guardrails
-- Retention Guardrail: никакая ad-гипотеза не катится в 100% rollout при падении D1 > 2 п.п.
-- Stability Guardrail: crash-free sessions < 99.5% блокирует релиз.
-- Gameplay Guardrail: рост `early_game_over_rate` > 10% требует rollback генератора.
-- UX Guardrail: рост tutorial drop-off > 8% требует пересмотра onboarding.
-- Revenue Guardrail: рост ARPDAU за счет >15% session churn считается невалидным uplift.
+- Retention: block rollout increase if D1 proxy drops > 2pp.
+- Stability: block rollout if crash-free < 99.5%.
+- Gameplay: rollback tuning when `early_game_over_rate > 0.30`.
+- UX: revisit onboarding if tutorial drop-off rises > 8%.
+- Ops: block promotion on hard gate fail (`ops_*` critical thresholds).
 
-## 4. Операционная модель rollback
-1. Детект: мониторинг сигнализирует отклонение.
-2. Верификация: data + product сверяют влияние по сегментам.
-3. Решение: instant rollback флагом или patch release.
-4. Постмортем: причина, prevention action, owner, deadline.
+## 4. Rollback Model
+1. Detect anomaly from metrics/alerts.
+2. Validate impact by segment and variant.
+3. Apply rollback via config or patch release.
+4. Run postmortem with owner and deadline.
 
-## 5. Release readiness gates
-- QA: smoke + regression pass.
-- Data: валидность ключевых событий подтверждена.
-- Product: определены success metric и stop criteria.
-- Ops: включены алерты на crash, retention proxy, ad anomalies.
-- Legal/Privacy: политики и consent flow проверены.
+## 5. Release Gates
+1. QA smoke/regression passed.
+2. Key analytics contracts valid.
+3. Success metrics and stop criteria documented.
+4. Ops alerts configured and monitored.
+5. Legal/privacy checklist complete.
 
-## 6. Anti-patterns (запрещено)
-- Увеличивать ad frequency без эксперимента.
-- Изменять генератор сложности без телеметрии.
-- Выпускать фичи без remote kill-switch.
-- Внедрять cosmetics магазин без базовой экономики и SKU аналитики.
+## 6. Anti-Patterns
+- Shipping variant changes without telemetry.
+- Modifying difficulty without guardrails.
+- Publishing without kill-switch capability.
+- Store claims that do not match implemented product state.

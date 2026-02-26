@@ -40,6 +40,27 @@ function Require-NumericField {
   return [double]$value
 }
 
+function Read-OptionalNumericField {
+  param(
+    [object]$Object,
+    [string]$FieldName
+  )
+
+  if (-not ($Object.PSObject.Properties.Name -contains $FieldName)) {
+    return $null
+  }
+
+  $value = $Object.$FieldName
+  if ($null -eq $value) {
+    return $null
+  }
+  if ($value -isnot [ValueType]) {
+    throw "Field '$FieldName' must be numeric when provided."
+  }
+
+  return [double]$value
+}
+
 Assert-FileExists -Path $MetricsPath -Description "Metrics file"
 Assert-FileExists -Path $ContractPath -Description "Contract file"
 
@@ -68,6 +89,15 @@ $lineClearRate = $null
 if ($metrics.PSObject.Properties.Name -contains "line_clear_rate" -and $null -ne $metrics.line_clear_rate) {
   $lineClearRate = [double]$metrics.line_clear_rate
 }
+$opsAlertCount = Read-OptionalNumericField -Object $metrics -FieldName "ops_alert_count"
+$opsAlertCriticalCount = Read-OptionalNumericField -Object $metrics -FieldName "ops_alert_critical_count"
+$opsRuntimeErrorSessions = Read-OptionalNumericField -Object $metrics -FieldName "ops_runtime_error_sessions"
+$opsEarlyGameoverAlertRate = Read-OptionalNumericField -Object $metrics -FieldName "ops_early_gameover_alert_rate"
+
+if ($null -ne $opsAlertCount -and $opsAlertCount -lt 0) { $opsAlertCount = $null }
+if ($null -ne $opsAlertCriticalCount -and $opsAlertCriticalCount -lt 0) { $opsAlertCriticalCount = $null }
+if ($null -ne $opsRuntimeErrorSessions -and $opsRuntimeErrorSessions -lt 0) { $opsRuntimeErrorSessions = $null }
+if ($null -ne $opsEarlyGameoverAlertRate -and $opsEarlyGameoverAlertRate -lt 0) { $opsEarlyGameoverAlertRate = $null }
 
 if ($targetMoves -le 0) { throw "target_moves_per_run must be > 0." }
 if ($sampleSize -le 0) { throw "sample_size_sessions must be > 0." }
@@ -77,6 +107,10 @@ if ($rewardedOptInRate -lt 0 -or $rewardedOptInRate -gt 1) { throw "rewarded_opt
 if ($avgSessionMinutes -lt 0) { throw "avg_session_minutes must be >= 0." }
 if ($observedAvgMoves -lt 0) { throw "observed_avg_moves_per_run must be >= 0." }
 if ($null -ne $lineClearRate -and ($lineClearRate -lt 0 -or $lineClearRate -gt 1)) { throw "line_clear_rate must be in [0..1] when provided." }
+if ($null -ne $opsAlertCount -and $opsAlertCount -lt 0) { throw "ops_alert_count must be >= 0 when provided." }
+if ($null -ne $opsAlertCriticalCount -and $opsAlertCriticalCount -lt 0) { throw "ops_alert_critical_count must be >= 0 when provided." }
+if ($null -ne $opsRuntimeErrorSessions -and $opsRuntimeErrorSessions -lt 0) { throw "ops_runtime_error_sessions must be >= 0 when provided." }
+if ($null -ne $opsEarlyGameoverAlertRate -and ($opsEarlyGameoverAlertRate -lt 0 -or $opsEarlyGameoverAlertRate -gt 1)) { throw "ops_early_gameover_alert_rate must be in [0..1] when provided." }
 
 $gapToTarget = [math]::Round(($targetMoves - $observedAvgMoves), 2)
 $targetAttainmentPct = [math]::Round((($observedAvgMoves / $targetMoves) * 100), 1)
@@ -124,6 +158,13 @@ $snapshot = [ordered]@{
       ab_experiment_exposure_count = $null
       variant_split = $null
       note = "Populate from ab_experiment_exposure event aggregates."
+    }
+    observability_alerting = [ordered]@{
+      ops_alert_count = if ($null -eq $opsAlertCount) { $null } else { [int][math]::Round($opsAlertCount, 0) }
+      ops_alert_critical_count = if ($null -eq $opsAlertCriticalCount) { $null } else { [int][math]::Round($opsAlertCriticalCount, 0) }
+      ops_runtime_error_sessions = if ($null -eq $opsRuntimeErrorSessions) { $null } else { [int][math]::Round($opsRuntimeErrorSessions, 0) }
+      ops_early_gameover_alert_rate = if ($null -eq $opsEarlyGameoverAlertRate) { $null } else { [math]::Round($opsEarlyGameoverAlertRate, 3) }
+      note = "Populate from ops_session_snapshot + ops_alert_triggered aggregates."
     }
   }
   notes = @(

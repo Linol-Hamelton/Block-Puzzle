@@ -21,6 +21,69 @@ void main() {
       expect(result.unknownParams, isEmpty);
     });
 
+    test('accepts game_start payload with UX and balance variants', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'game_start',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'round_id': 5,
+          'mode': 'classic',
+          'config_version': 'cfg-02',
+          'ux_variant': 'hud_focus_v1',
+          'difficulty_variant': 'challenge_bias_v1',
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts share_score_tapped payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'share_score_tapped',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'round_id': 7,
+          'channel': 'clipboard',
+          'score_total': 540,
+          'best_score': 820,
+          'level': 4,
+          'moves_played': 31,
+          'daily_goals_completed': 2,
+          'daily_goals_total': 3,
+          'ux_variant': 'hud_focus_v1',
+          'difficulty_variant': 'balanced_v1',
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts share_score_result payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'share_score_result',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'round_id': 7,
+          'channel': 'clipboard',
+          'success': true,
+          'score_total': 540,
+          'best_score': 820,
+          'level': 4,
+          'moves_played': 31,
+          'daily_goals_completed': 2,
+          'daily_goals_total': 3,
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
     test('returns invalid when required fields are missing', () {
       final AnalyticsValidationResult result = validator.validate(
         'ad_impression',
@@ -92,6 +155,42 @@ void main() {
       expect(result.unknownParams, isEmpty);
     });
 
+    test('accepts store_open payload with targeting fields', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'store_open',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'items_count': 4,
+          'owned_count': 1,
+          'strategy': 'cosmetics_first',
+          'offer_strategy_variant': 'cosmetics_first_v2',
+          'user_segment': 'engaged_user',
+          'recommended_sku': 'utility_tools_pass',
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts offer_targeting_exposure payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'offer_targeting_exposure',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'segment': 'new_user',
+          'strategy_variant': 'cosmetics_first_v2',
+          'recommended_sku': 'skin_pack_neon',
+          'targeted_skus': 'skin_pack_neon,skin_pack_mono,utility_tools_pass',
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
     test('accepts daily_goal_progress payload', () {
       final AnalyticsValidationResult result = validator.validate(
         'daily_goal_progress',
@@ -119,6 +218,126 @@ void main() {
           'current_streak': 4,
           'best_streak': 7,
           'reason': 'continued',
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts rewarded_hint_used payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'rewarded_hint_used',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'round_id': 3,
+          'cost': 1,
+          'source': 'earned_credits',
+          'credits_after': 2,
+          'piece_id': 'line4',
+          'anchor_x': 2,
+          'anchor_y': 4,
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts rewarded_undo_used payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'rewarded_undo_used',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'round_id': 3,
+          'cost': 1,
+          'source': 'iap_unlimited',
+          'credits_after': 2,
+          'moves_after': 4,
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts rewarded_tools_credits_earned payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'rewarded_tools_credits_earned',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'source': 'daily_goals',
+          'goals_completed_now': 2,
+          'credits_earned': 2,
+          'credits_balance': 5,
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts ops_session_snapshot payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'ops_session_snapshot',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'session_id': 'session_1',
+          'rounds_played': 4,
+          'rounds_ended': 4,
+          'session_duration_sec': 220,
+          'early_gameover_rate': 0.25,
+          'move_rejected_rate': 0.08,
+          'avg_round_duration_sec': 34.2,
+          'runtime_error_count': 0,
+          'move_attempts': 25,
+          'move_rejected_count': 2,
+          'no_valid_moves_game_over_count': 1,
+          'alert_count': 0,
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts ops_alert_triggered payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'ops_alert_triggered',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'alert_id': 'early_gameover_rate_high',
+          'severity': 'critical',
+          'metric_name': 'early_gameover_rate',
+          'comparator': '>',
+          'threshold': 0.30,
+          'observed_value': 0.5,
+          'session_id': 'session_1',
+          'rounds_played': 3,
+          'ux_variant': 'hud_standard_v1',
+          'difficulty_variant': 'balanced_v1',
+          'message': 'rate exceeded threshold',
+        },
+      );
+
+      expect(result.isValid, isTrue);
+      expect(result.missingRequired, isEmpty);
+      expect(result.unknownParams, isEmpty);
+    });
+
+    test('accepts ops_error payload', () {
+      final AnalyticsValidationResult result = validator.validate(
+        'ops_error',
+        params: <String, Object?>{
+          'schema_version': '1.0.0',
+          'source': 'flutter_error',
+          'error_type': 'StateError',
+          'message': 'Bad state',
         },
       );
 

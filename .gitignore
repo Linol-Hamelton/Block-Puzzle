@@ -7,6 +7,7 @@ Thumbs.db
 
 # Root build outputs
 artifacts/
+tmp_crops/
 
 # Flutter mobile generated files
 apps/mobile/.dart_tool/
@@ -14,6 +15,9 @@ apps/mobile/.flutter-plugins
 apps/mobile/.flutter-plugins-dependencies
 apps/mobile/.pub/
 apps/mobile/build/
+apps/mobile/.idea/
+apps/mobile/windows/flutter/ephemeral/
 
 # Android / Gradle local
 apps/mobile/android/local.properties
+apps/mobile/android/.gradle/

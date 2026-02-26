@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/di/di_container.dart';
+import '../../../ui/theme/app_theme.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -17,8 +20,6 @@ class GameLoopScreen extends StatefulWidget {
 }
 
 class _GameLoopScreenState extends State<GameLoopScreen> {
-  static const double _surfaceMaxWidth = 920;
-
   late final GameLoopController _controller;
   late final GameSfxPlayer _sfxPlayer;
   late final BlockPuzzleGame _game;
@@ -132,168 +133,227 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
         valueListenable: _controller.stateListenable,
         builder:
             (BuildContext context, GameLoopViewState state, Widget? child) {
-          return Stack(
-            children: <Widget>[
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: <Color>[
-                        Color(0xFFF6FBFF),
-                        Color(0xFFE9F2FA),
-                        Color(0xFFDDEAF6),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: _surfaceMaxWidth,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: GameWidget(
-                        game: _game,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                left: 0,
-                right: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: _surfaceMaxWidth,
-                      ),
-                      child: _HudPanel(state: state),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 66,
-                left: 0,
-                right: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: _surfaceMaxWidth,
-                      ),
-                      child: Align(
-                        alignment: Alignment.topRight,
-                        child: _ComboStackOverlay(
-                          entries: _comboToasts,
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final _LayoutProfile layout = _LayoutProfile.resolve(
+                constraints: constraints,
+                mediaQuery: MediaQuery.of(context),
+                isBannerVisible: state.isBannerVisible,
+                isOnboardingVisible: state.isOnboardingVisible,
+              );
+
+              _game.configureViewportInsets(
+                topInset: layout.gameTopInset,
+                bottomInset: layout.gameBottomInset,
+                horizontalPadding: layout.surfaceHorizontalPadding,
+                boardMaxPixels: layout.boardMaxPixels,
+                boardMinPixels: layout.boardMinPixels,
+                rackCellSize: layout.rackCellSize,
+                boardToRackGap: layout.boardToRackGap,
+                rackMinTouchTargetSize: layout.touchTargetMinSize,
+                dragActivationDistance: layout.dragActivationDistance,
+              );
+
+              return Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: <Color>[
+                            LuminaPalette.midnight,
+                            LuminaPalette.deepNavy,
+                            Color(0xFF18345A),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              if (state.isOnboardingVisible)
-                Positioned(
-                  top: 122,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0, -0.25),
+                          radius: 0.95,
+                          colors: <Color>[
+                            LuminaPalette.cyan.withOpacity(0.14),
+                            LuminaPalette.violet.withOpacity(0.09),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: _surfaceMaxWidth,
+                        constraints: BoxConstraints(
+                          maxWidth: layout.surfaceMaxWidth,
                         ),
-                        child: _OnboardingOverlayCard(
-                          title:
-                              state.onboardingTitle ?? 'Classic Mode Tutorial',
-                          description: state.onboardingDescription ??
-                              'Place pieces to fill lines and build combos.',
-                          onDismiss: () {
-                            unawaited(
-                              _controller.dismissOnboarding(),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (state.isGameOver)
-                Positioned.fill(
-                  child: Container(
-                    color: const Color(0x66000000),
-                    child: Center(
-                      child: Card(
-                        margin: const EdgeInsets.all(24),
                         child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              const Text(
-                                'Game Over',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: layout.surfaceHorizontalPadding,
+                          ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0x664C75A4),
                               ),
-                              const SizedBox(height: 8),
-                              Text('Score: ${state.scoreState.totalScore}'),
-                              Text('Best: ${state.bestScore}'),
-                              Text(
-                                'Daily goals: ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}',
-                              ),
-                              Text(
-                                'Streak: ${state.streak.currentDays}d (best ${state.streak.bestDays}d)',
-                              ),
-                              const SizedBox(height: 16),
-                              if (state.canUseRewardedRevive)
-                                FilledButton.tonalIcon(
-                                  onPressed: _onRevivePressed,
-                                  icon: const Icon(Icons.favorite),
-                                  label: const Text('Revive (Rewarded)'),
-                                ),
-                              if (state.canUseRewardedRevive)
-                                const SizedBox(height: 10),
-                              FilledButton(
-                                onPressed: _controller.startNewGame,
-                                child: const Text('Restart'),
-                              ),
-                            ],
+                            ),
+                            child: GameWidget(
+                              game: _game,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              if (state.isBannerVisible)
-                Positioned(
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: _surfaceMaxWidth,
+                  Positioned(
+                    top: layout.hudTop,
+                    left: 0,
+                    right: 0,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: layout.surfaceHorizontalPadding,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: layout.surfaceMaxWidth,
+                          ),
+                          child: _HudPanel(
+                            state: state,
+                            uiScale: layout.uiScale,
+                            compact: layout.compactHud,
+                          ),
                         ),
-                        child: const _BannerAdPlaceholder(),
                       ),
                     ),
                   ),
-                ),
-            ],
+                  Positioned(
+                    top: layout.comboTop,
+                    left: 0,
+                    right: 0,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: layout.surfaceHorizontalPadding,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: layout.surfaceMaxWidth,
+                          ),
+                          child: Align(
+                            alignment: Alignment.topRight,
+                            child: _ComboStackOverlay(
+                              entries: _comboToasts,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (state.isOnboardingVisible)
+                    Positioned(
+                      top: layout.onboardingTop,
+                      left: 0,
+                      right: 0,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: layout.surfaceHorizontalPadding,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: layout.surfaceMaxWidth,
+                            ),
+                            child: _OnboardingOverlayCard(
+                              title: state.onboardingTitle ??
+                                  'Classic Mode Tutorial',
+                              description: state.onboardingDescription ??
+                                  'Place pieces to fill lines and build combos.',
+                              onDismiss: () {
+                                unawaited(
+                                  _controller.dismissOnboarding(),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    bottom: layout.assistBarBottom,
+                    left: 0,
+                    right: 0,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: layout.surfaceHorizontalPadding,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: layout.surfaceMaxWidth,
+                          ),
+                          child: _AssistActionsBar(
+                            canUseHint: state.canUseRewardedHint,
+                            canUseUndo: state.canUseRewardedUndo,
+                            hasUnlimitedTools: state.hasUnlimitedRewardedTools,
+                            credits: state.rewardedToolsCredits,
+                            onHintPressed: _onHintPressed,
+                            onUndoPressed: _onUndoPressed,
+                            compact: layout.compactActions,
+                            uiScale: layout.uiScale,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (state.isGameOver)
+                    Positioned.fill(
+                      child: Container(
+                        color: const Color(0xB20A1222),
+                        child: Center(
+                          child: _GameOverOverlayCard(
+                            state: state,
+                            onRestartPressed: _controller.startNewGame,
+                            onRevivePressed: state.canUseRewardedRevive
+                                ? _onRevivePressed
+                                : null,
+                            onSharePressed: state.isShareFlowEnabled
+                                ? _onSharePressed
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (state.isBannerVisible)
+                    Positioned(
+                      bottom: layout.bannerBottom,
+                      left: 0,
+                      right: 0,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: layout.surfaceHorizontalPadding,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: layout.surfaceMaxWidth,
+                            ),
+                            child: _BannerAdPlaceholder(
+                              height: layout.bannerHeight,
+                              compact: layout.compactActions,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           );
         },
       ),
@@ -315,6 +375,605 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
       );
     }
   }
+
+  Future<void> _onHintPressed() async {
+    final RewardedHintResult result = await _controller.useRewardedHint();
+    if (!mounted) {
+      return;
+    }
+    if (result.isSuccess) {
+      final HintSuggestion hint = result.hintSuggestion!;
+      final String details = hint.estimatedClearedLines > 0
+          ? 'Hint: try ${hint.piece.id} at (${hint.anchorX}, ${hint.anchorY}) for ${hint.estimatedClearedLines} line clear.'
+          : 'Hint: try ${hint.piece.id} at (${hint.anchorX}, ${hint.anchorY}).';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(details)),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Hint unavailable: ${result.failureReason ?? 'unknown'}'),
+      ),
+    );
+  }
+
+  Future<void> _onUndoPressed() async {
+    final RewardedUndoResult result = await _controller.useRewardedUndo();
+    if (!mounted) {
+      return;
+    }
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Undo applied')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Undo unavailable: ${result.failureReason ?? 'unknown'}'),
+      ),
+    );
+  }
+
+  Future<void> _onSharePressed() async {
+    const String channel = 'clipboard';
+    final String shareText = _controller.buildShareScoreText();
+    await _controller.trackShareScoreTapped(channel: channel);
+
+    if (!mounted) {
+      return;
+    }
+
+    try {
+      await Clipboard.setData(ClipboardData(text: shareText));
+      await _controller.trackShareScoreResult(
+        channel: channel,
+        success: true,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Result copied to clipboard. Share it anywhere.'),
+        ),
+      );
+    } catch (error) {
+      await _controller.trackShareScoreResult(
+        channel: channel,
+        success: false,
+        failureReason: 'clipboard_error',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Share failed: $error'),
+        ),
+      );
+    }
+  }
+}
+
+class _AssistActionsBar extends StatelessWidget {
+  const _AssistActionsBar({
+    required this.canUseHint,
+    required this.canUseUndo,
+    required this.hasUnlimitedTools,
+    required this.credits,
+    required this.onHintPressed,
+    required this.onUndoPressed,
+    required this.compact,
+    required this.uiScale,
+  });
+
+  final bool canUseHint;
+  final bool canUseUndo;
+  final bool hasUnlimitedTools;
+  final int credits;
+  final VoidCallback onHintPressed;
+  final VoidCallback onUndoPressed;
+  final bool compact;
+  final double uiScale;
+
+  @override
+  Widget build(BuildContext context) {
+    final String balanceLabel =
+        hasUnlimitedTools ? 'Tools: Unlimited' : 'Tools credits: $credits';
+    final double verticalPadding = (8 * uiScale).clamp(6, 12).toDouble();
+    final double horizontalPadding = (10 * uiScale).clamp(8, 16).toDouble();
+    final double fontSize = (12 * uiScale).clamp(11, 15).toDouble();
+    final ButtonStyle actionButtonStyle = ButtonStyle(
+      minimumSize: WidgetStatePropertyAll<Size>(
+        Size(0, (46 * uiScale).clamp(48, 58).toDouble()),
+      ),
+      padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+        EdgeInsets.symmetric(
+          horizontal: (10 * uiScale).clamp(8, 16).toDouble(),
+        ),
+      ),
+      elevation: const WidgetStatePropertyAll<double>(0),
+      shape: WidgetStatePropertyAll<OutlinedBorder>(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      textStyle: WidgetStatePropertyAll<TextStyle>(
+        TextStyle(
+          fontSize: (14 * uiScale).clamp(13, 16).toDouble(),
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
+      backgroundColor: WidgetStateProperty.resolveWith<Color>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return const Color(0xFF24374F);
+          }
+          if (states.contains(WidgetState.pressed)) {
+            return const Color(0xFF335983);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return const Color(0xFF2F4F77);
+          }
+          return const Color(0xFF29466D);
+        },
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return const Color(0xFF8CA7C1);
+          }
+          return LuminaPalette.textPrimary;
+        },
+      ),
+      overlayColor: WidgetStateProperty.resolveWith<Color?>(
+        (Set<WidgetState> states) {
+          if (states.contains(WidgetState.pressed)) {
+            return const Color(0x20FFFFFF);
+          }
+          if (states.contains(WidgetState.focused)) {
+            return const Color(0x14FFFFFF);
+          }
+          return null;
+        },
+      ),
+    );
+
+    Widget actionsRow() {
+      return Row(
+        children: <Widget>[
+          Expanded(
+            child: FilledButton.tonalIcon(
+              onPressed: canUseHint ? onHintPressed : null,
+              style: actionButtonStyle,
+              icon: Icon(
+                Icons.lightbulb_outline,
+                size: (18 * uiScale).clamp(16, 22).toDouble(),
+              ),
+              label: const Text('Hint'),
+            ),
+          ),
+          SizedBox(width: (8 * uiScale).clamp(6, 12).toDouble()),
+          Expanded(
+            child: FilledButton.tonalIcon(
+              onPressed: canUseUndo ? onUndoPressed : null,
+              style: actionButtonStyle,
+              icon: Icon(
+                Icons.undo_rounded,
+                size: (18 * uiScale).clamp(16, 22).toDouble(),
+              ),
+              label: const Text('Undo'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Material(
+      color: const Color(0xE81B2C49),
+      surfaceTintColor: Colors.transparent,
+      elevation: 3,
+      shadowColor: const Color(0x55050A14),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: LuminaPalette.panelBorder,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          child: compact
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        balanceLabel,
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          color: LuminaPalette.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: (8 * uiScale).clamp(6, 12).toDouble()),
+                    actionsRow(),
+                  ],
+                )
+              : Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        balanceLabel,
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          color: LuminaPalette.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: (8 * uiScale).clamp(6, 12).toDouble()),
+                    Expanded(
+                      flex: 2,
+                      child: actionsRow(),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LayoutProfile {
+  const _LayoutProfile({
+    required this.surfaceMaxWidth,
+    required this.surfaceHorizontalPadding,
+    required this.hudTop,
+    required this.hudHeightEstimate,
+    required this.comboTop,
+    required this.onboardingTop,
+    required this.assistBarBottom,
+    required this.bannerBottom,
+    required this.bannerHeight,
+    required this.gameTopInset,
+    required this.gameBottomInset,
+    required this.boardMaxPixels,
+    required this.boardMinPixels,
+    required this.rackCellSize,
+    required this.boardToRackGap,
+    required this.touchTargetMinSize,
+    required this.dragActivationDistance,
+    required this.uiScale,
+    required this.compactHud,
+    required this.compactActions,
+  });
+
+  final double surfaceMaxWidth;
+  final double surfaceHorizontalPadding;
+  final double hudTop;
+  final double hudHeightEstimate;
+  final double comboTop;
+  final double onboardingTop;
+  final double assistBarBottom;
+  final double bannerBottom;
+  final double bannerHeight;
+  final double gameTopInset;
+  final double gameBottomInset;
+  final double boardMaxPixels;
+  final double boardMinPixels;
+  final double rackCellSize;
+  final double boardToRackGap;
+  final double touchTargetMinSize;
+  final double dragActivationDistance;
+  final double uiScale;
+  final bool compactHud;
+  final bool compactActions;
+
+  static _LayoutProfile resolve({
+    required BoxConstraints constraints,
+    required MediaQueryData mediaQuery,
+    required bool isBannerVisible,
+    required bool isOnboardingVisible,
+  }) {
+    final double width = constraints.maxWidth;
+    final double height = constraints.maxHeight;
+    final double shortestSide = math.min(width, height);
+    final bool isTablet = shortestSide >= 600;
+    final bool isCompactPhone = shortestSide < 370;
+    final bool isLargePhone = shortestSide >= 410 && !isTablet;
+
+    final double uiScale = isTablet
+        ? (shortestSide / 700).clamp(1.08, 1.26).toDouble()
+        : (shortestSide / 390).clamp(0.9, 1.06).toDouble();
+
+    final double surfaceMaxWidth = isTablet ? 1100 : 920;
+    final double surfaceHorizontalPadding = isTablet
+        ? 20
+        : (isCompactPhone ? 10 : (isLargePhone ? 14 : 12)).toDouble();
+    const double hudTop = 8;
+    final double hudHeightEstimate =
+        isTablet ? 142 : (isCompactPhone ? 122 : 132).toDouble();
+    final double comboTop = hudTop + (isTablet ? 56 : 60);
+    final double onboardingTop = hudTop + hudHeightEstimate + 8;
+    final double assistBarHeight =
+        isTablet ? 86 : (isCompactPhone ? 78 : 80).toDouble();
+    final double bannerHeight = isTablet ? 60 : 54;
+    final double safeBottomInset = mediaQuery.padding.bottom;
+    final double assistBarBottom =
+        (isBannerVisible ? (bannerHeight + 14) : 12) + safeBottomInset;
+    final double bannerBottom = safeBottomInset + 8;
+    final double onboardingExtra =
+        isOnboardingVisible ? (isTablet ? 84 : 72) : 0;
+    final double gameTopInset =
+        hudTop + hudHeightEstimate + 10 + onboardingExtra;
+    final double gameBottomInset = assistBarHeight +
+        (isBannerVisible ? (bannerHeight + 18) : 14) +
+        safeBottomInset;
+
+    final double boardMaxPixels = isTablet
+        ? (width * 0.68).clamp(480, 620).toDouble()
+        : (width * (isCompactPhone ? 0.94 : 0.92)).clamp(330, 430).toDouble();
+    final double boardMinPixels =
+        isTablet ? 260 : (isCompactPhone ? 190 : 210).toDouble();
+    final double rackCellSize =
+        isTablet ? 30 : (isCompactPhone ? 22 : 24).toDouble();
+    final double boardToRackGap =
+        isTablet ? 24 : (isCompactPhone ? 16 : 18).toDouble();
+    final double touchTargetMinSize =
+        isTablet ? 56 : (isCompactPhone ? 48 : 52).toDouble();
+    final double dragActivationDistance =
+        isTablet ? 12 : (isCompactPhone ? 7 : 9).toDouble();
+
+    return _LayoutProfile(
+      surfaceMaxWidth: surfaceMaxWidth,
+      surfaceHorizontalPadding: surfaceHorizontalPadding,
+      hudTop: hudTop,
+      hudHeightEstimate: hudHeightEstimate,
+      comboTop: comboTop,
+      onboardingTop: onboardingTop,
+      assistBarBottom: assistBarBottom,
+      bannerBottom: bannerBottom,
+      bannerHeight: bannerHeight,
+      gameTopInset: gameTopInset,
+      gameBottomInset: gameBottomInset,
+      boardMaxPixels: boardMaxPixels,
+      boardMinPixels: boardMinPixels,
+      rackCellSize: rackCellSize,
+      boardToRackGap: boardToRackGap,
+      touchTargetMinSize: touchTargetMinSize,
+      dragActivationDistance: dragActivationDistance,
+      uiScale: uiScale,
+      compactHud: isCompactPhone,
+      compactActions: isCompactPhone,
+    );
+  }
+}
+
+class _GameOverOverlayCard extends StatelessWidget {
+  const _GameOverOverlayCard({
+    required this.state,
+    required this.onRestartPressed,
+    this.onRevivePressed,
+    this.onSharePressed,
+  });
+
+  final GameLoopViewState state;
+  final VoidCallback onRestartPressed;
+  final VoidCallback? onRevivePressed;
+  final VoidCallback? onSharePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isNewBest = state.scoreState.totalScore >= state.bestScore &&
+        state.scoreState.totalScore > 0;
+    final ButtonStyle actionButtonStyle = FilledButton.styleFrom(
+      minimumSize: const Size(112, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      textStyle: const TextStyle(
+        fontWeight: FontWeight.w700,
+      ),
+    );
+
+    return Card(
+      margin: const EdgeInsets.all(20),
+      color: const Color(0xFFF0F6FF),
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: Color(0x442B4E7A)),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.flag_circle_outlined,
+                    color: Color(0xFF1E5B82),
+                    size: 26,
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Round Complete',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (isNewBest)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDDF3E7),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Text(
+                        'New Best',
+                        style: TextStyle(
+                          color: Color(0xFF276642),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _RoundStatTile(
+                      label: 'Score',
+                      value: '${state.scoreState.totalScore}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _RoundStatTile(
+                      label: 'Best',
+                      value: '${state.bestScore}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _RoundStatTile(
+                      label: 'Level',
+                      value: '${state.level}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _RoundStatTile(
+                      label: 'Moves',
+                      value: '${state.movesPlayed}',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE6F1FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        'Daily goals: ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}',
+                        style: const TextStyle(
+                          color: Color(0xFF244A66),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Streak ${state.streak.currentDays}d',
+                      style: const TextStyle(
+                        color: Color(0xFF244A66),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: <Widget>[
+                  if (onSharePressed != null)
+                    FilledButton.tonalIcon(
+                      onPressed: onSharePressed,
+                      style: actionButtonStyle,
+                      icon: const Icon(Icons.share_outlined),
+                      label: const Text('Share'),
+                    ),
+                  if (onRevivePressed != null)
+                    FilledButton.tonalIcon(
+                      onPressed: onRevivePressed,
+                      style: actionButtonStyle,
+                      icon: const Icon(Icons.favorite),
+                      label: const Text('Revive'),
+                    ),
+                  FilledButton.icon(
+                    onPressed: onRestartPressed,
+                    style: actionButtonStyle,
+                    icon: const Icon(Icons.replay),
+                    label: const Text('Restart'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundStatTile extends StatelessWidget {
+  const _RoundStatTile({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F2FD),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF3F617C),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF14293D),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _OnboardingOverlayCard extends StatelessWidget {
@@ -331,7 +990,7 @@ class _OnboardingOverlayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xF5243348),
+      color: const Color(0xEE172840),
       borderRadius: BorderRadius.circular(14),
       elevation: 4,
       child: Padding(
@@ -340,7 +999,7 @@ class _OnboardingOverlayCard extends StatelessWidget {
           children: <Widget>[
             const Icon(
               Icons.tips_and_updates_outlined,
-              color: Color(0xFFFDE68A),
+              color: LuminaPalette.amber,
               size: 20,
             ),
             const SizedBox(width: 10),
@@ -359,7 +1018,7 @@ class _OnboardingOverlayCard extends StatelessWidget {
                   Text(
                     description,
                     style: const TextStyle(
-                      color: Color(0xFFDCE7F2),
+                      color: Color(0xFFCFE0F2),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -371,7 +1030,10 @@ class _OnboardingOverlayCard extends StatelessWidget {
             TextButton(
               onPressed: onDismiss,
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFBAE6FD),
+                foregroundColor: LuminaPalette.cyan,
+                minimumSize: const Size(64, 48),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
               child: const Text('Hide'),
             ),
@@ -420,11 +1082,14 @@ class _ComboToastChip extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
-            color: const Color(0xFFE86A33),
+            color: const Color(0xFFF58F56),
             borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0x55FFFFFF),
+            ),
             boxShadow: const <BoxShadow>[
               BoxShadow(
-                color: Color(0x553A1F1A),
+                color: Color(0x552A1B16),
                 blurRadius: 8,
                 offset: Offset(0, 3),
               ),
@@ -436,6 +1101,14 @@ class _ComboToastChip extends StatelessWidget {
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 13,
+              letterSpacing: 0.2,
+              shadows: <Shadow>[
+                Shadow(
+                  color: Color(0x44000000),
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ],
             ),
           ),
         ),
@@ -447,58 +1120,147 @@ class _ComboToastChip extends StatelessWidget {
 class _HudPanel extends StatelessWidget {
   const _HudPanel({
     required this.state,
+    required this.uiScale,
+    required this.compact,
   });
 
   final GameLoopViewState state;
+  final double uiScale;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final double metricLabelSize =
+        ((compact ? 10.5 : 11.0) * uiScale).clamp(10, 13).toDouble();
+    final double metricValueSize =
+        ((compact ? 15.0 : 16.0) * uiScale).clamp(14, 21).toDouble();
+    final double outerHorizontalPadding =
+        (12 * uiScale).clamp(10, 18).toDouble();
+    final double outerVerticalPadding = (10 * uiScale).clamp(8, 14).toDouble();
+    final double rowGap = (8 * uiScale).clamp(6, 11).toDouble();
+
     return Material(
       elevation: 3,
       borderRadius: BorderRadius.circular(14),
-      color: const Color.fromRGBO(255, 255, 255, 0.92),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _HudMetric(
-                    label: 'Score',
-                    value: '${state.scoreState.totalScore}',
-                  ),
+      color: const Color(0xEAF3F8FF),
+      shadowColor: const Color(0x33050A14),
+      surfaceTintColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0x442D4E78)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: outerHorizontalPadding,
+            vertical: outerVerticalPadding,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (compact) ...<Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Score',
+                        value: '${state.scoreState.totalScore}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Level',
+                        value: '${state.level}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Combo',
+                        value: '${state.scoreState.comboStreak}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: _HudMetric(
-                    label: 'Level',
-                    value: '${state.level}',
-                  ),
+                SizedBox(height: (4 * uiScale).clamp(3, 7).toDouble()),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Best',
+                        value: '${state.bestScore}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Moves',
+                        value: '${state.movesPlayed}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    const Spacer(),
+                  ],
                 ),
-                Expanded(
-                  child: _HudMetric(
-                    label: 'Combo',
-                    value: '${state.scoreState.comboStreak}',
-                  ),
+              ] else
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Score',
+                        value: '${state.scoreState.totalScore}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Level',
+                        value: '${state.level}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Combo',
+                        value: '${state.scoreState.comboStreak}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Best',
+                        value: '${state.bestScore}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                    Expanded(
+                      child: _HudMetric(
+                        label: 'Moves',
+                        value: '${state.movesPlayed}',
+                        labelFontSize: metricLabelSize,
+                        valueFontSize: metricValueSize,
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: _HudMetric(
-                    label: 'Best',
-                    value: '${state.bestScore}',
-                  ),
-                ),
-                Expanded(
-                  child: _HudMetric(
-                    label: 'Moves',
-                    value: '${state.movesPlayed}',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _ProgressSummaryBar(state: state),
-          ],
+              SizedBox(height: rowGap),
+              _ProgressSummaryBar(
+                state: state,
+                uiScale: uiScale,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -508,12 +1270,21 @@ class _HudPanel extends StatelessWidget {
 class _ProgressSummaryBar extends StatelessWidget {
   const _ProgressSummaryBar({
     required this.state,
+    required this.uiScale,
   });
 
   final GameLoopViewState state;
+  final double uiScale;
 
   @override
   Widget build(BuildContext context) {
+    if (state.uxVariant == 'hud_focus_v1') {
+      return _FocusProgressSummary(
+        state: state,
+        uiScale: uiScale,
+      );
+    }
+
     final String goalsLine =
         'Goals ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}'
         '  M ${state.dailyGoals.movesProgress}/${state.dailyGoals.movesTarget}'
@@ -521,10 +1292,13 @@ class _ProgressSummaryBar extends StatelessWidget {
         '  S ${state.dailyGoals.scoreProgress}/${state.dailyGoals.scoreTarget}';
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: (10 * uiScale).clamp(8, 14).toDouble(),
+        vertical: (6 * uiScale).clamp(5, 10).toDouble(),
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFEAF3FA),
+        color: const Color(0xFFE7F1FC),
       ),
       child: Row(
         children: <Widget>[
@@ -533,21 +1307,163 @@ class _ProgressSummaryBar extends StatelessWidget {
               goalsLine,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF365468),
+              style: TextStyle(
+                fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
+                color: const Color(0xFF2D4E66),
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: (10 * uiScale).clamp(8, 14).toDouble()),
           Text(
             'Streak ${state.streak.currentDays}d'
             '  Best ${state.streak.bestDays}d',
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF21485F),
+            style: TextStyle(
+              fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
+              color: const Color(0xFF214A65),
               fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FocusProgressSummary extends StatelessWidget {
+  const _FocusProgressSummary({
+    required this.state,
+    required this.uiScale,
+  });
+
+  final GameLoopViewState state;
+  final double uiScale;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: (10 * uiScale).clamp(8, 14).toDouble(),
+        vertical: (8 * uiScale).clamp(6, 12).toDouble(),
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFE7F1FC),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text(
+                'Goals ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}',
+                style: TextStyle(
+                  fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
+                  color: const Color(0xFF264960),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Streak ${state.streak.currentDays}d / ${state.streak.bestDays}d',
+                style: TextStyle(
+                  fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
+                  color: const Color(0xFF214A65),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: (7 * uiScale).clamp(6, 10).toDouble()),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _GoalProgressPill(
+                  label: 'Moves',
+                  progress: state.dailyGoals.movesProgress,
+                  target: state.dailyGoals.movesTarget,
+                  completed: state.dailyGoals.movesCompleted,
+                  uiScale: uiScale,
+                ),
+              ),
+              SizedBox(width: (6 * uiScale).clamp(4, 10).toDouble()),
+              Expanded(
+                child: _GoalProgressPill(
+                  label: 'Lines',
+                  progress: state.dailyGoals.linesProgress,
+                  target: state.dailyGoals.linesTarget,
+                  completed: state.dailyGoals.linesCompleted,
+                  uiScale: uiScale,
+                ),
+              ),
+              SizedBox(width: (6 * uiScale).clamp(4, 10).toDouble()),
+              Expanded(
+                child: _GoalProgressPill(
+                  label: 'Score',
+                  progress: state.dailyGoals.scoreProgress,
+                  target: state.dailyGoals.scoreTarget,
+                  completed: state.dailyGoals.scoreCompleted,
+                  uiScale: uiScale,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalProgressPill extends StatelessWidget {
+  const _GoalProgressPill({
+    required this.label,
+    required this.progress,
+    required this.target,
+    required this.completed,
+    required this.uiScale,
+  });
+
+  final String label;
+  final int progress;
+  final int target;
+  final bool completed;
+  final double uiScale;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: (8 * uiScale).clamp(6, 12).toDouble(),
+        vertical: (6 * uiScale).clamp(5, 9).toDouble(),
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: completed ? const Color(0xFFD8F1E1) : const Color(0xFFF2F7FF),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: (10 * uiScale).clamp(9, 12).toDouble(),
+              color:
+                  completed ? const Color(0xFF2E6E4A) : const Color(0xFF33536A),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$progress/$target',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
+              color: const Color(0xFF203E53),
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -560,10 +1476,14 @@ class _HudMetric extends StatelessWidget {
   const _HudMetric({
     required this.label,
     required this.value,
+    required this.labelFontSize,
+    required this.valueFontSize,
   });
 
   final String label;
   final String value;
+  final double labelFontSize;
+  final double valueFontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -572,9 +1492,11 @@ class _HudMetric extends StatelessWidget {
       children: <Widget>[
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: Color(0xFF44657A),
+          style: TextStyle(
+            fontSize: labelFontSize,
+            color: const Color(0xFF446986),
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.15,
           ),
         ),
         const SizedBox(height: 2),
@@ -586,9 +1508,10 @@ class _HudMetric extends StatelessWidget {
           child: Text(
             value,
             key: ValueKey<String>('${label}_$value'),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+            style: TextStyle(
+              fontSize: valueFontSize,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.1,
             ),
           ),
         ),
@@ -598,30 +1521,44 @@ class _HudMetric extends StatelessWidget {
 }
 
 class _BannerAdPlaceholder extends StatelessWidget {
-  const _BannerAdPlaceholder();
+  const _BannerAdPlaceholder({
+    required this.height,
+    required this.compact,
+  });
+
+  final double height;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFF3F6FA),
+      color: const Color(0xE81B2C49),
+      surfaceTintColor: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
-      elevation: 1,
+      elevation: 3,
+      shadowColor: const Color(0x44050A14),
       child: Container(
-        height: 54,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: LuminaPalette.panelBorder,
+          ),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
         alignment: Alignment.centerLeft,
-        child: const Row(
+        child: Row(
           children: <Widget>[
-            Icon(
+            const Icon(
               Icons.campaign_outlined,
-              color: Color(0xFF5B7281),
+              color: LuminaPalette.textSecondary,
               size: 18,
             ),
-            SizedBox(width: 8),
-            Text(
+            SizedBox(width: compact ? 6 : 8),
+            const Text(
               'Banner Ad Slot (Debug)',
               style: TextStyle(
-                color: Color(0xFF49606F),
+                color: LuminaPalette.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),

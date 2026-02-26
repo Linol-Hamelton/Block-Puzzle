@@ -1,9 +1,9 @@
-# services/analytics-pipeline
+﻿# services/analytics-pipeline
 
-Пайплайн продуктовой аналитики:
-- прием событий;
-- валидация схем;
-- агрегаты retention/monetization;
-- публикация в BI слой.
+Planned service boundary for:
+- event ingestion
+- schema validation
+- cohort aggregations
+- BI feed publishing
 
-На этапе 0 готовятся контракты событий и витрины KPI v1.
+Current repository includes contract files and export/tuning scripts that emulate the first operational loop without full backend deployment.

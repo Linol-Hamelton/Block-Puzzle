@@ -22,6 +22,7 @@ import 'package:block_puzzle_mobile/features/monetization/ad_guardrail_policy.da
 import 'package:block_puzzle_mobile/features/monetization/ad_placement.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_service.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_show_result.dart';
+import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -44,6 +45,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
         playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
@@ -81,6 +83,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
         playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
@@ -118,6 +121,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
         playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
@@ -128,7 +132,9 @@ void main() {
         analytics.trackedEvents.any(
           (event) =>
               event.name == 'session_start' &&
-              event.params['ab_bucket'] == 'variant_a',
+              event.params['ab_bucket'] == 'variant_a' &&
+              event.params['ux_variant'] == 'hud_focus_v1' &&
+              event.params['difficulty_variant'] == 'fairness_bias_v1',
         ),
         isTrue,
       );
@@ -141,6 +147,110 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'ab_experiment_exposure' &&
+              event.params['experiment_id'] == 'hud_ux' &&
+              event.params['variant_id'] == 'hud_focus_v1',
+        ),
+        isTrue,
+      );
+      expect(controller.state.uxVariant, 'hud_focus_v1');
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'game_start' &&
+              event.params['ux_variant'] == 'hud_focus_v1' &&
+              event.params['difficulty_variant'] == 'fairness_bias_v1',
+        ),
+        isTrue,
+      );
+    });
+
+    test('builds share text and tracks share events', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _InMemoryRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      final Move? move = _firstValidMove(controller);
+      expect(move, isNotNull);
+      await controller.processMove(move!);
+
+      final String shareText = controller.buildShareScoreText();
+      expect(shareText, contains('Lumina Blocks'));
+      expect(shareText, contains('#BlockPuzzle'));
+
+      await controller.trackShareScoreTapped(channel: 'clipboard');
+      await controller.trackShareScoreResult(
+        channel: 'clipboard',
+        success: true,
+      );
+
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'share_score_tapped' &&
+              event.params['channel'] == 'clipboard',
+        ),
+        isTrue,
+      );
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'share_score_result' &&
+              event.params['channel'] == 'clipboard' &&
+              event.params['success'] == true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('disables share flow from remote config', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _ShareDisabledRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+
+      expect(controller.state.isShareFlowEnabled, isFalse);
     });
 
     test('plays 10+ moves without failure using predictable rack', () async {
@@ -161,6 +271,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
         playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
@@ -211,6 +322,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
         playerProgressRepository: InMemoryPlayerProgressRepository(),
         logger: AppLogger(),
       );
@@ -230,6 +342,220 @@ void main() {
               event.name == 'daily_goal_progress' &&
               event.params['goal_id'] == 'daily_moves' &&
               event.params['is_completed'] == true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('uses rewarded hint via earned credits', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _HintUndoRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      final int creditsBefore = controller.state.rewardedToolsCredits;
+      final RewardedHintResult result = await controller.useRewardedHint();
+
+      expect(result.isSuccess, isTrue);
+      expect(controller.state.hintSuggestion, isNotNull);
+      expect(controller.state.rewardedToolsCredits, creditsBefore - 1);
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'rewarded_hint_used' &&
+              event.params['source'] == 'earned_credits',
+        ),
+        isTrue,
+      );
+    });
+
+    test('earns tools credits when daily goal is completed', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _DailyGoalRewardCreditsRemoteConfig(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      expect(controller.state.rewardedToolsCredits, 0);
+      final Move? move = _firstValidMove(controller);
+      expect(move, isNotNull);
+
+      await controller.processMove(move!);
+
+      expect(controller.state.dailyGoals.movesCompleted, isTrue);
+      expect(controller.state.rewardedToolsCredits, 2);
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'rewarded_tools_credits_earned' &&
+              event.params['source'] == 'daily_goals' &&
+              event.params['credits_earned'] == 2 &&
+              event.params['credits_balance'] == 2,
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejects rewarded hint when no credits and no unlimited access',
+        () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository:
+            const _NoCreditsHintUndoRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+
+      final RewardedHintResult result = await controller.useRewardedHint();
+
+      expect(result.isSuccess, isFalse);
+      expect(result.failureReason, 'insufficient_tools_credits');
+      expect(controller.state.hintSuggestion, isNull);
+      expect(
+        analytics.trackedEvents.any(
+          (event) => event.name == 'rewarded_hint_used',
+        ),
+        isFalse,
+      );
+    });
+
+    test('uses rewarded undo and restores previous board state', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _HintUndoRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      final Move? move = _firstValidMove(controller);
+      expect(move, isNotNull);
+      await controller.processMove(move!);
+      expect(controller.state.movesPlayed, 1);
+
+      final RewardedUndoResult undoResult = await controller.useRewardedUndo();
+
+      expect(undoResult.isSuccess, isTrue);
+      expect(controller.state.movesPlayed, 0);
+      expect(controller.state.boardState.occupiedCells, isEmpty);
+      expect(
+        analytics.trackedEvents.any(
+          (event) => event.name == 'rewarded_undo_used',
+        ),
+        isTrue,
+      );
+    });
+
+    test('uses rewarded hint via iap unlimited access without spending credits',
+        () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final DebugIapStoreService iapService = DebugIapStoreService();
+      final product = (await iapService.loadCatalog()).firstWhere(
+        (item) => item.id == 'utility_tools_pass',
+      );
+      await iapService.purchase(product: product);
+
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository:
+            const _IapUnlimitedHintUndoRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: iapService,
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      final int creditsBefore = controller.state.rewardedToolsCredits;
+      final RewardedHintResult result = await controller.useRewardedHint();
+
+      expect(result.isSuccess, isTrue);
+      expect(controller.state.hasUnlimitedRewardedTools, isTrue);
+      expect(controller.state.rewardedToolsCredits, creditsBefore);
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'rewarded_hint_used' &&
+              event.params['source'] == 'iap_unlimited',
         ),
         isTrue,
       );
@@ -257,6 +583,7 @@ void main() {
         analyticsTracker: analytics,
         adService: const _NoopAdService(),
         adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
         playerProgressRepository: progressRepository,
         logger: AppLogger(),
         nowUtcProvider: () => nowUtc,
@@ -276,6 +603,57 @@ void main() {
               event.name == 'streak_updated' &&
               event.params['reason'] == 'continued' &&
               event.params['current_streak'] == 2,
+        ),
+        isTrue,
+      );
+    });
+
+    test('emits ops snapshot and alert on runtime guardrail violation',
+        () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      DateTime nowUtc = DateTime.utc(2026, 2, 25, 10, 0, 0);
+
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository:
+            const _ObservabilityAlertRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: _FailingIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+        nowUtcProvider: () => nowUtc,
+      );
+
+      await controller.initialize();
+      nowUtc = nowUtc.add(const Duration(seconds: 45));
+      controller.dispose();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'ops_session_snapshot' &&
+              (event.params['runtime_error_count'] as int? ?? 0) >= 1,
+        ),
+        isTrue,
+      );
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'ops_alert_triggered' &&
+              event.params['alert_id'] == 'runtime_errors_high',
         ),
         isTrue,
       );
@@ -377,6 +755,7 @@ class _AbVariantRemoteConfigRepository implements RemoteConfigRepository {
       'ab.tutorial_variant': 'guided_v2',
       'ab.offer_strategy_variant': 'cosmetics_first_v2',
       'ab.difficulty_variant': 'fairness_bias_v1',
+      'ab.ux_variant': 'hud_focus_v1',
     };
   }
 }
@@ -398,6 +777,138 @@ class _DailyGoalsRemoteConfigRepository implements RemoteConfigRepository {
       'progression.daily_goal_lines_target': 200,
       'progression.daily_goal_score_target': 5000,
       'progression.streak_enabled': true,
+    };
+  }
+}
+
+class _HintUndoRemoteConfigRepository implements RemoteConfigRepository {
+  const _HintUndoRemoteConfigRepository();
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return getCached();
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return <String, Object?>{
+      'difficulty.hard_piece_weight': 0.2,
+      'difficulty.max_hard_pieces_per_triplet': 1,
+      'progression.rewarded_tools_initial_credits': 3,
+      'progression.rewarded_tools_hint_cost': 1,
+      'progression.rewarded_tools_undo_cost': 1,
+      'progression.undo_history_limit': 1,
+      'iap.rewarded_tools_unlimited_enabled': true,
+      'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
+    };
+  }
+}
+
+class _ShareDisabledRemoteConfigRepository implements RemoteConfigRepository {
+  const _ShareDisabledRemoteConfigRepository();
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return getCached();
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return <String, Object?>{
+      'difficulty.hard_piece_weight': 0.2,
+      'difficulty.max_hard_pieces_per_triplet': 1,
+      'social.share_enabled': false,
+    };
+  }
+}
+
+class _NoCreditsHintUndoRemoteConfigRepository
+    implements RemoteConfigRepository {
+  const _NoCreditsHintUndoRemoteConfigRepository();
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return getCached();
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return <String, Object?>{
+      'difficulty.hard_piece_weight': 0.2,
+      'difficulty.max_hard_pieces_per_triplet': 1,
+      'progression.rewarded_tools_initial_credits': 0,
+      'progression.rewarded_tools_hint_cost': 1,
+      'progression.rewarded_tools_undo_cost': 1,
+      'progression.undo_history_limit': 1,
+      'iap.rewarded_tools_unlimited_enabled': false,
+      'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
+    };
+  }
+}
+
+class _DailyGoalRewardCreditsRemoteConfig implements RemoteConfigRepository {
+  const _DailyGoalRewardCreditsRemoteConfig();
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return getCached();
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return <String, Object?>{
+      'difficulty.hard_piece_weight': 0.2,
+      'difficulty.max_hard_pieces_per_triplet': 1,
+      'progression.daily_goal_moves_target': 1,
+      'progression.daily_goal_lines_target': 500,
+      'progression.daily_goal_score_target': 10000,
+      'progression.daily_goal_reward_credits': 2,
+      'progression.rewarded_tools_initial_credits': 0,
+      'progression.streak_enabled': true,
+    };
+  }
+}
+
+class _IapUnlimitedHintUndoRemoteConfigRepository
+    implements RemoteConfigRepository {
+  const _IapUnlimitedHintUndoRemoteConfigRepository();
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return getCached();
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return <String, Object?>{
+      'difficulty.hard_piece_weight': 0.2,
+      'difficulty.max_hard_pieces_per_triplet': 1,
+      'progression.rewarded_tools_initial_credits': 0,
+      'progression.rewarded_tools_hint_cost': 1,
+      'progression.rewarded_tools_undo_cost': 1,
+      'progression.undo_history_limit': 1,
+      'iap.rewarded_tools_unlimited_enabled': true,
+      'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
+    };
+  }
+}
+
+class _ObservabilityAlertRemoteConfigRepository
+    implements RemoteConfigRepository {
+  const _ObservabilityAlertRemoteConfigRepository();
+
+  @override
+  Future<Map<String, Object?>> fetchLatest() async {
+    return getCached();
+  }
+
+  @override
+  Future<Map<String, Object?>> getCached() async {
+    return <String, Object?>{
+      'difficulty.hard_piece_weight': 0.2,
+      'difficulty.max_hard_pieces_per_triplet': 1,
+      'ops.alerting.enabled': true,
+      'ops.alerting.max_runtime_error_count': 0,
     };
   }
 }
@@ -484,4 +995,11 @@ class _AllowAllAdGuardrailPolicy implements AdGuardrailPolicy {
 
   @override
   int rewardedReviveClearCells(Map<String, Object?> remoteConfig) => 6;
+}
+
+class _FailingIapStoreService extends DebugIapStoreService {
+  @override
+  Future<Set<String>> loadOwnedProductIds() async {
+    throw StateError('iap_load_failed');
+  }
 }

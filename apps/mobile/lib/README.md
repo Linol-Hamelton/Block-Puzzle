@@ -1,6 +1,14 @@
-# apps/mobile/lib
+﻿# apps/mobile/lib
 
-Папка для будущих модулей клиента:
-- app/core/domain/data/features/ui.
+Main application code for Lumina Blocks.
 
-Реализация будет выполняться по спринтам, указанным в roadmap.
+Current modules:
+- `app` bootstrap/app shell
+- `core` DI, logging, shared infrastructure
+- `domain` gameplay rules and value objects
+- `data` analytics, remote config, repositories
+- `features` game loop, store, monetization utilities
+- `ui` screens and theme
+
+Actual implementation status is tracked in:
+`docs/roadmap/05_IMPLEMENTATION_STATUS.md`

@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "hard": {
+    "min_sample_size_sessions": 30,
+    "max_observed_early_gameover_rate": 0.3,
+    "max_ops_alert_critical_count": 0,
+    "max_ops_runtime_error_session_rate": 0.02,
+    "max_ops_early_gameover_alert_rate": 0.1
+  },
+  "soft": {
+    "min_avg_session_minutes": 6.0,
+    "min_combo_move_rate": 0.2,
+    "min_target_attainment_pct": 92.0,
+    "max_target_attainment_pct": 123.0,
+    "max_ops_alert_rate": 0.25
+  }
+}

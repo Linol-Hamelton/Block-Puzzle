@@ -10,8 +10,14 @@ class GameLoopViewState {
     required this.rackPieces,
     required this.level,
     required this.colorThemeIndex,
+    required this.uxVariant,
+    required this.isShareFlowEnabled,
     required this.isGameOver,
     required this.canUseRewardedRevive,
+    required this.canUseRewardedHint,
+    required this.canUseRewardedUndo,
+    required this.rewardedToolsCredits,
+    required this.hasUnlimitedRewardedTools,
     required this.isBannerVisible,
     required this.isOnboardingVisible,
     required this.dailyGoals,
@@ -22,6 +28,7 @@ class GameLoopViewState {
     this.onboardingStepId,
     this.onboardingTitle,
     this.onboardingDescription,
+    this.hintSuggestion,
     this.gameOverReason,
   });
 
@@ -30,8 +37,14 @@ class GameLoopViewState {
   final List<Piece> rackPieces;
   final int level;
   final int colorThemeIndex;
+  final String uxVariant;
+  final bool isShareFlowEnabled;
   final bool isGameOver;
   final bool canUseRewardedRevive;
+  final bool canUseRewardedHint;
+  final bool canUseRewardedUndo;
+  final int rewardedToolsCredits;
+  final bool hasUnlimitedRewardedTools;
   final bool isBannerVisible;
   final bool isOnboardingVisible;
   final DailyGoalsSnapshot dailyGoals;
@@ -42,6 +55,7 @@ class GameLoopViewState {
   final String? onboardingStepId;
   final String? onboardingTitle;
   final String? onboardingDescription;
+  final HintSuggestion? hintSuggestion;
   final String? gameOverReason;
 
   factory GameLoopViewState.initial() {
@@ -51,8 +65,14 @@ class GameLoopViewState {
       rackPieces: <Piece>[],
       level: 1,
       colorThemeIndex: 0,
+      uxVariant: 'hud_standard_v1',
+      isShareFlowEnabled: true,
       isGameOver: false,
       canUseRewardedRevive: false,
+      canUseRewardedHint: false,
+      canUseRewardedUndo: false,
+      rewardedToolsCredits: 0,
+      hasUnlimitedRewardedTools: false,
       isBannerVisible: false,
       isOnboardingVisible: false,
       dailyGoals: DailyGoalsSnapshot.initial(),
@@ -63,6 +83,7 @@ class GameLoopViewState {
       onboardingStepId: null,
       onboardingTitle: null,
       onboardingDescription: null,
+      hintSuggestion: null,
     );
   }
 
@@ -72,8 +93,14 @@ class GameLoopViewState {
     List<Piece>? rackPieces,
     int? level,
     int? colorThemeIndex,
+    String? uxVariant,
+    bool? isShareFlowEnabled,
     bool? isGameOver,
     bool? canUseRewardedRevive,
+    bool? canUseRewardedHint,
+    bool? canUseRewardedUndo,
+    int? rewardedToolsCredits,
+    bool? hasUnlimitedRewardedTools,
     bool? isBannerVisible,
     bool? isOnboardingVisible,
     DailyGoalsSnapshot? dailyGoals,
@@ -84,8 +111,10 @@ class GameLoopViewState {
     String? onboardingStepId,
     String? onboardingTitle,
     String? onboardingDescription,
+    HintSuggestion? hintSuggestion,
     String? gameOverReason,
     bool resetOnboarding = false,
+    bool resetHintSuggestion = false,
     bool resetGameOverReason = false,
   }) {
     return GameLoopViewState(
@@ -94,8 +123,15 @@ class GameLoopViewState {
       rackPieces: rackPieces ?? this.rackPieces,
       level: level ?? this.level,
       colorThemeIndex: colorThemeIndex ?? this.colorThemeIndex,
+      uxVariant: uxVariant ?? this.uxVariant,
+      isShareFlowEnabled: isShareFlowEnabled ?? this.isShareFlowEnabled,
       isGameOver: isGameOver ?? this.isGameOver,
       canUseRewardedRevive: canUseRewardedRevive ?? this.canUseRewardedRevive,
+      canUseRewardedHint: canUseRewardedHint ?? this.canUseRewardedHint,
+      canUseRewardedUndo: canUseRewardedUndo ?? this.canUseRewardedUndo,
+      rewardedToolsCredits: rewardedToolsCredits ?? this.rewardedToolsCredits,
+      hasUnlimitedRewardedTools:
+          hasUnlimitedRewardedTools ?? this.hasUnlimitedRewardedTools,
       isBannerVisible: isBannerVisible ?? this.isBannerVisible,
       isOnboardingVisible: isOnboardingVisible ?? this.isOnboardingVisible,
       dailyGoals: dailyGoals ?? this.dailyGoals,
@@ -110,8 +146,24 @@ class GameLoopViewState {
       onboardingDescription: resetOnboarding
           ? null
           : (onboardingDescription ?? this.onboardingDescription),
+      hintSuggestion:
+          resetHintSuggestion ? null : (hintSuggestion ?? this.hintSuggestion),
       gameOverReason:
           resetGameOverReason ? null : (gameOverReason ?? this.gameOverReason),
     );
   }
+}
+
+class HintSuggestion {
+  const HintSuggestion({
+    required this.piece,
+    required this.anchorX,
+    required this.anchorY,
+    required this.estimatedClearedLines,
+  });
+
+  final Piece piece;
+  final int anchorX;
+  final int anchorY;
+  final int estimatedClearedLines;
 }

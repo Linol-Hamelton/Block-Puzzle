@@ -1,39 +1,39 @@
-# QA Smoke Pack v1
+﻿# QA Smoke Pack v1
 
 ## 1. Purpose
-Run the mandatory release-quality baseline for internal playtest and prepare installable artifacts for PC/Web and Android.
+Run the mandatory internal smoke baseline and generate quick installable artifacts for Android and Web.
 
-## 2. Checks Included
+## 2. Checks Included (current script)
 1. `flutter analyze`
 2. `flutter test`
 3. `flutter build apk --debug`
-4. `flutter build web --release` (optional via switch)
+4. `flutter build web --release` (optional)
 
 ## 3. Script
-Use:
-`scripts/mobile_smoke_pack_v1.ps1`
+`./scripts/mobile_smoke_pack_v1.ps1`
 
-Example:
+Run:
 ```powershell
 .\scripts\mobile_smoke_pack_v1.ps1
 ```
 
-Without web build:
+Skip web:
 ```powershell
 .\scripts\mobile_smoke_pack_v1.ps1 -SkipWebBuild
 ```
 
 ## 4. Output Artifacts
-After successful run:
-1. APK: [block-puzzle-internal-debug.apk](/d:/Block-Puzzle/artifacts/block-puzzle-internal-debug.apk)
-2. Web zip: `artifacts/block-puzzle-web-build-YYYY-MM-DD.zip`
+- APK: [block-puzzle-internal-debug.apk](/d:/Block-Puzzle/artifacts/block-puzzle-internal-debug.apk)
+- Web zip: `artifacts/block-puzzle-web-build-YYYY-MM-DD.zip`
 
 ## 5. Pass Criteria
-1. `analyze` has no issues.
-2. Unit/widget/internal tests pass.
-3. APK is produced and installable on Android test devices.
-4. Web bundle opens and gameplay loop is functional (start -> move -> game over -> restart).
+1. Analyze has no blocking issues.
+2. Tests pass.
+3. APK installs and launches on Android test devices.
+4. Core game loop is functional (start -> move -> game over -> restart).
 
-## 6. Notes
-- This is smoke coverage, not full regression.
-- Before external release, add performance and device-matrix checks.
+## 6. Store-Mode Build Note
+Smoke pack is intentionally debug-oriented.
+For store validation, additionally build:
+- `flutter build apk --release`
+- `flutter build appbundle --release`

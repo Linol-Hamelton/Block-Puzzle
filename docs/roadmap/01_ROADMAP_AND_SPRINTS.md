@@ -1,80 +1,94 @@
-# Подробная Дорожная Карта и Sprint Backlog
+﻿# Roadmap and Sprint Backlog
 
-## 1. Этапы продукта
-1. Этап 0 (2-4 недели): прототип и фундамент.
-2. Этап 1 (6-8 недель): MVP и подготовка soft launch.
-3. Этап 2 (2-3 месяца): soft launch, оптимизация retention и ad stack.
-4. Этап 3 (3-6 месяцев): масштабирование, новые режимы, метагейм.
-5. Этап 4 (ongoing): LiveOps фабрика экспериментов.
+## 1. Product Stages
+1. Stage 0 (2-4 weeks): prototype and foundations.
+2. Stage 1 (6-8 weeks): MVP and soft launch preparation.
+3. Stage 2 (2-3 months): soft launch optimization (retention, balance, monetization).
+4. Stage 3 (3-6 months): scaling, new modes, deeper progression.
+5. Stage 4 (ongoing): liveops experiment factory.
 
-## 2. План на первые 16 недель (8 спринтов по 2 недели)
-
+## 2. First 16 Weeks (8 sprints x 2 weeks)
 ### Sprint 1
-- Архитектурный каркас Flutter+Flame.
-- Доменные модели board/piece/move/score.
-- Прототип drag&drop и валидация хода.
-- События `session_start`, `game_start`, `move_made`.
+- Flutter+Flame architecture scaffold
+- domain models and contracts
+- first game screen skeleton
+- baseline telemetry
 
 ### Sprint 2
-- Очистка линий, combo, game over, restart.
-- Базовый HUD и экран результатов.
-- Локальное сохранение рекорда.
-- Unit tests для domain rules.
+- core gameplay loop completion
+- HUD and result screen basics
+- best score persistence
+- domain unit tests
 
 ### Sprint 3
-- Core-loop polish: базовые эффекты и звук.
-- Onboarding v1 (guided first game).
-- Remote config клиент + fallback.
-- ad adapters (только заглушки/интерфейсы).
+- VFX/SFX baseline polish
+- onboarding v1
+- remote config fallback
+- adapter hooks for external integrations
 
 ### Sprint 4
-- Интеграция Banner + Interstitial + Rewarded revive.
-- События рекламы и валидация схем.
-- Performance pass (assets, draw calls, memory).
-- QA smoke pack v1.
+- telemetry quality hardening
+- QA smoke baseline
+- performance pass
+- ad mediation deferred by current ad-free strategy
 
 ### Sprint 5
-- Soft launch readiness build.
-- A/B framework v1 (tutorial variant + ad cap variant).
-- Dashboard MVP (retention, session, ad metrics).
-- Bugfix и stability hardening.
+- dashboard MVP contract
+- AB framework baseline
+- readiness hardening
 
 ### Sprint 6
-- Дневные цели + streak система.
-- Rewarded hint/undo.
-- Первая волна UX/Balance A/B tests.
-- Тонкая настройка генератора фигур.
+- daily goals + streak
+- utility hint/undo economy
+- first UX/balance AB wave
 
 ### Sprint 7
-- IAP ad-free + cosmetic starter pack.
-- Сегментация пользователей и offer targeting v1.
-- Улучшение end-of-round UX и social loop (share score optional).
-- Observability и alerting upgrade.
+- segmentation and offer targeting
+- end-of-round UX + optional share
+- observability and alerting upgrade
 
 ### Sprint 8
-- Soft launch iteration #2.
-- Rollout победивших экспериментов.
-- План расширения в новые GEO.
-- Pre-production дизайн пакета Этапа 3.
+- soft launch iteration loop
+- rollout gate execution on real cohorts
+- geo expansion preparation
+- stage-3 pre-production package
 
-## 3. Роли и ownership по спринтам
-- Product Manager: гипотезы, KPI, приоритизация.
-- Game Client Engineer: core gameplay, performance, UI integration.
-- Backend/Data Engineer: config API, events pipeline, dashboards.
-- UA/Monetization Manager: ad strategy, mediation roadmap, pricing IAP.
-- Game Designer: difficulty curve, loop tuning, balance.
-- UI/UX + Motion Artist: визуальный стиль, juice эффект, clarity.
-- QA Engineer: smoke/regression + device matrix.
+### Sprint 8.1
+- stabilization pass for release readiness
+- device-matrix QA and regression hardening
+- real cohort gate decisions and rollout discipline
 
-## 4. KPI-гейты перехода между этапами
-- Этап 0 -> 1: core-loop стабилен, crash-free >= 99%.
-- Этап 1 -> 2: MVP готов, ключевые события валидны, ad stack работает без критических UX потерь.
-- Этап 2 -> 3: подтвержден product-market signal в soft launch (retention+ARPDAU в целевом коридоре).
-- Этап 3 -> 4: масштабируемая liveops и experiment cadence, стабильный KPI тренд.
+### Sprint 9
+- Mode Hub rollout on Home screen
+- first new mode delivery (`Tetris Rush`)
+- technical scaffold for next mode (`Match-3`)
+- feature-flag controlled rollout
+- mode-specific analytics and quality gates
 
-## 5. Бэклог-группы для постоянной работы
-1. Gameplay Quality: fairness, combo fun, late-game decisions.
-2. Monetization Efficiency: placement tuning, mediation, rewarded value design.
-3. Retention Systems: goals, streak, meta progression, seasonal events.
-4. Tech Platform: perf, reliability, test automation, release velocity.
-5. Data Excellence: schema quality, dashboards, experiment governance.
+## 3. Roles and Ownership
+- Product Manager: hypotheses and KPI prioritization
+- Gameplay Engineer: core loop and balance
+- Client Engineer: platform integration and UI
+- Data Engineer: contracts, validation, dashboard pipelines
+- Designer/Artist: UX and visual polish
+- QA Engineer: device-matrix and regression control
+
+## 4. Stage Gates
+- Stage 0 -> 1: stable prototype and no critical blockers.
+- Stage 1 -> 2: MVP stable, telemetry valid, release process reproducible.
+- Stage 2 -> 3: soft launch signals validated on cohorts.
+- Stage 3 -> 4: repeatable liveops and experiment cadence.
+
+## 5. Continuous Backlog Streams
+1. Gameplay quality
+2. Monetization quality (ad-free-first economy)
+3. Retention systems
+4. Tech platform reliability
+5. Data and experiment governance
+
+## 6. Execution Packs
+1. [Sprint 8.1 Stabilization Backlog](/d:/Block-Puzzle/docs/roadmap/07_SPRINT8_1_STABILIZATION_BACKLOG.md)
+2. [Sprint 9 First New Mode Backlog](/d:/Block-Puzzle/docs/roadmap/08_SPRINT9_FIRST_NEW_MODE_BACKLOG.md)
+3. [Sprint 8.1 Issue-Ready Daily Plan](/d:/Block-Puzzle/docs/roadmap/09_SPRINT8_1_ISSUE_READY_DAILY.md)
+4. [Sprint 9 Issue-Ready Daily Plan](/d:/Block-Puzzle/docs/roadmap/10_SPRINT9_MODE_HUB_ISSUE_READY_DAILY.md)
+5. [Sprint 8.1 + Sprint 9 GitHub Issue Pack (Title / Labels / Body)](/d:/Block-Puzzle/docs/roadmap/11_SPRINT8_1_SPRINT9_GITHUB_ISSUES.md)

@@ -9,7 +9,7 @@ class BlockPuzzleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Block Puzzle',
+      title: 'Lumina Blocks',
       theme: AppTheme.lightTheme(),
       home: const HomeScreen(),
     );

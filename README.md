@@ -1,51 +1,52 @@
-# Block Puzzle - Top 1 Preparation Pack
+﻿# Lumina Blocks - Project Documentation Hub
 
-Этот репозиторий содержит стартовый пакет pre-production для мобильной F2P игры в жанре block puzzle (ориентир: Block Blast-подобный core-loop) с фокусом на:
-- максимальную коммерциализацию без разрушения UX;
-- "гипнотический" геймплей (быстрый цикл, мощный визуальный/аудио фидбек, высокий повторный запуск);
-- масштабируемую архитектуру (MVP -> Soft Launch -> Global Scale).
+This repository contains the current implementation and operational documentation for **Lumina Blocks** (Flutter + Flame).
 
-Полный код проекта здесь специально не реализован. В репозитории заложены структура, архитектура, каталогизация, карта связей, подробное ТЗ и дорожная карта.
+## Current Product State
+- Core gameplay loop is implemented and playable on Android/Web/Desktop.
+- Sprints 1-7 are implemented (with ad-free strategy selected for monetization).
+- Sprint 8 is in progress (soft launch iteration loop with rollout gates).
+- Branding was migrated from default placeholders to `Lumina Blocks` assets.
 
-## Документация
-- [Product Vision и KPI](docs/product/01_PRODUCT_VISION_KPI.md)
-- [Подробное Техническое ТЗ](docs/product/02_TECHNICAL_REQUIREMENTS_SPEC.md)
-- [UI/UX и Art Direction](docs/design/01_UI_UX_ART_DIRECTION.md)
-- [Целевая Структура Репозитория](docs/architecture/01_TARGET_REPO_STRUCTURE.md)
-- [Архитектура и Каталог Модулей](docs/architecture/02_ARCHITECTURE_MODULE_CATALOG.md)
-- [Карта Связей Системы](docs/architecture/03_RELATION_MAP.md)
-- [Спека Аналитики, A/B и Монетизации](docs/operations/01_ANALYTICS_AB_MONETIZATION_SPEC.md)
-- [Риски и Guardrails](docs/operations/02_RISKS_GUARDRAILS.md)
-- [Internal Playtest Protocol](docs/operations/03_INTERNAL_PLAYTEST_PROTOCOL.md)
-- [Internal Playtest Run 001 Report](docs/operations/04_INTERNAL_PLAYTEST_RUN_001_REPORT.md)
-- [Run 002 Input Template](docs/operations/05_RUN_002_INPUT_TEMPLATE.md)
-- [QA Smoke Pack v1](docs/operations/06_QA_SMOKE_PACK_V1.md)
-- [GitHub Actions Build Setup](docs/operations/07_GITHUB_ACTIONS_SETUP.md)
-- [Ad-Free Mode Strategy](docs/operations/08_AD_FREE_MODE_STRATEGY.md)
-- [IAP Sandbox Scaffold](docs/operations/09_IAP_SANDBOX_SCAFFOLD.md)
-- [Dashboard MVP Contract](docs/operations/10_DASHBOARD_MVP_CONTRACT.md)
-- [Roadmap и Sprint Backlog](docs/roadmap/01_ROADMAP_AND_SPRINTS.md)
-- [Чеклист Этапа 0](docs/roadmap/02_PHASE0_CHECKLIST.md)
-- [Sprint 1 Issue-Ready Backlog](docs/roadmap/03_SPRINT1_ISSUE_READY_BACKLOG.md)
-- [Sprint 1 GitHub Issues](docs/roadmap/04_SPRINT1_GITHUB_ISSUES.md)
-- [Implementation Status](docs/roadmap/05_IMPLEMENTATION_STATUS.md)
+## Repo Areas
+- `apps/mobile` - game client (Flutter + Flame).
+- `docs` - product, architecture, operations, release, roadmap.
+- `data` - analytics/dashboard contracts and run metrics snapshots.
+- `scripts` - tuning, rollout-gates, export, smoke-pack automation.
+- `distribution` - store metadata and submission assets checklist.
 
-## Каркас Репозитория
-- `apps/mobile` - Flutter + Flame клиент (игра, UI, оффлайн слой, SDK интеграции).
-- `services/config-api` - сервис remote config, feature flags и A/B распределения.
-- `services/analytics-pipeline` - ingestion, валидация, агрегации событий и витрины метрик.
-- `infra` - IaC, окружения, CI/CD, секреты, observability.
-- `data` - схемы событий, словари, контрактные спецификации.
+## Build and Test
+From `apps/mobile`:
+```bash
+flutter pub get
+flutter analyze
+flutter test
+```
 
-## Стартовые Принципы
-- Архитектурно отделяем `core gameplay` от `monetization/experimentation`, чтобы быстро тестировать гипотезы без риска регрессий в gameplay.
-- Любое усиление рекламы проходит guardrails по retention и session quality.
-- Каждая продуктовая гипотеза должна иметь ожидаемый KPI uplift, план эксперимента и критерий остановки.
-
-## Быстрый Запуск Smoke Pack
+Run internal smoke pack from repo root:
 ```powershell
 .\scripts\mobile_smoke_pack_v1.ps1
 ```
-Артефакты после прогона:
-- `artifacts/block-puzzle-internal-debug.apk`
-- `artifacts/block-puzzle-web-build-YYYY-MM-DD.zip`
+
+## Artifact Locations
+Common local artifacts:
+- `artifacts/block-puzzle-internal-debug.apk` (internal smoke debug APK)
+- `artifacts/block-puzzle-store-release.apk` (store-mode APK for manual install tests)
+- `artifacts/android/block-puzzle-release.aab` (store upload bundle)
+- `artifacts/block-puzzle-web-build-YYYY-MM-DD.zip` (web build zip)
+- `artifacts/windows/block-puzzle-windows-release.zip` (desktop package)
+
+## Main Documentation
+- [Product Vision & KPI](docs/product/01_PRODUCT_VISION_KPI.md)
+- [Technical Requirements](docs/product/02_TECHNICAL_REQUIREMENTS_SPEC.md)
+- [Architecture Catalog](docs/architecture/02_ARCHITECTURE_MODULE_CATALOG.md)
+- [Operations Index (Sprint docs)](docs/operations)
+- [Roadmap and Status](docs/roadmap/01_ROADMAP_AND_SPRINTS.md)
+- [Implementation Status (Actual)](docs/roadmap/05_IMPLEMENTATION_STATUS.md)
+- [Roadmap Completeness Audit](docs/roadmap/06_ROADMAP_COMPLETENESS_AUDIT_2026-02-25.md)
+
+## Source of Truth Rule
+If documents conflict:
+1. `docs/roadmap/05_IMPLEMENTATION_STATUS.md` defines implemented scope.
+2. `apps/mobile` code is authoritative for runtime behavior.
+3. Older planning docs are treated as historical context unless updated.
