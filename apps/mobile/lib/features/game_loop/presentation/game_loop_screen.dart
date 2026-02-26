@@ -178,8 +178,8 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
                           center: const Alignment(0, -0.25),
                           radius: 0.95,
                           colors: <Color>[
-                            LuminaPalette.cyan.withOpacity(0.14),
-                            LuminaPalette.violet.withOpacity(0.09),
+                            LuminaPalette.cyan.withValues(alpha: 0.14),
+                            LuminaPalette.violet.withValues(alpha: 0.09),
                             Colors.transparent,
                           ],
                         ),

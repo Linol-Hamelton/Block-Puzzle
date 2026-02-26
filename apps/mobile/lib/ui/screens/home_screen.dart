@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
                   center: const Alignment(0, -0.25),
                   radius: 0.9,
                   colors: <Color>[
-                    LuminaPalette.cyan.withOpacity(0.13),
+                    LuminaPalette.cyan.withValues(alpha: 0.13),
                     Colors.transparent,
                   ],
                 ),

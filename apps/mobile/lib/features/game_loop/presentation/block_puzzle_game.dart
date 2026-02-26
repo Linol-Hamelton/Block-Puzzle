@@ -627,21 +627,22 @@ void _drawGlassBlockCell(
   final bool isCrystal = preset == BlockVisualPreset.crystal;
 
   final Color topTint = _adjustLightness(tint, isCrystal ? 0.28 : 0.24)
-      .withOpacity((isCrystal ? 0.54 : 0.66) * opacity);
+      .withValues(alpha: (isCrystal ? 0.54 : 0.66) * opacity);
   final Color bottomTint = _mixColor(
     _adjustLightness(tint, isCrystal ? -0.08 : -0.1),
     const Color(0xFF0D1731),
     isCrystal ? 0.48 : 0.42,
-  ).withOpacity((isCrystal ? 0.44 : 0.58) * opacity);
+  ).withValues(alpha: (isCrystal ? 0.44 : 0.58) * opacity);
   final Color outlineTint = _mixColor(tint, const Color(0xFFF2FAFF), 0.56)
-      .withOpacity(0.95 * opacity);
+      .withValues(alpha: 0.95 * opacity);
   final Color prismTop = _mixColor(tint, const Color(0xFF9FE7FF), 0.62);
   final Color prismBottom = _mixColor(tint, const Color(0xFFCBA2FF), 0.56);
 
   final Paint glowPaint = Paint()
-    ..color = tint.withOpacity(
-      (intenseGlow ? (isCrystal ? 0.6 : 0.5) : (isCrystal ? 0.44 : 0.34)) *
-          opacity,
+    ..color = tint.withValues(
+      alpha:
+          (intenseGlow ? (isCrystal ? 0.6 : 0.5) : (isCrystal ? 0.44 : 0.34)) *
+              opacity,
     )
     ..maskFilter = MaskFilter.blur(
       BlurStyle.normal,
@@ -665,9 +666,9 @@ void _drawGlassBlockCell(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: <Color>[
-        prismTop.withOpacity((isCrystal ? 0.26 : 0.2) * opacity),
-        Colors.white.withOpacity((isCrystal ? 0.14 : 0.08) * opacity),
-        prismBottom.withOpacity((isCrystal ? 0.28 : 0.22) * opacity),
+        prismTop.withValues(alpha: (isCrystal ? 0.26 : 0.2) * opacity),
+        Colors.white.withValues(alpha: (isCrystal ? 0.14 : 0.08) * opacity),
+        prismBottom.withValues(alpha: (isCrystal ? 0.28 : 0.22) * opacity),
       ],
       stops: const <double>[0, 0.45, 1],
     ).createShader(rect);
@@ -678,14 +679,14 @@ void _drawGlassBlockCell(
       center: const Alignment(0, 0),
       radius: 0.72,
       colors: <Color>[
-        Colors.white.withOpacity(
-          (intenseGlow
+        Colors.white.withValues(
+          alpha: (intenseGlow
                   ? (isCrystal ? 0.62 : 0.46)
                   : (isCrystal ? 0.48 : 0.34)) *
               opacity,
         ),
-        tint.withOpacity(
-          (intenseGlow
+        tint.withValues(
+          alpha: (intenseGlow
                   ? (isCrystal ? 0.48 : 0.36)
                   : (isCrystal ? 0.36 : 0.26)) *
               opacity,
@@ -701,8 +702,8 @@ void _drawGlassBlockCell(
       center: const Alignment(-0.25, -0.35),
       radius: 1.1,
       colors: <Color>[
-        Colors.white.withOpacity((isCrystal ? 0.56 : 0.44) * opacity),
-        Colors.white.withOpacity((isCrystal ? 0.18 : 0.12) * opacity),
+        Colors.white.withValues(alpha: (isCrystal ? 0.56 : 0.44) * opacity),
+        Colors.white.withValues(alpha: (isCrystal ? 0.18 : 0.12) * opacity),
         Colors.transparent,
       ],
       stops: const <double>[0, 0.56, 1],
@@ -718,11 +719,12 @@ void _drawGlassBlockCell(
   final Paint innerEdgePaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 0.9
-    ..color = Colors.white.withOpacity(0.22 * opacity);
+    ..color = Colors.white.withValues(alpha: 0.22 * opacity);
   canvas.drawRRect(rr.deflate(0.9), innerEdgePaint);
 
   final Paint cornerSparkPaint = Paint()
-    ..color = Colors.white.withOpacity((isCrystal ? 0.58 : 0.46) * opacity)
+    ..color =
+        Colors.white.withValues(alpha: (isCrystal ? 0.58 : 0.46) * opacity)
     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.6);
   final double spark = rect.width * 0.07;
   canvas.drawCircle(

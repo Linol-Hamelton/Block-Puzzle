@@ -88,8 +88,8 @@ class _StoreScreenState extends State<StoreScreen> {
                   center: const Alignment(0, -0.35),
                   radius: 0.92,
                   colors: <Color>[
-                    LuminaPalette.cyan.withOpacity(0.12),
-                    LuminaPalette.violet.withOpacity(0.07),
+                    LuminaPalette.cyan.withValues(alpha: 0.12),
+                    LuminaPalette.violet.withValues(alpha: 0.07),
                     Colors.transparent,
                   ],
                 ),
