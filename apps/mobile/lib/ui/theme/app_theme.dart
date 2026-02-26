@@ -137,7 +137,7 @@ class AppTheme {
           ),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: const Color(0xFFF8FBFF),
         elevation: 4,
         shadowColor: const Color(0x1A000000),
