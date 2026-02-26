@@ -11,6 +11,10 @@ on:
         description: "App version code (integer)"
         required: true
         default: "2"
+      use_signing:
+        description: "Use keystore secrets for release signing (true/false)"
+        required: true
+        default: "false"
 
 concurrency:
   group: android-release-${{ github.ref }}
@@ -43,10 +47,12 @@ jobs:
         run: flutter pub get
 
       - name: Decode Android keystore
+        if: ${{ inputs.use_signing == 'true' }}
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
 
       - name: Create key.properties
+        if: ${{ inputs.use_signing == 'true' }}
         run: |
           cat <<'EOF' > android/key.properties
           storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
