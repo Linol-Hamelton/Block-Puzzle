@@ -137,14 +137,7 @@ class AppTheme {
           ),
         ),
       ),
-      cardTheme: CardThemeData(
-        color: const Color(0xFFF8FBFF),
-        elevation: 4,
-        shadowColor: const Color(0x1A000000),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
+      cardColor: const Color(0xFFF8FBFF),
       chipTheme: const ChipThemeData(
         backgroundColor: Color(0x1A56D4FF),
         disabledColor: Color(0x331A2B42),

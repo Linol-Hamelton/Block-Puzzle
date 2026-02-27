@@ -19,7 +19,8 @@ class GameLoopScreen extends StatefulWidget {
   State<GameLoopScreen> createState() => _GameLoopScreenState();
 }
 
-class _GameLoopScreenState extends State<GameLoopScreen> {
+class _GameLoopScreenState extends State<GameLoopScreen>
+    with WidgetsBindingObserver {
   late final GameLoopController _controller;
   late final GameSfxPlayer _sfxPlayer;
   late final BlockPuzzleGame _game;
@@ -31,6 +32,7 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = sl<GameLoopController>();
     _sfxPlayer = sl<GameSfxPlayer>();
     _game = BlockPuzzleGame(
@@ -43,8 +45,31 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
   @override
   void dispose() {
     _isDisposed = true;
+    WidgetsBinding.instance.removeObserver(this);
     _controller.stateListenable.removeListener(_onControllerStateChanged);
+    _game.shutdown();
+    _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isDisposed) {
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _game.resumeEngine();
+        unawaited(_sfxPlayer.preload());
+        return;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _game.pauseEngine();
+        return;
+    }
   }
 
   void _onControllerStateChanged() {
@@ -128,7 +153,23 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Classic Mode')),
+      appBar: AppBar(
+        title: const Text(
+          'Classic Mode',
+          style: TextStyle(
+            color: Color(0xFFC9EDFF),
+            fontWeight: FontWeight.w500,
+            fontSize: 24,
+            letterSpacing: 0.35,
+            shadows: <Shadow>[
+              Shadow(
+                color: Color(0x6634C8FF),
+                blurRadius: 18,
+              ),
+            ],
+          ),
+        ),
+      ),
       body: ValueListenableBuilder<GameLoopViewState>(
         valueListenable: _controller.stateListenable,
         builder:
@@ -156,36 +197,7 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
 
               return Stack(
                 children: <Widget>[
-                  Positioned.fill(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: <Color>[
-                            LuminaPalette.midnight,
-                            LuminaPalette.deepNavy,
-                            Color(0xFF18345A),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: const Alignment(0, -0.25),
-                          radius: 0.95,
-                          colors: <Color>[
-                            LuminaPalette.cyan.withValues(alpha: 0.14),
-                            LuminaPalette.violet.withValues(alpha: 0.09),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  const Positioned.fill(child: _NebulaBackground()),
                   Positioned.fill(
                     child: Center(
                       child: ConstrainedBox(
@@ -198,8 +210,9 @@ class _GameLoopScreenState extends State<GameLoopScreen> {
                           ),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
                               border: Border.all(
-                                color: const Color(0x664C75A4),
+                                color: const Color(0x2C88CFFF),
                               ),
                             ),
                             child: GameWidget(
@@ -497,7 +510,8 @@ class _AssistActionsBar extends StatelessWidget {
       elevation: const WidgetStatePropertyAll<double>(0),
       shape: WidgetStatePropertyAll<OutlinedBorder>(
         RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0x4F88C8FF)),
         ),
       ),
       textStyle: WidgetStatePropertyAll<TextStyle>(
@@ -510,23 +524,23 @@ class _AssistActionsBar extends StatelessWidget {
       backgroundColor: WidgetStateProperty.resolveWith<Color>(
         (Set<WidgetState> states) {
           if (states.contains(WidgetState.disabled)) {
-            return const Color(0xFF24374F);
+            return const Color(0x1D8CB6E0);
           }
           if (states.contains(WidgetState.pressed)) {
-            return const Color(0xFF335983);
+            return const Color(0x355EA9DE);
           }
           if (states.contains(WidgetState.hovered)) {
-            return const Color(0xFF2F4F77);
+            return const Color(0x2D5A9FD3);
           }
-          return const Color(0xFF29466D);
+          return const Color(0x285B9FD5);
         },
       ),
       foregroundColor: WidgetStateProperty.resolveWith<Color>(
         (Set<WidgetState> states) {
           if (states.contains(WidgetState.disabled)) {
-            return const Color(0xFF8CA7C1);
+            return const Color(0xFF83A0BE);
           }
-          return LuminaPalette.textPrimary;
+          return const Color(0xFFDDF2FF);
         },
       ),
       overlayColor: WidgetStateProperty.resolveWith<Color?>(
@@ -573,7 +587,7 @@ class _AssistActionsBar extends StatelessWidget {
     }
 
     return Material(
-      color: const Color(0xE81B2C49),
+      color: const Color(0x5A253D67),
       surfaceTintColor: Colors.transparent,
       elevation: 3,
       shadowColor: const Color(0x55050A14),
@@ -581,9 +595,21 @@ class _AssistActionsBar extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: LuminaPalette.panelBorder,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[Color(0x71334D7E), Color(0x5A1F335C)],
           ),
+          border: Border.all(
+            color: const Color(0x6581B1DF),
+          ),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x221389C9),
+              blurRadius: 16,
+              spreadRadius: 1,
+            ),
+          ],
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(
@@ -600,7 +626,7 @@ class _AssistActionsBar extends StatelessWidget {
                         balanceLabel,
                         style: TextStyle(
                           fontSize: fontSize,
-                          color: LuminaPalette.textPrimary,
+                          color: const Color(0xCDE3F8FF),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -616,7 +642,7 @@ class _AssistActionsBar extends StatelessWidget {
                         balanceLabel,
                         style: TextStyle(
                           fontSize: fontSize,
-                          color: LuminaPalette.textPrimary,
+                          color: const Color(0xCDE3F8FF),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1140,15 +1166,27 @@ class _HudPanel extends StatelessWidget {
     final double rowGap = (8 * uiScale).clamp(6, 11).toDouble();
 
     return Material(
-      elevation: 3,
+      elevation: 2,
       borderRadius: BorderRadius.circular(14),
-      color: const Color(0xEAF3F8FF),
-      shadowColor: const Color(0x33050A14),
+      color: const Color(0x62344E79),
+      shadowColor: const Color(0x3C091126),
       surfaceTintColor: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0x442D4E78)),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[Color(0x77415E8E), Color(0x5A2D436E)],
+          ),
+          border: Border.all(color: const Color(0x77A3CEFF)),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x2A42C2FF),
+              blurRadius: 22,
+              spreadRadius: 1,
+            ),
+          ],
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(
@@ -1298,7 +1336,7 @@ class _ProgressSummaryBar extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFE7F1FC),
+        color: const Color(0x2E9CBFEC),
       ),
       child: Row(
         children: <Widget>[
@@ -1309,7 +1347,7 @@ class _ProgressSummaryBar extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
-                color: const Color(0xFF2D4E66),
+                color: const Color(0xFFC8E6FF),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1320,7 +1358,7 @@ class _ProgressSummaryBar extends StatelessWidget {
             '  Best ${state.streak.bestDays}d',
             style: TextStyle(
               fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
-              color: const Color(0xFF214A65),
+              color: const Color(0xFFD2ECFF),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1349,7 +1387,7 @@ class _FocusProgressSummary extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFE7F1FC),
+        color: const Color(0x2E9CBFEC),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1360,7 +1398,7 @@ class _FocusProgressSummary extends StatelessWidget {
                 'Goals ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}',
                 style: TextStyle(
                   fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
-                  color: const Color(0xFF264960),
+                  color: const Color(0xFFC8E6FF),
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1369,7 +1407,7 @@ class _FocusProgressSummary extends StatelessWidget {
                 'Streak ${state.streak.currentDays}d / ${state.streak.bestDays}d',
                 style: TextStyle(
                   fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
-                  color: const Color(0xFF214A65),
+                  color: const Color(0xFFD2ECFF),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1439,7 +1477,7 @@ class _GoalProgressPill extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: completed ? const Color(0xFFD8F1E1) : const Color(0xFFF2F7FF),
+        color: completed ? const Color(0x3B78DFAF) : const Color(0x254D7CB0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1451,7 +1489,7 @@ class _GoalProgressPill extends StatelessWidget {
             style: TextStyle(
               fontSize: (10 * uiScale).clamp(9, 12).toDouble(),
               color:
-                  completed ? const Color(0xFF2E6E4A) : const Color(0xFF33536A),
+                  completed ? const Color(0xFFD9FFEC) : const Color(0xC9CBE4FF),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1462,7 +1500,7 @@ class _GoalProgressPill extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: (11 * uiScale).clamp(10, 13).toDouble(),
-              color: const Color(0xFF203E53),
+              color: const Color(0xFFE8F7FF),
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1494,7 +1532,7 @@ class _HudMetric extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: labelFontSize,
-            color: const Color(0xFF446986),
+            color: const Color(0xB6C4E4FF),
             fontWeight: FontWeight.w600,
             letterSpacing: 0.15,
           ),
@@ -1512,6 +1550,13 @@ class _HudMetric extends StatelessWidget {
               fontSize: valueFontSize,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.1,
+              color: const Color(0xFFE8FAFF),
+              shadows: const <Shadow>[
+                Shadow(
+                  color: Color(0x9929B6FF),
+                  blurRadius: 14,
+                ),
+              ],
             ),
           ),
         ),
@@ -1567,6 +1612,132 @@ class _BannerAdPlaceholder extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NebulaBackground extends StatelessWidget {
+  const _NebulaBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF070E2A),
+            Color(0xFF121D4B),
+            Color(0xFF141B4B),
+            Color(0xFF0A153D),
+          ],
+        ),
+      ),
+      child: CustomPaint(
+        painter: _NebulaBackgroundPainter(),
+        child: SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _NebulaBackgroundPainter extends CustomPainter {
+  const _NebulaBackgroundPainter();
+
+  static const List<Offset> _stars = <Offset>[
+    Offset(0.08, 0.08),
+    Offset(0.14, 0.16),
+    Offset(0.23, 0.11),
+    Offset(0.31, 0.2),
+    Offset(0.42, 0.12),
+    Offset(0.56, 0.17),
+    Offset(0.63, 0.1),
+    Offset(0.74, 0.2),
+    Offset(0.86, 0.14),
+    Offset(0.92, 0.24),
+    Offset(0.12, 0.39),
+    Offset(0.24, 0.33),
+    Offset(0.39, 0.46),
+    Offset(0.51, 0.38),
+    Offset(0.67, 0.42),
+    Offset(0.8, 0.35),
+    Offset(0.89, 0.49),
+    Offset(0.06, 0.6),
+    Offset(0.19, 0.55),
+    Offset(0.34, 0.66),
+    Offset(0.46, 0.59),
+    Offset(0.62, 0.67),
+    Offset(0.76, 0.61),
+    Offset(0.87, 0.71),
+    Offset(0.11, 0.82),
+    Offset(0.28, 0.78),
+    Offset(0.43, 0.88),
+    Offset(0.58, 0.8),
+    Offset(0.71, 0.9),
+    Offset(0.9, 0.86),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Rect rect = Offset.zero & size;
+
+    final Paint cyanNebula = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.2, -0.3),
+        radius: 0.95,
+        colors: <Color>[
+          _withAlpha(const Color(0xFF56D4FF), 0.2),
+          _withAlpha(const Color(0xFF56D4FF), 0.06),
+          Colors.transparent,
+        ],
+      ).createShader(rect);
+    final Paint violetNebula = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0.55, 0.08),
+        radius: 1.05,
+        colors: <Color>[
+          _withAlpha(const Color(0xFF9B7CFF), 0.16),
+          _withAlpha(const Color(0xFF9B7CFF), 0.05),
+          Colors.transparent,
+        ],
+      ).createShader(rect);
+    final Paint lowerNebula = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0.0, 0.85),
+        radius: 1.0,
+        colors: <Color>[
+          _withAlpha(const Color(0xFF46A2FF), 0.1),
+          Colors.transparent,
+        ],
+      ).createShader(rect);
+    final Paint starAura = Paint()
+      ..color = const Color(0x44C6EEFF)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.7);
+    final Paint starCore = Paint()..color = const Color(0xA5DFF7FF);
+
+    canvas.drawRect(rect, cyanNebula);
+    canvas.drawRect(rect, violetNebula);
+    canvas.drawRect(rect, lowerNebula);
+
+    for (final Offset star in _stars) {
+      final Offset point = Offset(size.width * star.dx, size.height * star.dy);
+      canvas.drawCircle(point, 2.5, starAura);
+      canvas.drawCircle(point, 0.95, starCore);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
+Color _withAlpha(
+  Color color,
+  double alpha,
+) {
+  final int a =
+      (alpha.clamp(0, 1).toDouble() * 255).round().clamp(0, 255).toInt();
+  return Color.fromARGB(a, color.red, color.green, color.blue);
 }
 
 class _ComboToastData {

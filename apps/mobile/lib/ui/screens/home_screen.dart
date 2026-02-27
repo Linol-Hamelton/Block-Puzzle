@@ -28,14 +28,14 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          Positioned.fill(
+          const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0, -0.25),
+                  center: Alignment(0, -0.25),
                   radius: 0.9,
                   colors: <Color>[
-                    LuminaPalette.cyan.withValues(alpha: 0.13),
+                    Color(0x2156D4FF),
                     Colors.transparent,
                   ],
                 ),

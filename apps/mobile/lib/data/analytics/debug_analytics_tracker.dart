@@ -18,6 +18,10 @@ class DebugAnalyticsTracker implements AnalyticsTracker {
     String eventName, {
     Map<String, Object?> params = const <String, Object?>{},
   }) async {
+    if (kReleaseMode) {
+      return;
+    }
+
     final Map<String, Object?> payload = Map<String, Object?>.from(params);
     payload.putIfAbsent('schema_version', () => _schemaValidator.schemaVersion);
     payload.putIfAbsent(

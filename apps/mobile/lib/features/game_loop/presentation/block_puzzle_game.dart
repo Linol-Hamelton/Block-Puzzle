@@ -29,6 +29,8 @@ class BlockPuzzleGame extends FlameGame {
   final BoardComponent _boardComponent = BoardComponent();
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
   VoidCallback? _stateListener;
+  String _rackSignature = '';
+  bool _isShuttingDown = false;
 
   double _boardCellSize = 36;
   Vector2 _boardOrigin = Vector2.zero();
@@ -87,7 +89,7 @@ class BlockPuzzleGame extends FlameGame {
   ];
 
   @override
-  Color backgroundColor() => const Color(0xFF0A1730);
+  Color backgroundColor() => const Color(0xFF060E24);
 
   int _activePaletteIndex = 0;
   int _previousPaletteIndex = 0;
@@ -97,6 +99,10 @@ class BlockPuzzleGame extends FlameGame {
   Future<void> onLoad() async {
     await sfxPlayer.preload();
     await controller.initialize();
+
+    if (_isShuttingDown) {
+      return;
+    }
 
     add(_boardComponent);
 
@@ -118,6 +124,9 @@ class BlockPuzzleGame extends FlameGame {
     double? rackMinTouchTargetSize,
     double? dragActivationDistance,
   }) {
+    if (_isShuttingDown) {
+      return;
+    }
     final double normalizedTop = topInset.clamp(84, 300);
     final double normalizedBottom = bottomInset.clamp(84, 320);
     final double normalizedHorizontalPadding =
@@ -183,6 +192,9 @@ class BlockPuzzleGame extends FlameGame {
 
   @override
   void onGameResize(Vector2 size) {
+    if (_isShuttingDown) {
+      return;
+    }
     super.onGameResize(size);
     _recalculateLayout();
     if (_pendingRackRebuild && _rackComponents.isNotEmpty) {
@@ -199,6 +211,9 @@ class BlockPuzzleGame extends FlameGame {
 
   @override
   void update(double dt) {
+    if (_isShuttingDown) {
+      return;
+    }
     super.update(dt);
     if (_paletteTransition >= 1) {
       return;
@@ -209,15 +224,36 @@ class BlockPuzzleGame extends FlameGame {
 
   @override
   void onRemove() {
+    shutdown();
+    super.onRemove();
+  }
+
+  void shutdown() {
+    if (_isShuttingDown) {
+      return;
+    }
+    _isShuttingDown = true;
+    pauseEngine();
+
     final VoidCallback? listener = _stateListener;
     if (listener != null) {
       controller.stateListenable.removeListener(listener);
       _stateListener = null;
     }
-    super.onRemove();
+
+    for (final RackPieceComponent component in _rackComponents) {
+      component.removeFromParent();
+    }
+    _rackComponents.clear();
+    _rackSignature = '';
+    _boardComponent.clearPreview();
+    _boardComponent.clearHint();
   }
 
   void onRackPieceDragged(RackPieceComponent pieceComponent) {
+    if (_isShuttingDown) {
+      return;
+    }
     final _BoardAnchor? anchor = _anchorForPiecePosition(pieceComponent);
     if (anchor == null) {
       _boardComponent.clearPreview();
@@ -239,6 +275,11 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   Future<void> onRackPieceDropped(RackPieceComponent pieceComponent) async {
+    if (_isShuttingDown) {
+      pieceComponent.resetToHome();
+      _boardComponent.clearPreview();
+      return;
+    }
     if (_dropInProgress) {
       pieceComponent.resetToHome();
       _boardComponent.clearPreview();
@@ -292,6 +333,9 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   void _syncWithState() {
+    if (_isShuttingDown) {
+      return;
+    }
     final state = controller.state;
     _visualPreset = _blockVisualPresetFromString(controller.blocksVisualPreset);
     _boardComponent.setVisualPreset(_visualPreset);
@@ -307,12 +351,36 @@ class BlockPuzzleGame extends FlameGame {
         anchorY: hintSuggestion.anchorY,
       );
     }
-    _rebuildRackPieces(state.rackPieces);
+    final String nextRackSignature = _buildRackSignature(state.rackPieces);
+    final bool rackChanged = nextRackSignature != _rackSignature;
+    if (rackChanged || _rackComponents.length != state.rackPieces.length) {
+      _rackSignature = nextRackSignature;
+      _rebuildRackPieces(state.rackPieces);
+    } else if (_rackComponents.isNotEmpty) {
+      _applyCurrentPalette();
+    }
     _recalculateLayout();
     _positionRackPieces();
   }
 
+  String _buildRackSignature(List<Piece> pieces) {
+    if (pieces.isEmpty) {
+      return '';
+    }
+    final StringBuffer buffer = StringBuffer();
+    for (int i = 0; i < pieces.length; i++) {
+      if (i > 0) {
+        buffer.write('|');
+      }
+      buffer.write(pieces[i].id);
+    }
+    return buffer.toString();
+  }
+
   void _recalculateLayout() {
+    if (_isShuttingDown) {
+      return;
+    }
     if (!hasLayout) {
       return;
     }
@@ -373,6 +441,9 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   void _rebuildRackPieces(List<Piece> pieces) {
+    if (_isShuttingDown) {
+      return;
+    }
     for (final RackPieceComponent component in _rackComponents) {
       component.removeFromParent();
     }
@@ -401,6 +472,9 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   void _positionRackPieces() {
+    if (_isShuttingDown) {
+      return;
+    }
     if (!hasLayout) {
       return;
     }
@@ -614,6 +688,15 @@ Color _adjustLightness(
       .toColor();
 }
 
+Color _withAlpha(
+  Color color,
+  double alpha,
+) {
+  final int a =
+      (alpha.clamp(0, 1).toDouble() * 255).round().clamp(0, 255).toInt();
+  return Color.fromARGB(a, color.red, color.green, color.blue);
+}
+
 void _drawGlassBlockCell(
   Canvas canvas, {
   required Rect rect,
@@ -626,29 +709,37 @@ void _drawGlassBlockCell(
   final RRect rr = RRect.fromRectAndRadius(rect, Radius.circular(radius));
   final bool isCrystal = preset == BlockVisualPreset.crystal;
 
-  final Color topTint = _adjustLightness(tint, isCrystal ? 0.28 : 0.24)
-      .withValues(alpha: (isCrystal ? 0.54 : 0.66) * opacity);
+  final Color topTint = _withAlpha(
+    _adjustLightness(tint, isCrystal ? 0.28 : 0.24),
+    (isCrystal ? 0.54 : 0.66) * opacity,
+  );
   final Color bottomTint = _mixColor(
     _adjustLightness(tint, isCrystal ? -0.08 : -0.1),
     const Color(0xFF0D1731),
     isCrystal ? 0.48 : 0.42,
-  ).withValues(alpha: (isCrystal ? 0.44 : 0.58) * opacity);
-  final Color outlineTint = _mixColor(tint, const Color(0xFFF2FAFF), 0.56)
-      .withValues(alpha: 0.95 * opacity);
+  );
+  final Color bottomTintWithAlpha =
+      _withAlpha(bottomTint, (isCrystal ? 0.44 : 0.58) * opacity);
+  final Color outlineTint = _withAlpha(
+      _mixColor(tint, const Color(0xFFF2FAFF), 0.56), 0.95 * opacity);
   final Color prismTop = _mixColor(tint, const Color(0xFF9FE7FF), 0.62);
   final Color prismBottom = _mixColor(tint, const Color(0xFFCBA2FF), 0.56);
-
-  final Paint glowPaint = Paint()
-    ..color = tint.withValues(
-      alpha:
-          (intenseGlow ? (isCrystal ? 0.6 : 0.5) : (isCrystal ? 0.44 : 0.34)) *
-              opacity,
-    )
-    ..maskFilter = MaskFilter.blur(
-      BlurStyle.normal,
-      isCrystal ? 7.4 : 6.2,
-    );
-  canvas.drawRRect(rr.inflate(0.7), glowPaint);
+  final bool enableOuterGlow = intenseGlow || isCrystal;
+  if (enableOuterGlow) {
+    final Paint glowPaint = Paint()
+      ..color = _withAlpha(
+        tint,
+        (intenseGlow ? (isCrystal ? 0.6 : 0.5) : (isCrystal ? 0.4 : 0.3)) *
+            opacity,
+      );
+    if (intenseGlow || isCrystal) {
+      glowPaint.maskFilter = MaskFilter.blur(
+        BlurStyle.normal,
+        intenseGlow ? (isCrystal ? 7.2 : 6.0) : 4.2,
+      );
+    }
+    canvas.drawRRect(rr.inflate(intenseGlow ? 0.75 : 0.35), glowPaint);
+  }
 
   final Paint bodyPaint = Paint()
     ..shader = LinearGradient(
@@ -656,7 +747,7 @@ void _drawGlassBlockCell(
       end: Alignment.bottomRight,
       colors: <Color>[
         topTint,
-        bottomTint,
+        bottomTintWithAlpha,
       ],
     ).createShader(rect);
   canvas.drawRRect(rr, bodyPaint);
@@ -666,9 +757,9 @@ void _drawGlassBlockCell(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: <Color>[
-        prismTop.withValues(alpha: (isCrystal ? 0.26 : 0.2) * opacity),
-        Colors.white.withValues(alpha: (isCrystal ? 0.14 : 0.08) * opacity),
-        prismBottom.withValues(alpha: (isCrystal ? 0.28 : 0.22) * opacity),
+        _withAlpha(prismTop, (isCrystal ? 0.26 : 0.2) * opacity),
+        _withAlpha(Colors.white, (isCrystal ? 0.14 : 0.08) * opacity),
+        _withAlpha(prismBottom, (isCrystal ? 0.28 : 0.22) * opacity),
       ],
       stops: const <double>[0, 0.45, 1],
     ).createShader(rect);
@@ -679,14 +770,16 @@ void _drawGlassBlockCell(
       center: const Alignment(0, 0),
       radius: 0.72,
       colors: <Color>[
-        Colors.white.withValues(
-          alpha: (intenseGlow
+        _withAlpha(
+          Colors.white,
+          (intenseGlow
                   ? (isCrystal ? 0.62 : 0.46)
                   : (isCrystal ? 0.48 : 0.34)) *
               opacity,
         ),
-        tint.withValues(
-          alpha: (intenseGlow
+        _withAlpha(
+          tint,
+          (intenseGlow
                   ? (isCrystal ? 0.48 : 0.36)
                   : (isCrystal ? 0.36 : 0.26)) *
               opacity,
@@ -702,8 +795,8 @@ void _drawGlassBlockCell(
       center: const Alignment(-0.25, -0.35),
       radius: 1.1,
       colors: <Color>[
-        Colors.white.withValues(alpha: (isCrystal ? 0.56 : 0.44) * opacity),
-        Colors.white.withValues(alpha: (isCrystal ? 0.18 : 0.12) * opacity),
+        _withAlpha(Colors.white, (isCrystal ? 0.56 : 0.44) * opacity),
+        _withAlpha(Colors.white, (isCrystal ? 0.18 : 0.12) * opacity),
         Colors.transparent,
       ],
       stops: const <double>[0, 0.56, 1],
@@ -719,13 +812,17 @@ void _drawGlassBlockCell(
   final Paint innerEdgePaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 0.9
-    ..color = Colors.white.withValues(alpha: 0.22 * opacity);
+    ..color = _withAlpha(Colors.white, 0.22 * opacity);
   canvas.drawRRect(rr.deflate(0.9), innerEdgePaint);
 
   final Paint cornerSparkPaint = Paint()
-    ..color =
-        Colors.white.withValues(alpha: (isCrystal ? 0.58 : 0.46) * opacity)
-    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.6);
+    ..color = _withAlpha(
+      Colors.white,
+      (isCrystal ? (intenseGlow ? 0.58 : 0.34) : 0.42) * opacity,
+    );
+  if (intenseGlow || isCrystal) {
+    cornerSparkPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.1);
+  }
   final double spark = rect.width * 0.07;
   canvas.drawCircle(
     Offset(rect.left + (rect.width * 0.18), rect.top + (rect.height * 0.2)),
@@ -735,6 +832,26 @@ void _drawGlassBlockCell(
 }
 
 class BoardComponent extends PositionComponent {
+  static const List<Offset> _starMap = <Offset>[
+    Offset(0.1, 0.14),
+    Offset(0.22, 0.08),
+    Offset(0.36, 0.2),
+    Offset(0.54, 0.12),
+    Offset(0.68, 0.23),
+    Offset(0.84, 0.18),
+    Offset(0.18, 0.34),
+    Offset(0.41, 0.39),
+    Offset(0.61, 0.31),
+    Offset(0.79, 0.44),
+    Offset(0.14, 0.56),
+    Offset(0.33, 0.6),
+    Offset(0.56, 0.52),
+    Offset(0.74, 0.67),
+    Offset(0.23, 0.76),
+    Offset(0.5, 0.82),
+    Offset(0.83, 0.78),
+  ];
+
   BoardState _boardState = BoardState.empty(size: 8);
   _PreviewState? _previewState;
   _HintState? _hintState;
@@ -803,9 +920,9 @@ class BoardComponent extends PositionComponent {
       const Radius.circular(14),
     );
     final Color boardTop =
-        _mixColor(_boardBackgroundColor, const Color(0xFF304F84), 0.26);
+        _mixColor(_boardBackgroundColor, const Color(0xFF3653A2), 0.3);
     final Color boardBottom =
-        _mixColor(_boardBackgroundColor, const Color(0xFF061025), 0.4);
+        _mixColor(_boardBackgroundColor, const Color(0xFF050A1A), 0.42);
 
     final Paint boardBackground = Paint()
       ..shader = LinearGradient(
@@ -816,33 +933,42 @@ class BoardComponent extends PositionComponent {
     final Paint boardGlow = Paint()
       ..shader = const RadialGradient(
         center: Alignment(0, -0.25),
-        radius: 1.05,
+        radius: 1.08,
         colors: <Color>[
-          Color(0x2E58B7FF),
+          Color(0x2B6FC6FF),
           Colors.transparent,
         ],
       ).createShader(boardRect);
     final Paint boardPrismGlow = Paint()
       ..shader = const RadialGradient(
-        center: Alignment(0.36, 0.28),
-        radius: 1.1,
+        center: Alignment(0.38, 0.25),
+        radius: 1.12,
         colors: <Color>[
-          Color(0x1FA574FF),
+          Color(0x238F6FFF),
           Colors.transparent,
         ],
       ).createShader(boardRect);
+    final Paint boardOuterGlow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..color = const Color(0x338DD4FF)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.6);
     final Paint borderPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = const Color(0x668DC3FF);
+      ..strokeWidth = 1.15
+      ..color = const Color(0x7390CDFF);
     final Paint minorGridPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..color = const Color(0x296FB4E6);
+      ..color = const Color(0x245CA8DD);
     final Paint majorGridPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.15
-      ..color = const Color(0x3B8ECAFF);
+      ..color = const Color(0x3C7FC5F4);
+    final Paint starCorePaint = Paint()..color = const Color(0x55B7ECFF);
+    final Paint starAuraPaint = Paint()
+      ..color = const Color(0x22A2DEFF)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.8);
 
     canvas.drawRRect(boardRRect, boardBackground);
     canvas.drawRRect(boardRRect, boardGlow);
@@ -850,6 +976,11 @@ class BoardComponent extends PositionComponent {
 
     canvas.save();
     canvas.clipRRect(boardRRect);
+    for (final Offset uv in _starMap) {
+      final Offset point = Offset(size.x * uv.dx, size.y * uv.dy);
+      canvas.drawCircle(point, cellSize * 0.035, starAuraPaint);
+      canvas.drawCircle(point, cellSize * 0.014, starCorePaint);
+    }
     for (int i = 0; i <= _boardState.size; i++) {
       final double lineOffset = i * cellSize;
       final Paint paint = (i % 2 == 0) ? majorGridPaint : minorGridPaint;
@@ -865,6 +996,7 @@ class BoardComponent extends PositionComponent {
       );
     }
     canvas.restore();
+    canvas.drawRRect(boardRRect.inflate(0.4), boardOuterGlow);
     canvas.drawRRect(boardRRect, borderPaint);
 
     for (final BoardCell cell in _boardState.occupiedCells) {

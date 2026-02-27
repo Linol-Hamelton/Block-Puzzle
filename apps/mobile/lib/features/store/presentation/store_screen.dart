@@ -81,15 +81,15 @@ class _StoreScreenState extends State<StoreScreen> {
               ),
             ),
           ),
-          Positioned.fill(
+          const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0, -0.35),
+                  center: Alignment(0, -0.35),
                   radius: 0.92,
                   colors: <Color>[
-                    LuminaPalette.cyan.withValues(alpha: 0.12),
-                    LuminaPalette.violet.withValues(alpha: 0.07),
+                    Color(0x1F56D4FF),
+                    Color(0x129B7CFF),
                     Colors.transparent,
                   ],
                 ),
