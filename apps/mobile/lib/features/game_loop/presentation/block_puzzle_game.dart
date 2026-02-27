@@ -694,8 +694,17 @@ Color _withAlpha(
 ) {
   final int a =
       (alpha.clamp(0, 1).toDouble() * 255).round().clamp(0, 255).toInt();
-  final int rgb = color.value & 0x00FFFFFF;
+  final int rgb = _colorToArgb32(color) & 0x00FFFFFF;
   return Color((a << 24) | rgb);
+}
+
+int _colorToArgb32(Color color) {
+  final dynamic dynamicColor = color;
+  try {
+    return dynamicColor.toARGB32() as int;
+  } catch (_) {
+    return dynamicColor.value as int;
+  }
 }
 
 void _drawGlassBlockCell(
