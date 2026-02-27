@@ -1737,7 +1737,8 @@ Color _withAlpha(
 ) {
   final int a =
       (alpha.clamp(0, 1).toDouble() * 255).round().clamp(0, 255).toInt();
-  return Color.fromARGB(a, color.red, color.green, color.blue);
+  final int rgb = color.value & 0x00FFFFFF;
+  return Color((a << 24) | rgb);
 }
 
 class _ComboToastData {
