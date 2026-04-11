@@ -1,10 +1,12 @@
-﻿# Internal Playtest Run 001 Report
+﻿# Internal Playtest Run 001 Report — `simulation_only`
+
+> **Status: `simulation_only`**. This report was generated from 40 automated synthetic sessions, not real human players. It is useful only as a pipeline validation artifact, not as a source of truth for player behavior, balance decisions, or rollout gate evaluation. The first real human cohort window lands in Phase 2 per [../roadmap/01_ROADMAP_AND_SPRINTS.md](../roadmap/01_ROADMAP_AND_SPRINTS.md).
 
 ## 1. Run Context
 - Run ID: `internal_playtest_run_001`
 - Date (UTC): `2026-02-25`
-- Data source: automated internal simulation (40 sessions)
-- Purpose: baseline before real human cohort windows
+- Data source: automated internal simulation (40 sessions), not real players
+- Purpose: pipeline validation only; NOT a substitute for real human cohort windows
 
 Build artifacts used at the time:
 - APK (debug): [block-puzzle-internal-debug.apk](/d:/Block-Puzzle/artifacts/block-puzzle-internal-debug.apk)
