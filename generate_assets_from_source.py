@@ -32,6 +32,22 @@ def ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
+def save_resized(
+    source_path: Path,
+    out_path: Path,
+    size: tuple[int, int],
+    *,
+    keep_alpha: bool = True,
+) -> None:
+    src = Image.open(source_path).convert("RGBA")
+    fitted = ImageOps.fit(src, size, method=Image.Resampling.LANCZOS)
+    if not keep_alpha and fitted.mode == "RGBA":
+        fitted = fitted.convert("RGB")
+    ensure_parent(out_path)
+    fitted.save(out_path)
+    print(f"Generated: {out_path}")
+
+
 def save_fit(
     src: Image.Image,
     crop_box: tuple[int, int, int, int],
@@ -155,11 +171,76 @@ def apply_distribution_assets(src: Image.Image) -> None:
         save_fit(src, crop, out, size)
 
 
+def restore_from_existing_assets() -> None:
+    icon_source_candidates = [
+        ROOT / "brand_pack/04_store_google_play/store_icon_512.png",
+        ROOT / "apps/mobile/web/icons/Icon-512.png",
+    ]
+    icon_source = next((path for path in icon_source_candidates if path.exists()), None)
+    if icon_source is None:
+        raise FileNotFoundError(
+            "No fallback icon source found. Restore "
+            "'brand_pack/04_store_google_play/store_icon_512.png' first."
+        )
+
+    feature_graphic_source = ROOT / "brand_pack/04_store_google_play/feature_graphic_1024x500.png"
+    if not feature_graphic_source.exists():
+        raise FileNotFoundError(
+            "Fallback feature graphic missing: "
+            f"{feature_graphic_source}"
+        )
+
+    screenshot_pairs = [
+        (
+            ROOT / "distribution/assets/checklist/screenshot_phone_01.png",
+            ROOT / "brand_pack/04_store_google_play/screenshots_phone/01_hook.png",
+        ),
+        (
+            ROOT / "distribution/assets/checklist/screenshot_phone_02.png",
+            ROOT / "brand_pack/04_store_google_play/screenshots_phone/02_satisfaction.png",
+        ),
+        (
+            ROOT / "distribution/assets/checklist/screenshot_phone_03.png",
+            ROOT / "brand_pack/04_store_google_play/screenshots_phone/03_challenge.png",
+        ),
+    ]
+
+    icon_targets = [
+        (ROOT / "brand_pack/02_icons/app_icon_master_1024.png", (1024, 1024)),
+        (ROOT / "brand_pack/02_icons/web_favicon_512.png", (512, 512)),
+        (ROOT / "brand_pack/05_store_rustore/store_icon_512.png", (512, 512)),
+        (ROOT / "apps/mobile/assets/branding/lumina_icon.png", (512, 512)),
+        (ROOT / "apps/mobile/web/icons/Icon-192.png", (192, 192)),
+        (ROOT / "apps/mobile/web/icons/Icon-512.png", (512, 512)),
+        (ROOT / "apps/mobile/web/icons/Icon-maskable-192.png", (192, 192)),
+        (ROOT / "apps/mobile/web/icons/Icon-maskable-512.png", (512, 512)),
+        (ROOT / "distribution/assets/checklist/store_icon_512.png", (512, 512)),
+    ]
+    for target_path, size in icon_targets:
+        save_resized(icon_source, target_path, size)
+
+    save_resized(
+        feature_graphic_source,
+        ROOT / "distribution/assets/checklist/feature_graphic_1024x500.png",
+        (1024, 500),
+        keep_alpha=False,
+    )
+
+    for source_path, target_path in screenshot_pairs:
+        if not source_path.exists():
+            raise FileNotFoundError(f"Fallback screenshot missing: {source_path}")
+        save_resized(source_path, target_path, (1080, 1920), keep_alpha=False)
+
+    print(
+        "Brand asset restoration completed using existing store/checklist exports. "
+        "Master source sheet was not required."
+    )
+
+
 def main() -> None:
     if not SOURCE_IMAGE.exists():
-        raise FileNotFoundError(
-            f"Source sheet not found: {SOURCE_IMAGE}. Put the file in repo root and rerun."
-        )
+        restore_from_existing_assets()
+        return
 
     src = Image.open(SOURCE_IMAGE).convert("RGBA")
     if src.size != (2816, 1536):
