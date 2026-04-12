@@ -40,7 +40,7 @@ class AppConfig {
         'BUNDLED_REMOTE_CONFIG_VERSION',
         defaultValue: 'bundled_config_v1',
       ),
-      remoteConfigTtl: Duration(
+      remoteConfigTtl: const Duration(
         minutes: int.fromEnvironment(
           'REMOTE_CONFIG_TTL_MINUTES',
           defaultValue: 30,
