@@ -1,6 +1,7 @@
 import 'package:block_puzzle_mobile/core/logging/app_logger.dart';
 import 'package:block_puzzle_mobile/data/analytics/analytics_tracker.dart';
 import 'package:block_puzzle_mobile/data/remote_config/remote_config_repository.dart';
+import 'package:block_puzzle_mobile/data/remote_config/remote_config_snapshot.dart';
 import 'package:block_puzzle_mobile/data/repositories/in_memory_player_progress_repository.dart';
 import 'package:block_puzzle_mobile/domain/generator/difficulty_profile.dart';
 import 'package:block_puzzle_mobile/domain/generator/difficulty_tuner.dart';
@@ -736,6 +737,24 @@ class _InMemoryRemoteConfigRepository implements RemoteConfigRepository {
       'difficulty.max_hard_pieces_per_triplet': 1,
     };
   }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached());
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached());
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
+  }
 }
 
 class _AbVariantRemoteConfigRepository implements RemoteConfigRepository {
@@ -758,6 +777,24 @@ class _AbVariantRemoteConfigRepository implements RemoteConfigRepository {
       'ab.ux_variant': 'hud_focus_v1',
     };
   }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'ab_variant_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'ab_variant_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
+  }
 }
 
 class _DailyGoalsRemoteConfigRepository implements RemoteConfigRepository {
@@ -778,6 +815,24 @@ class _DailyGoalsRemoteConfigRepository implements RemoteConfigRepository {
       'progression.daily_goal_score_target': 5000,
       'progression.streak_enabled': true,
     };
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'daily_goals_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'daily_goals_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
   }
 }
 
@@ -802,6 +857,24 @@ class _HintUndoRemoteConfigRepository implements RemoteConfigRepository {
       'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
     };
   }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'hint_undo_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'hint_undo_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
+  }
 }
 
 class _ShareDisabledRemoteConfigRepository implements RemoteConfigRepository {
@@ -819,6 +892,24 @@ class _ShareDisabledRemoteConfigRepository implements RemoteConfigRepository {
       'difficulty.max_hard_pieces_per_triplet': 1,
       'social.share_enabled': false,
     };
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'share_disabled_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'share_disabled_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
   }
 }
 
@@ -844,6 +935,24 @@ class _NoCreditsHintUndoRemoteConfigRepository
       'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
     };
   }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'no_credits_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'no_credits_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
+  }
 }
 
 class _DailyGoalRewardCreditsRemoteConfig implements RemoteConfigRepository {
@@ -866,6 +975,24 @@ class _DailyGoalRewardCreditsRemoteConfig implements RemoteConfigRepository {
       'progression.rewarded_tools_initial_credits': 0,
       'progression.streak_enabled': true,
     };
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'goal_reward_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'goal_reward_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
   }
 }
 
@@ -891,6 +1018,24 @@ class _IapUnlimitedHintUndoRemoteConfigRepository
       'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
     };
   }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'iap_unlimited_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'iap_unlimited_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
+  }
 }
 
 class _ObservabilityAlertRemoteConfigRepository
@@ -910,6 +1055,24 @@ class _ObservabilityAlertRemoteConfigRepository
       'ops.alerting.enabled': true,
       'ops.alerting.max_runtime_error_count': 0,
     };
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'ops_alert_test');
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _testSnapshot(await getCached(), version: 'ops_alert_test');
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
   }
 }
 
@@ -931,6 +1094,14 @@ class _MemoryAnalyticsTracker implements AnalyticsTracker {
       ),
     );
   }
+
+  @override
+  Future<void> flush({
+    bool force = false,
+  }) async {}
+
+  @override
+  Future<void> close() async {}
 }
 
 class _TrackedAnalyticsEvent {
@@ -1002,4 +1173,17 @@ class _FailingIapStoreService extends DebugIapStoreService {
   Future<Set<String>> loadOwnedProductIds() async {
     throw StateError('iap_load_failed');
   }
+}
+
+RemoteConfigSnapshot _testSnapshot(
+  Map<String, Object?> config, {
+  String version = 'game_loop_test_snapshot',
+}) {
+  return RemoteConfigSnapshot(
+    version: version,
+    config: Map<String, Object?>.from(config),
+    fetchedAtUtc: DateTime.utc(2026, 2, 25),
+    ttl: const Duration(minutes: 30),
+    source: RemoteConfigSource.cache,
+  );
 }

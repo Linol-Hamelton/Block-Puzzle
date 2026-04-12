@@ -53,14 +53,14 @@ class HomeScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(10),
                         color: LuminaPalette.panel,
                         border: Border.all(
                           color: LuminaPalette.panelBorder,
                         ),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(10),
                         child: Image.asset(
                           'assets/branding/lumina_icon.png',
                           width: 86,

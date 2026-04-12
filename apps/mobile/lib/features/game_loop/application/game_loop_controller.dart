@@ -7,6 +7,7 @@ import '../../../core/observability/guardrail_alert_evaluator.dart';
 import '../../../core/observability/session_observability_tracker.dart';
 import '../../../data/analytics/analytics_tracker.dart';
 import '../../../data/remote_config/remote_config_repository.dart';
+import '../../../data/remote_config/remote_config_snapshot.dart';
 import '../../../domain/generator/difficulty_tuner.dart';
 import '../../../domain/generator/piece_generation_service.dart';
 import '../../../domain/gameplay/board_state.dart';
@@ -173,6 +174,7 @@ class GameLoopController {
     required this.iapStoreService,
     required this.playerProgressRepository,
     required this.logger,
+    this.appVersion = 'dev-local',
     GuardrailAlertEvaluator? guardrailAlertEvaluator,
     SessionObservabilityTracker? observabilityTracker,
     DateTime Function()? nowUtcProvider,
@@ -194,6 +196,7 @@ class GameLoopController {
   final IapStoreService iapStoreService;
   final PlayerProgressRepository playerProgressRepository;
   final AppLogger logger;
+  final String appVersion;
   final GuardrailAlertEvaluator _guardrailAlertEvaluator;
   final SessionObservabilityTracker _observabilityTracker;
   final DateTime Function() _nowUtc;
@@ -202,6 +205,7 @@ class GameLoopController {
       ValueNotifier<GameLoopViewState>(GameLoopViewState.initial());
 
   Map<String, Object?> _remoteConfig = <String, Object?>{};
+  String _remoteConfigVersion = 'bundled_config_v1';
   SessionState _sessionState = SessionState.initial;
   final List<DateTime> _interstitialImpressionHistoryUtc = <DateTime>[];
   bool _initialized = false;
@@ -246,7 +250,10 @@ class GameLoopController {
       return;
     }
 
-    _remoteConfig = await remoteConfigRepository.getCached();
+    final RemoteConfigSnapshot remoteConfigSnapshot =
+        await remoteConfigRepository.fetchLatestSnapshot();
+    _remoteConfig = remoteConfigSnapshot.config;
+    _remoteConfigVersion = remoteConfigSnapshot.version;
     _onboardingEnabled = _readBoolConfig(
       'onboarding.enabled',
       fallback: true,
@@ -330,7 +337,7 @@ class GameLoopController {
       'session_start',
       params: <String, Object?>{
         'session_id': _sessionId,
-        'app_version': 'dev-local',
+        'app_version': appVersion,
         'platform': defaultTargetPlatform.name,
         'ab_bucket': _abBucket,
         'ux_variant': _uxVariant,
@@ -392,6 +399,7 @@ class GameLoopController {
       isOnboardingVisible: shouldShowOnboarding,
       dailyGoals: _buildDailyGoalsSnapshot(),
       streak: _buildStreakSnapshot(),
+      bestScore: _playerProgressState.bestScore,
       onboardingStepId: shouldShowOnboarding ? _tutorialStepWelcome : null,
       onboardingTitle: shouldShowOnboarding ? 'Welcome to Classic Mode' : null,
       onboardingDescription: shouldShowOnboarding
@@ -430,7 +438,7 @@ class GameLoopController {
       params: <String, Object?>{
         'round_id': _currentGameNumber,
         'mode': 'classic',
-        'config_version': 'in_memory_v1',
+        'config_version': _remoteConfigVersion,
         'board_size': state.boardState.size,
         'rack_size': rack.length,
         'level': level,
@@ -531,6 +539,7 @@ class GameLoopController {
     await _applyProgressAfterMove(
       clearedLines: lineResult.clearedTotal,
       scoreDelta: scoreDelta,
+      bestScore: nextBestScore,
     );
     final DailyGoalsSnapshot dailyGoalsAfter = _buildDailyGoalsSnapshot();
     await _trackNewGoalCompletions(
@@ -1095,6 +1104,7 @@ class GameLoopController {
         (_playerProgressState.rewardedToolsCredits - cost).clamp(0, 100000);
     _playerProgressState = _playerProgressState.copyWith(
       rewardedToolsCredits: nextCredits,
+      lastSeenUtc: _nowUtc(),
     );
     await playerProgressRepository.save(_playerProgressState);
     return _hintCostSourceEarned;
@@ -1188,6 +1198,14 @@ class GameLoopController {
       onboardingTitle: title,
       onboardingDescription: description,
     );
+    _playerProgressState = _playerProgressState.copyWith(
+      onboardingStatus: _playerProgressState.onboardingStatus.copyWith(
+        lastStepId: stepId,
+        lastStatus: _tutorialStatusShown,
+      ),
+      lastSeenUtc: _nowUtc(),
+    );
+    await playerProgressRepository.save(_playerProgressState);
     await _trackTutorialStep(
       stepId: stepId,
       status: _tutorialStatusShown,
@@ -1208,6 +1226,15 @@ class GameLoopController {
       isOnboardingVisible: false,
       resetOnboarding: true,
     );
+    _playerProgressState = _playerProgressState.copyWith(
+      onboardingStatus: _playerProgressState.onboardingStatus.copyWith(
+        completed: true,
+        lastStepId: stepId,
+        lastStatus: status,
+      ),
+      lastSeenUtc: _nowUtc(),
+    );
+    await playerProgressRepository.save(_playerProgressState);
     await _trackTutorialStep(
       stepId: stepId,
       status: status,
@@ -1249,6 +1276,7 @@ class GameLoopController {
           todayUtc,
           initialRewardedToolsCredits: initialRewardedToolsCredits,
         );
+    _onboardingCompleted = _playerProgressState.onboardingStatus.completed;
 
     if (!_streakEnabled) {
       _playerProgressState = _playerProgressState.copyWith(
@@ -1257,6 +1285,9 @@ class GameLoopController {
       );
     }
 
+    _playerProgressState = _playerProgressState.copyWith(
+      lastSeenUtc: _nowUtc(),
+    );
     await _syncProgressForCurrentDay();
     await playerProgressRepository.save(_playerProgressState);
   }
@@ -1300,6 +1331,7 @@ class GameLoopController {
       dailyMoves: 0,
       dailyLinesCleared: 0,
       dailyScoreEarned: 0,
+      lastSeenUtc: _nowUtc(),
     );
     await playerProgressRepository.save(_playerProgressState);
     await _trackStreakUpdated(reason: streakReason);
@@ -1326,11 +1358,16 @@ class GameLoopController {
   Future<void> _applyProgressAfterMove({
     required int clearedLines,
     required int scoreDelta,
+    required int bestScore,
   }) async {
     _playerProgressState = _playerProgressState.copyWith(
       dailyMoves: _playerProgressState.dailyMoves + 1,
       dailyLinesCleared: _playerProgressState.dailyLinesCleared + clearedLines,
       dailyScoreEarned: _playerProgressState.dailyScoreEarned + scoreDelta,
+      bestScore: bestScore > _playerProgressState.bestScore
+          ? bestScore
+          : _playerProgressState.bestScore,
+      lastSeenUtc: _nowUtc(),
     );
     await playerProgressRepository.save(_playerProgressState);
   }
@@ -1376,6 +1413,7 @@ class GameLoopController {
     _playerProgressState = _playerProgressState.copyWith(
       rewardedToolsCredits:
           _playerProgressState.rewardedToolsCredits + creditsEarned,
+      lastSeenUtc: _nowUtc(),
     );
     await playerProgressRepository.save(_playerProgressState);
 
@@ -1462,7 +1500,19 @@ class GameLoopController {
 
   Future<void> _refreshOwnedIapProducts() async {
     try {
-      _ownedIapProductIds = await iapStoreService.loadOwnedProductIds();
+      final Set<String> nextOwnedProductIds =
+          await iapStoreService.loadOwnedProductIds();
+      _ownedIapProductIds = nextOwnedProductIds;
+      if (!setEquals(
+        nextOwnedProductIds,
+        _playerProgressState.ownedProductIds,
+      )) {
+        _playerProgressState = _playerProgressState.copyWith(
+          ownedProductIds: nextOwnedProductIds,
+          lastSeenUtc: _nowUtc(),
+        );
+        await playerProgressRepository.save(_playerProgressState);
+      }
     } catch (error) {
       _observabilityTracker.onRuntimeError();
       logger.warn('Failed to refresh IAP ownership: $error');
@@ -1545,7 +1595,7 @@ class GameLoopController {
   String _resolveBlocksVisualPreset() {
     final String value = _readStringConfig(
       'visual.blocks_preset',
-      fallback: 'soft',
+      fallback: _playerProgressState.settings.selectedBlocksPreset,
     ).trim().toLowerCase();
     if (value == 'crystal') {
       return 'crystal';
@@ -1718,7 +1768,9 @@ class GameLoopController {
   }
 
   void dispose() {
-    unawaited(_trackSessionEnd());
+    unawaited(
+      _trackSessionEnd().whenComplete(analyticsTracker.close),
+    );
     _stateNotifier.dispose();
   }
 }

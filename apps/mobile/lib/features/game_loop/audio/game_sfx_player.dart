@@ -1,6 +1,8 @@
 abstract interface class GameSfxPlayer {
   Future<void> preload();
 
+  Future<void> onAppResumed();
+
   Future<void> playPiecePlaced();
 
   Future<void> playInvalidMove();

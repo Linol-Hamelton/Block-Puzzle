@@ -3,4 +3,10 @@ abstract interface class AnalyticsTracker {
     String eventName, {
     Map<String, Object?> params = const <String, Object?>{},
   });
+
+  Future<void> flush({
+    bool force = false,
+  });
+
+  Future<void> close();
 }

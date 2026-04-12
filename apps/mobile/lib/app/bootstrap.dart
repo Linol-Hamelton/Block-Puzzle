@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'block_puzzle_app.dart';
@@ -10,6 +11,11 @@ import '../data/analytics/analytics_tracker.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations(
+    const <DeviceOrientation>[
+      DeviceOrientation.portraitUp,
+    ],
+  );
   await configureDependencies();
   _configureGlobalErrorHandlers();
   runApp(const BlockPuzzleApp());

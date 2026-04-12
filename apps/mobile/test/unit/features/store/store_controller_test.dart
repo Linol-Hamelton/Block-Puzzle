@@ -1,6 +1,7 @@
 import 'package:block_puzzle_mobile/core/logging/app_logger.dart';
 import 'package:block_puzzle_mobile/data/analytics/analytics_tracker.dart';
 import 'package:block_puzzle_mobile/data/remote_config/remote_config_repository.dart';
+import 'package:block_puzzle_mobile/data/remote_config/remote_config_snapshot.dart';
 import 'package:block_puzzle_mobile/data/repositories/in_memory_player_progress_repository.dart';
 import 'package:block_puzzle_mobile/domain/progression/player_progress_state.dart';
 import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
@@ -157,6 +158,14 @@ class _MemoryAnalyticsTracker implements AnalyticsTracker {
       ),
     );
   }
+
+  @override
+  Future<void> flush({
+    bool force = false,
+  }) async {}
+
+  @override
+  Future<void> close() async {}
 }
 
 class _TrackedAnalyticsEvent {
@@ -183,4 +192,32 @@ class _InMemoryRemoteConfigRepository implements RemoteConfigRepository {
   Future<Map<String, Object?>> getCached() async {
     return _config;
   }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _buildSnapshot(_config);
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _buildSnapshot(_config);
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {}
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return null;
+  }
+}
+
+RemoteConfigSnapshot _buildSnapshot(Map<String, Object?> config) {
+  return RemoteConfigSnapshot(
+    version: 'store_test_snapshot',
+    config: Map<String, Object?>.from(config),
+    fetchedAtUtc: DateTime.utc(2026, 2, 25),
+    ttl: const Duration(minutes: 30),
+    source: RemoteConfigSource.cache,
+  );
 }

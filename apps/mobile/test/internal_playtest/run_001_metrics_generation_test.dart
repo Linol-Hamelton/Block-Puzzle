@@ -171,6 +171,14 @@ class _MemoryAnalyticsTracker implements AnalyticsTracker {
     String eventName, {
     Map<String, Object?> params = const <String, Object?>{},
   }) async {}
+
+  @override
+  Future<void> flush({
+    bool force = false,
+  }) async {}
+
+  @override
+  Future<void> close() async {}
 }
 
 class _NoopAdService implements AdService {

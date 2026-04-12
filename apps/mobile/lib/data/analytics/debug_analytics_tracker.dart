@@ -50,4 +50,12 @@ class DebugAnalyticsTracker implements AnalyticsTracker {
 
     debugPrint('[ANALYTICS] $eventName $payload');
   }
+
+  @override
+  Future<void> flush({
+    bool force = false,
+  }) async {}
+
+  @override
+  Future<void> close() async {}
 }

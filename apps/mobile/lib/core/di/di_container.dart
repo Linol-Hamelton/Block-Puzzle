@@ -1,10 +1,13 @@
 import 'package:get_it/get_it.dart';
 
+import '../../core/config/app_environment.dart';
 import '../../data/analytics/analytics_tracker.dart';
 import '../../data/analytics/debug_analytics_tracker.dart';
+import '../../data/analytics/queued_analytics_tracker.dart';
 import '../../data/remote_config/in_memory_remote_config_repository.dart';
 import '../../data/remote_config/remote_config_repository.dart';
-import '../../data/repositories/in_memory_player_progress_repository.dart';
+import '../../data/remote_config/versioned_remote_config_repository.dart';
+import '../../data/repositories/shared_preferences_player_progress_repository.dart';
 import '../../domain/generator/basic_difficulty_tuner.dart';
 import '../../domain/generator/basic_piece_generation_service.dart';
 import '../../domain/generator/difficulty_tuner.dart';
@@ -26,9 +29,11 @@ import '../../features/game_loop/presentation/block_puzzle_game.dart';
 import '../../features/monetization/ad_guardrail_policy.dart';
 import '../../features/monetization/ad_service.dart';
 import '../../features/monetization/basic_ad_guardrail_policy.dart';
+import '../../features/monetization/disabled_ad_service.dart';
 import '../../features/monetization/debug_iap_store_service.dart';
 import '../../features/monetization/debug_ad_service.dart';
 import '../../features/monetization/iap_store_service.dart';
+import '../../features/monetization/local_catalog_iap_store_service.dart';
 import '../../features/store/application/store_controller.dart';
 import '../config/app_config.dart';
 import '../logging/app_logger.dart';
@@ -40,10 +45,19 @@ Future<void> configureDependencies() async {
     return;
   }
 
-  final InMemoryRemoteConfigRepository inMemoryRemoteConfigRepository =
-      InMemoryRemoteConfigRepository();
+  final AppConfig appConfig = AppConfig.fromEnvironment();
+  final AppLogger logger = AppLogger();
+  final bool useDebugAdapters =
+      appConfig.environment.isDevelopment && appConfig.buildFlavor.isDebug;
+
+  final RemoteConfigRepository bootstrapRemoteConfigRepository = useDebugAdapters
+      ? InMemoryRemoteConfigRepository(appConfig: appConfig)
+      : VersionedRemoteConfigRepository(
+          appConfig: appConfig,
+          logger: logger,
+        );
   final Map<String, Object?> bootstrapRemoteConfig =
-      await inMemoryRemoteConfigRepository.getCached();
+      await bootstrapRemoteConfigRepository.getCached();
   final bool includeBundle = _resolveIapBundleEnabled(bootstrapRemoteConfig);
   final bool includeUtilityPass = _readBoolConfig(
     bootstrapRemoteConfig,
@@ -52,35 +66,47 @@ Future<void> configureDependencies() async {
   );
 
   sl.registerSingleton<AppConfig>(
-    const AppConfig(
-      appName: 'Lumina Blocks',
-      environment: 'dev',
-    ),
+    appConfig,
   );
-  sl.registerLazySingleton<AppLogger>(AppLogger.new);
+  sl.registerSingleton<AppLogger>(logger);
   sl.registerLazySingleton<GameSfxPlayer>(
     () => FlameGameSfxPlayer(logger: sl()),
   );
   sl.registerLazySingleton<AdService>(
-    () => DebugAdService(logger: sl()),
+    () => useDebugAdapters
+        ? DebugAdService(logger: sl())
+        : const DisabledAdService(),
   );
   sl.registerLazySingleton<RemoteConfigRepository>(
-    () => inMemoryRemoteConfigRepository,
+    () => bootstrapRemoteConfigRepository,
   );
   sl.registerLazySingleton<PlayerProgressRepository>(
-    InMemoryPlayerProgressRepository.new,
+    () => useDebugAdapters
+        ? SharedPreferencesPlayerProgressRepository(logger: sl())
+        : SharedPreferencesPlayerProgressRepository(logger: sl()),
   );
   sl.registerLazySingleton<IapStoreService>(
-    () => DebugIapStoreService(
-      includeBundle: includeBundle,
-      includeUtilityPass: includeUtilityPass,
-    ),
+    () => useDebugAdapters
+        ? DebugIapStoreService(
+            includeBundle: includeBundle,
+            includeUtilityPass: includeUtilityPass,
+          )
+        : LocalCatalogIapStoreService(
+            playerProgressRepository: sl(),
+            remoteConfigRepository: sl(),
+            logger: sl(),
+          ),
   );
   sl.registerLazySingleton<AdGuardrailPolicy>(
     BasicAdGuardrailPolicy.new,
   );
   sl.registerLazySingleton<AnalyticsTracker>(
-    () => DebugAnalyticsTracker(logger: sl()),
+    () => useDebugAdapters
+        ? DebugAnalyticsTracker(logger: sl())
+        : QueuedAnalyticsTracker(
+            appConfig: sl(),
+            logger: sl(),
+          ),
   );
 
   sl.registerLazySingleton<MoveValidator>(BasicMoveValidator.new);
@@ -115,6 +141,7 @@ Future<void> configureDependencies() async {
       iapStoreService: sl(),
       playerProgressRepository: sl(),
       logger: sl(),
+      appVersion: sl<AppConfig>().appVersion,
     ),
   );
 

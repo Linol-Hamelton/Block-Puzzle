@@ -14,6 +14,11 @@ class DebugGameSfxPlayer implements GameSfxPlayer {
   }
 
   @override
+  Future<void> onAppResumed() async {
+    _logger.info('SFX hook: app_resumed');
+  }
+
+  @override
   Future<void> playPiecePlaced() async {
     _logger.info('SFX hook: piece_placed');
   }

@@ -1,70 +1,61 @@
+import '../../core/config/app_config.dart';
+import 'bundled_remote_config_defaults.dart';
 import 'remote_config_repository.dart';
+import 'remote_config_snapshot.dart';
 
 class InMemoryRemoteConfigRepository implements RemoteConfigRepository {
-  static const Map<String, Object?> _defaultConfig = <String, Object?>{
-    'ads.ad_free_mode': true,
-    'ads.banner_enabled': false,
-    'ads.interstitial_enabled': false,
-    'ads.interstitial_skip_first_rounds': 1,
-    'difficulty.hard_piece_weight': 0.2,
-    'difficulty.max_hard_pieces_per_triplet': 1,
-    'ads.interstitial_cooldown_rounds': 2,
-    'ads.interstitial_window_minutes': 10,
-    'ads.interstitial_max_impressions_in_window': 2,
-    'ads.rewarded_revive_enabled': false,
-    'ads.rewarded_revive_clear_cells': 6,
-    'iap.rollout_strategy': 'cosmetics_first',
-    'iap.bundle_enabled': false,
-    'iap.rewarded_tools_unlimited_enabled': true,
-    'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
-    'iap.segment_collector_owned_threshold': 2,
-    'iap.segment_engaged_streak_threshold': 2,
-    'iap.segment_engaged_daily_moves_threshold': 10,
-    'iap.segment_engaged_daily_score_threshold': 400,
-    'iap.targeting_bundle_sku': 'premium_starter_bundle',
-    'iap.targeting_cosmetic_primary_sku': 'skin_pack_neon',
-    'iap.targeting_cosmetic_secondary_sku': 'skin_pack_mono',
-    'iap.targeting.new_user_primary_sku': 'skin_pack_neon',
-    'iap.targeting.engaged_primary_sku': 'utility_tools_pass',
-    'iap.targeting.collector_primary_sku': 'premium_starter_bundle',
-    'iap.targeting.utility_owner_primary_sku': 'skin_pack_mono',
-    'ab.bucket': 'control',
-    'ab.tutorial_variant': 'guided_v1',
-    'ab.offer_strategy_variant': 'cosmetics_first_v1',
-    'ab.difficulty_variant': 'balanced_v1',
-    'ab.ux_variant': 'hud_standard_v1',
-    'visual.blocks_preset': 'soft',
-    'social.share_enabled': true,
-    'social.share_score_hashtag': '#BlockPuzzle',
-    'onboarding.enabled': true,
-    'onboarding.max_guided_moves': 8,
-    'progression.streak_enabled': true,
-    'progression.daily_goal_moves_target': 18,
-    'progression.daily_goal_lines_target': 6,
-    'progression.daily_goal_score_target': 350,
-    'progression.daily_goal_reward_credits': 1,
-    'progression.rewarded_tools_initial_credits': 3,
-    'progression.rewarded_tools_hint_cost': 1,
-    'progression.rewarded_tools_undo_cost': 1,
-    'progression.undo_history_limit': 1,
-    'progression.level_score_step': 140,
-    'balance.target_moves_per_run': 14,
-    'balance.observed_avg_moves_per_run': 12.5,
-    'balance.observed_early_gameover_rate': 0.22,
-    'ops.alerting.enabled': true,
-    'ops.alerting.max_early_gameover_rate': 0.30,
-    'ops.alerting.max_move_rejection_rate': 0.18,
-    'ops.alerting.min_avg_round_duration_sec': 20.0,
-    'ops.alerting.max_runtime_error_count': 0,
-  };
+  InMemoryRemoteConfigRepository({
+    AppConfig? appConfig,
+    Map<String, Object?>? initialConfig,
+  })  : _appConfig = appConfig ?? AppConfig.fromEnvironment(),
+        _activeSnapshot = RemoteConfigSnapshot(
+          version: (appConfig ?? AppConfig.fromEnvironment())
+              .bundledRemoteConfigVersion,
+          config: Map<String, Object?>.from(
+            initialConfig ?? bundledRemoteConfigDefaults,
+          ),
+          fetchedAtUtc: DateTime.now().toUtc(),
+          ttl: (appConfig ?? AppConfig.fromEnvironment()).remoteConfigTtl,
+          source: RemoteConfigSource.bundled,
+        );
+
+  final AppConfig _appConfig;
+  RemoteConfigSnapshot _activeSnapshot;
+  RemoteConfigSnapshot? _rollbackSnapshot;
 
   @override
   Future<Map<String, Object?>> fetchLatest() async {
-    return _defaultConfig;
+    return (await fetchLatestSnapshot()).config;
   }
 
   @override
   Future<Map<String, Object?>> getCached() async {
-    return _defaultConfig;
+    return (await getCachedSnapshot()).config;
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> fetchLatestSnapshot() async {
+    return _activeSnapshot;
+  }
+
+  @override
+  Future<RemoteConfigSnapshot> getCachedSnapshot() async {
+    return _activeSnapshot;
+  }
+
+  @override
+  Future<void> applySnapshot(RemoteConfigSnapshot snapshot) async {
+    _rollbackSnapshot = _activeSnapshot.copyWith(
+      source: RemoteConfigSource.rollback,
+    );
+    _activeSnapshot = snapshot.copyWith(
+      ttl: snapshot.ttl <= Duration.zero ? _appConfig.remoteConfigTtl : null,
+      source: RemoteConfigSource.applied,
+    );
+  }
+
+  @override
+  Future<RemoteConfigSnapshot?> getRollbackSnapshot() async {
+    return _rollbackSnapshot;
   }
 }
