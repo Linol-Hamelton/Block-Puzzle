@@ -1,0 +1,14 @@
+{
+  "version": "config_2026_04_11_001",
+  "ttl_seconds": 1800,
+  "config": {
+    "onboarding.enabled": true,
+    "progression.streak_enabled": true,
+    "progression.daily_goal_moves_target": 18,
+    "progression.daily_goal_lines_target": 6,
+    "progression.daily_goal_score_target": 350,
+    "iap.rewarded_tools_unlimited_enabled": true,
+    "iap.rewarded_tools_unlimited_sku": "utility_tools_pass",
+    "social.share_enabled": true
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "app_name": "Lumina Blocks",
+  "environment": "stage",
+  "app_version": "1.0.0+1",
+  "events": [
+    {
+      "id": "evt_1_1712793600000",
+      "event_name": "session_start",
+      "params": {
+        "schema_version": 1,
+        "event_ts_utc": "2026-04-11T10:00:00.000Z",
+        "session_id": "session_1712793600000",
+        "ab_bucket": "control"
+      },
+      "created_at_utc": "2026-04-11T10:00:00.000Z",
+      "delivery_attempts": 0
+    }
+  ]
+}
