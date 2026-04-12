@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/config/app_environment.dart';
 import '../../core/logging/app_logger.dart';
 import 'analytics_schema_validator.dart';
 import 'analytics_tracker.dart';
