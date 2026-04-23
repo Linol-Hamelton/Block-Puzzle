@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 /// Full-screen nebula gradient background used behind the game board.

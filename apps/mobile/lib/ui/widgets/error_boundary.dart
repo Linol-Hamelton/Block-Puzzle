@@ -83,7 +83,7 @@ class _ErrorBoundaryScope extends InheritedWidget {
 
   final void Function(FlutterErrorDetails) onError;
 
-  final void Function(FlutterErrorDetails) onError;
+  @override
   bool updateShouldNotify(_ErrorBoundaryScope oldWidget) {
     return onError != oldWidget.onError;
   }
