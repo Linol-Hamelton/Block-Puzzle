@@ -30,6 +30,7 @@ import '../../monetization/iap_store_service.dart';
 import 'game_loop_phase.dart';
 import 'game_loop_view_state.dart';
 import 'models/models.dart';
+import 'services/ab_experiment_service.dart';
 import 'services/onboarding_flow_controller.dart';
 import 'services/progression_sync_service.dart';
 import 'services/share_flow_service.dart';
@@ -111,10 +112,7 @@ class GameLoopController {
   String _uxVariant = 'hud_standard_v1';
   String _difficultyVariant = 'balanced_v1';
   bool _shareFlowEnabled = true;
-  String _shareHashtag = _defaultShareHashtag;
-  Map<String, String> _abExperimentVariants = <String, String>{};
   Set<String> _ownedIapProductIds = <String>{};
-  final List<_UndoSnapshot> _undoHistory = <_UndoSnapshot>[];
   final List<_UndoSnapshot> _undoHistory = <_UndoSnapshot>[];
 
   PlayerProgressState get _playerProgressState => progressionSyncService.state;
@@ -991,11 +989,7 @@ class GameLoopController {
       return false;
     }
     return _undoHistory.isNotEmpty;
-
-
-
-
-
+  }
 
   Future<void> _refreshOwnedIapProducts() async {
     try {
@@ -1006,11 +1000,7 @@ class GameLoopController {
         nextOwnedProductIds,
         _playerProgressState.ownedProductIds,
       )) {
-        _playerProgressState = _playerProgressState.copyWith(
-          ownedProductIds: nextOwnedProductIds,
-          lastSeenUtc: _nowUtc(),
-        );
-        await playerProgressRepository.save(_playerProgressState);
+        await progressionSyncService.updateOwnedIapProducts(nextOwnedProductIds);
       }
     } catch (error) {
       _observabilityTracker.onRuntimeError();

@@ -1,4 +1,4 @@
-import '../../../data/analytics/analytics_tracker.dart';
+import '../../../../data/analytics/analytics_tracker.dart';
 import '../game_loop_view_state.dart';
 
 /// Handles share-score text generation and analytics tracking.

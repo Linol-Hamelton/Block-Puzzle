@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import '../../../core/config/remote_config_reader.dart';
-import '../../../core/logging/app_logger.dart';
-import '../../../data/analytics/analytics_tracker.dart';
-import '../../../domain/progression/player_progress_repository.dart';
-import '../../../domain/progression/player_progress_state.dart';
-import '../../../domain/progression/progression_snapshots.dart';
+import '../../../../core/config/remote_config_reader.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../data/analytics/analytics_tracker.dart';
+import '../../../../domain/progression/player_progress_repository.dart';
+import '../../../../domain/progression/player_progress_state.dart';
+import '../../../../domain/progression/progression_snapshots.dart';
 
 /// Manages daily progression: day rollover, streak tracking, daily
 /// goals, and rewarded tool credit grants.
@@ -248,6 +248,16 @@ class ProgressionSyncService {
   void updateState(PlayerProgressState newState) {
     _state = newState;
   }
+
+  /// Update owned IAP products and save to persistence.
+  Future<void> updateOwnedIapProducts(Set<String> nextOwnedProductIds) async {
+    _state = _state.copyWith(
+      ownedProductIds: nextOwnedProductIds,
+      lastSeenUtc: _nowUtc(),
+    );
+    await playerProgressRepository.save(_state);
+  }
+
 
   // ── Private analytics helpers ──────────────────────────────────
 

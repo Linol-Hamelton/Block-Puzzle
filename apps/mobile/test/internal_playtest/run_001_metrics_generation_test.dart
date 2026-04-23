@@ -21,12 +21,18 @@ import 'package:block_puzzle_mobile/features/monetization/ad_guardrail_policy.da
 import 'package:block_puzzle_mobile/features/monetization/ad_placement.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_service.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_show_result.dart';
+import 'package:block_puzzle_mobile/data/repositories/in_memory_game_session_repository.dart';
+import 'package:block_puzzle_mobile/features/game_loop/application/services/services.dart';
 import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Generate run_001 internal playtest metrics', () async {
     final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+    final InMemoryRemoteConfigRepository configRepository = InMemoryRemoteConfigRepository();
+    final InMemoryPlayerProgressRepository progressRepository = InMemoryPlayerProgressRepository();
+    final AppLogger logger = AppLogger();
+
     final GameLoopController controller = GameLoopController(
       placePieceUseCase: const PlacePieceUseCase(
         moveValidator: BasicMoveValidator(),
@@ -39,13 +45,29 @@ void main() {
       ),
       pieceGenerationService: BasicPieceGenerationService(),
       difficultyTuner: const BasicDifficultyTuner(),
-      remoteConfigRepository: InMemoryRemoteConfigRepository(),
+      remoteConfigRepository: configRepository,
       analyticsTracker: analytics,
       adService: const _NoopAdService(),
       adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
       iapStoreService: DebugIapStoreService(),
-      playerProgressRepository: InMemoryPlayerProgressRepository(),
-      logger: AppLogger(),
+      logger: logger,
+      gameSessionRepository: InMemoryGameSessionRepository(),
+      progressionSyncService: ProgressionSyncService(
+        playerProgressRepository: progressRepository,
+        analyticsTracker: analytics,
+        logger: logger,
+      ),
+      abExperimentService: ABExperimentService(
+        remoteConfigRepository: configRepository,
+        analyticsTracker: analytics,
+        logger: logger,
+      ),
+      shareFlowService: ShareFlowService(analyticsTracker: analytics),
+      onboardingFlowController: OnboardingFlowController(
+        playerProgressRepository: progressRepository,
+        analyticsTracker: analytics,
+        logger: logger,
+      ),
     );
 
     const int sessions = 40;
@@ -69,7 +91,7 @@ void main() {
           break;
         }
 
-        final MoveProcessingResult result = await controller.processMove(move);
+        final dynamic result = await controller.processMove(move);
         if (!result.isSuccess) {
           break;
         }

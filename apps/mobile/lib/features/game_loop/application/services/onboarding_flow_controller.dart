@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../core/config/remote_config_reader.dart';
-import '../../../core/logging/app_logger.dart';
-import '../../../data/analytics/analytics_tracker.dart';
-import '../../../domain/progression/player_progress_repository.dart';
-import '../../../domain/progression/player_progress_state.dart';
+import '../../../../core/config/remote_config_reader.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../data/analytics/analytics_tracker.dart';
+import '../../../../domain/progression/player_progress_repository.dart';
+import '../../../../domain/progression/player_progress_state.dart';
 import '../game_loop_view_state.dart';
 
 /// Manages the FTUE/onboarding flow as a 3-step tutorial sequence.

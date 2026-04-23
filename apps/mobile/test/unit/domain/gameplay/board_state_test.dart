@@ -60,10 +60,10 @@ void main() {
     test('removeCells removes matching cells', () {
       final board = BoardState(
         size: 8,
-        occupiedCells: const <BoardCell>{
-          BoardCell(x: 0, y: 0),
-          BoardCell(x: 1, y: 0),
-          BoardCell(x: 2, y: 0),
+        occupiedCells: <BoardCell>{
+          const BoardCell(x: 0, y: 0),
+          const BoardCell(x: 1, y: 0),
+          const BoardCell(x: 2, y: 0),
         },
       );
 
@@ -79,7 +79,7 @@ void main() {
     test('removeCells with no matches returns same cell set', () {
       final board = BoardState(
         size: 8,
-        occupiedCells: const <BoardCell>{BoardCell(x: 5, y: 5)},
+        occupiedCells: <BoardCell>{const BoardCell(x: 5, y: 5)},
       );
 
       final updated = board.removeCells((_) => false);
