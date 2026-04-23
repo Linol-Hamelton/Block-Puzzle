@@ -272,7 +272,7 @@ class StoreController {
       if (segmentPrimarySku != null) segmentPrimarySku,
       ...basePrioritySkus,
     ]
-        .where((String sku) => catalogProductIds.contains(sku))
+        .where(catalogProductIds.contains)
         .toSet()
         .toList(growable: false);
 

@@ -6,7 +6,7 @@ void main() {
   group('RemoteConfigReader', () {
     group('readBool', () {
       test('returns bool value directly', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'flag_true': true,
           'flag_false': false,
         });
@@ -16,7 +16,7 @@ void main() {
       });
 
       test('parses string "true" and "false"', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'str_true': 'true',
           'str_TRUE': 'TRUE',
           'str_false': 'false',
@@ -30,7 +30,7 @@ void main() {
       });
 
       test('treats positive numbers as true', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'num_pos': 1,
           'num_pos_float': 0.5,
           'num_zero': 0,
@@ -44,14 +44,14 @@ void main() {
       });
 
       test('returns fallback for missing keys', () {
-        final reader = RemoteConfigReader(const <String, Object?>{});
+        final reader = const RemoteConfigReader(<String, Object?>{});
 
         expect(reader.readBool('missing', fallback: true), isTrue);
         expect(reader.readBool('missing', fallback: false), isFalse);
       });
 
       test('returns fallback for null values', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'null_val': null,
         });
 
@@ -59,7 +59,7 @@ void main() {
       });
 
       test('returns fallback for unparseable strings', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'garbage': 'maybe',
         });
 
@@ -70,7 +70,7 @@ void main() {
 
     group('readInt', () {
       test('returns int value directly', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'count': 42,
         });
 
@@ -78,7 +78,7 @@ void main() {
       });
 
       test('converts double to int', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'float_val': 3.7,
         });
 
@@ -86,7 +86,7 @@ void main() {
       });
 
       test('parses string integers', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'str_int': '123',
         });
 
@@ -94,7 +94,7 @@ void main() {
       });
 
       test('returns fallback for unparseable strings', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'bad': 'hello',
         });
 
@@ -102,7 +102,7 @@ void main() {
       });
 
       test('returns fallback for missing keys', () {
-        final reader = RemoteConfigReader(const <String, Object?>{});
+        final reader = const RemoteConfigReader(<String, Object?>{});
 
         expect(reader.readInt('missing', fallback: 7), 7);
       });
@@ -110,7 +110,7 @@ void main() {
 
     group('readString', () {
       test('returns non-empty string value', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'name': 'hello',
         });
 
@@ -118,7 +118,7 @@ void main() {
       });
 
       test('trims whitespace', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'padded': '  value  ',
         });
 
@@ -126,7 +126,7 @@ void main() {
       });
 
       test('returns fallback for empty string', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'empty': '',
           'spaces': '   ',
         });
@@ -136,13 +136,13 @@ void main() {
       });
 
       test('returns fallback for missing keys', () {
-        final reader = RemoteConfigReader(const <String, Object?>{});
+        final reader = const RemoteConfigReader(<String, Object?>{});
 
         expect(reader.readString('missing', fallback: 'x'), 'x');
       });
 
       test('returns fallback for non-string values', () {
-        final reader = RemoteConfigReader(const <String, Object?>{
+        final reader = const RemoteConfigReader(<String, Object?>{
           'num': 42,
           'bool': true,
         });

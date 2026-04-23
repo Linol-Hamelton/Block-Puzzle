@@ -702,8 +702,10 @@ Color _withAlpha(
 int _colorToArgb32(Color color) {
   final dynamic dynamicColor = color;
   try {
+    // ignore: avoid_dynamic_calls
     return dynamicColor.toARGB32() as int;
   } catch (_) {
+    // ignore: avoid_dynamic_calls
     return dynamicColor.value as int;
   }
 }

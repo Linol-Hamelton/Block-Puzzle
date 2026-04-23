@@ -1100,7 +1100,7 @@ class GameLoopController {
       });
 
     final Set<BoardCell> toRemove = sorted.take(cellsToClear).toSet();
-    return boardState.removeCells((BoardCell cell) => toRemove.contains(cell));
+    return boardState.removeCells(toRemove.contains);
   }
 
   Future<void> _trackAdImpression({
@@ -1114,7 +1114,7 @@ class GameLoopController {
       'network': adResult.network,
     };
     if (adResult.ecpmUsd != null) {
-      params['ecpm_usd'] = adResult.ecpmUsd!;
+      params['ecpm_usd'] = adResult.ecpmUsd;
     }
     await analyticsTracker.track(
       'ad_impression',

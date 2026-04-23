@@ -84,21 +84,17 @@ GameLoopController _buildController({
     final logger = match.group(7);
     final nowUtc = match.group(8);
 
-    var res = '_buildController(\n'
+    return '_buildController(\n'
         '  remoteConfigRepository: $remoteConfig,\n'
         '  analyticsTracker: $analytics,\n'
         '  adService: $adService,\n'
         '  adGuardrailPolicy: $adGuardrail,\n'
         '  iapStoreService: $iapStore,\n'
         '  playerProgressRepository: $progress,\n'
-        '  logger: $logger,\n';
-    if (nowUtc != null) {
-      res += '  nowUtcProvider: $nowUtc,\n';
-    }
-    res += ')';
-    return res;
+        '  logger: $logger,\n'
+        '${nowUtc != null ? '  nowUtcProvider: $nowUtc,\n' : ''}'
+        ')';
   });
 
   file.writeAsStringSync(content);
-  print('Updated game_loop_controller_test.dart successfully!');
 }

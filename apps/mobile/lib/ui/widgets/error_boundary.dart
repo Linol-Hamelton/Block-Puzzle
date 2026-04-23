@@ -83,11 +83,7 @@ class _ErrorBoundaryScope extends InheritedWidget {
 
   final void Function(FlutterErrorDetails) onError;
 
-  static _ErrorBoundaryScope? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_ErrorBoundaryScope>();
-  }
-
-  @override
+  final void Function(FlutterErrorDetails) onError;
   bool updateShouldNotify(_ErrorBoundaryScope oldWidget) {
     return onError != oldWidget.onError;
   }
@@ -132,7 +128,7 @@ class _ErrorFallbackScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
-                  Text(
+                  const Text(
                     'An unexpected error occurred. Your progress has been saved.',
                     style: TextStyle(
                       fontSize: 14,

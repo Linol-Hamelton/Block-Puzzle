@@ -88,7 +88,7 @@ class OnboardingFlowController {
 
     if (currentStepId == stepWelcome) {
       await _trackTutorialStep(stepId: stepWelcome, status: statusCompleted);
-      return OnboardingUpdate(
+      return const OnboardingUpdate(
         type: OnboardingUpdateType.advanceStep,
         stepId: stepClearLine,
         title: 'Clear Your First Line',
@@ -101,7 +101,7 @@ class OnboardingFlowController {
       if (clearedLines > 0) {
         await _trackTutorialStep(
             stepId: stepClearLine, status: statusCompleted);
-        return OnboardingUpdate(
+        return const OnboardingUpdate(
           type: OnboardingUpdateType.advanceStep,
           stepId: stepComboChain,
           title: 'Chain a Combo',

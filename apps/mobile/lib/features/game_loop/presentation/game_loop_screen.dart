@@ -99,9 +99,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     }
 
     if (current.isGameOver && !previous.isGameOver && _comboToasts.isNotEmpty) {
-      setState(() {
-        _comboToasts.clear();
-      });
+      setState(_comboToasts.clear);
     }
   }
 
