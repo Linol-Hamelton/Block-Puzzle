@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/config/remote_config_reader.dart';
+
 import '../../../core/logging/app_logger.dart';
 import '../../../core/observability/guardrail_alert_evaluator.dart';
 import '../../../core/observability/session_observability_tracker.dart';
@@ -13,10 +15,11 @@ import '../../../domain/generator/piece_generation_service.dart';
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
-import '../../../domain/progression/player_progress_repository.dart';
 import '../../../domain/progression/player_progress_state.dart';
 import '../../../domain/progression/progression_snapshots.dart';
 import '../../../domain/scoring/score_state.dart';
+import '../../../domain/session/game_session_repository.dart';
+import '../../../domain/session/game_snapshot.dart';
 import '../../../domain/session/session_state.dart';
 import '../../monetization/ad_guardrail_decision.dart';
 import '../../monetization/ad_guardrail_policy.dart';
@@ -24,143 +27,17 @@ import '../../monetization/ad_placement.dart';
 import '../../monetization/ad_service.dart';
 import '../../monetization/ad_show_result.dart';
 import '../../monetization/iap_store_service.dart';
+import 'game_loop_phase.dart';
 import 'game_loop_view_state.dart';
+import 'models/models.dart';
+import 'services/onboarding_flow_controller.dart';
+import 'services/progression_sync_service.dart';
+import 'services/share_flow_service.dart';
 import 'use_cases/clear_lines_use_case.dart';
 import 'use_cases/compute_score_use_case.dart';
 import 'use_cases/place_piece_use_case.dart';
 
-class MoveProcessingResult {
-  const MoveProcessingResult({
-    required this.isSuccess,
-    required this.clearedLines,
-    required this.clearedCells,
-    required this.comboStreak,
-    required this.totalScore,
-    required this.isGameOver,
-    this.failureReason,
-  });
-
-  final bool isSuccess;
-  final int clearedLines;
-  final Set<BoardCell> clearedCells;
-  final int comboStreak;
-  final int totalScore;
-  final bool isGameOver;
-  final String? failureReason;
-
-  factory MoveProcessingResult.success({
-    required int clearedLines,
-    required Set<BoardCell> clearedCells,
-    required int comboStreak,
-    required int totalScore,
-    required bool isGameOver,
-  }) {
-    return MoveProcessingResult(
-      isSuccess: true,
-      clearedLines: clearedLines,
-      clearedCells: clearedCells,
-      comboStreak: comboStreak,
-      totalScore: totalScore,
-      isGameOver: isGameOver,
-    );
-  }
-
-  factory MoveProcessingResult.failure(String reason) {
-    return MoveProcessingResult(
-      isSuccess: false,
-      clearedLines: 0,
-      clearedCells: <BoardCell>{},
-      comboStreak: 0,
-      totalScore: 0,
-      isGameOver: false,
-      failureReason: reason,
-    );
-  }
-}
-
-class RewardedReviveResult {
-  const RewardedReviveResult({
-    required this.isSuccess,
-    this.failureReason,
-  });
-
-  final bool isSuccess;
-  final String? failureReason;
-
-  factory RewardedReviveResult.success() {
-    return const RewardedReviveResult(isSuccess: true);
-  }
-
-  factory RewardedReviveResult.failure(String reason) {
-    return RewardedReviveResult(
-      isSuccess: false,
-      failureReason: reason,
-    );
-  }
-}
-
-class RewardedHintResult {
-  const RewardedHintResult({
-    required this.isSuccess,
-    this.hintSuggestion,
-    this.failureReason,
-  });
-
-  final bool isSuccess;
-  final HintSuggestion? hintSuggestion;
-  final String? failureReason;
-
-  factory RewardedHintResult.success(HintSuggestion hintSuggestion) {
-    return RewardedHintResult(
-      isSuccess: true,
-      hintSuggestion: hintSuggestion,
-    );
-  }
-
-  factory RewardedHintResult.failure(String reason) {
-    return RewardedHintResult(
-      isSuccess: false,
-      failureReason: reason,
-    );
-  }
-}
-
-class RewardedUndoResult {
-  const RewardedUndoResult({
-    required this.isSuccess,
-    this.failureReason,
-  });
-
-  final bool isSuccess;
-  final String? failureReason;
-
-  factory RewardedUndoResult.success() {
-    return const RewardedUndoResult(isSuccess: true);
-  }
-
-  factory RewardedUndoResult.failure(String reason) {
-    return RewardedUndoResult(
-      isSuccess: false,
-      failureReason: reason,
-    );
-  }
-}
-
 class GameLoopController {
-  static const String _tutorialStepWelcome = 'welcome_drag_piece';
-  static const String _tutorialStepClearLine = 'goal_clear_line';
-  static const String _tutorialStepComboChain = 'goal_combo_chain';
-  static const String _tutorialFlow = 'onboarding_v1';
-  static const String _tutorialStatusShown = 'shown';
-  static const String _tutorialStatusCompleted = 'completed';
-  static const String _tutorialStatusSkipped = 'skipped';
-  static const String _dailyGoalMoves = 'daily_moves';
-  static const String _dailyGoalLines = 'daily_lines_cleared';
-  static const String _dailyGoalScore = 'daily_score';
-  static const String _hintCostSourceEarned = 'earned_credits';
-  static const String _hintCostSourceIap = 'iap_unlimited';
-  static const String _defaultShareHashtag = '#BlockPuzzle';
-
   GameLoopController({
     required this.placePieceUseCase,
     required this.clearLinesUseCase,
@@ -172,7 +49,11 @@ class GameLoopController {
     required this.adService,
     required this.adGuardrailPolicy,
     required this.iapStoreService,
-    required this.playerProgressRepository,
+    required this.gameSessionRepository,
+    required this.abExperimentService,
+    required this.progressionSyncService,
+    required this.shareFlowService,
+    required this.onboardingFlowController,
     required this.logger,
     this.appVersion = 'dev-local',
     GuardrailAlertEvaluator? guardrailAlertEvaluator,
@@ -194,7 +75,11 @@ class GameLoopController {
   final AdService adService;
   final AdGuardrailPolicy adGuardrailPolicy;
   final IapStoreService iapStoreService;
-  final PlayerProgressRepository playerProgressRepository;
+  final GameSessionRepository gameSessionRepository;
+  final ProgressionSyncService progressionSyncService;
+  final ABExperimentService abExperimentService;
+  final ShareFlowService shareFlowService;
+  final OnboardingFlowController onboardingFlowController;
   final AppLogger logger;
   final String appVersion;
   final GuardrailAlertEvaluator _guardrailAlertEvaluator;
@@ -205,18 +90,11 @@ class GameLoopController {
       ValueNotifier<GameLoopViewState>(GameLoopViewState.initial());
 
   Map<String, Object?> _remoteConfig = <String, Object?>{};
+  late RemoteConfigReader _configReader = const RemoteConfigReader(<String, Object?>{});
   String _remoteConfigVersion = 'bundled_config_v1';
   SessionState _sessionState = SessionState.initial;
   final List<DateTime> _interstitialImpressionHistoryUtc = <DateTime>[];
   bool _initialized = false;
-  bool _onboardingEnabled = true;
-  bool _onboardingCompleted = false;
-  int _onboardingMoveCount = 0;
-  bool _streakEnabled = true;
-  int _dailyGoalMovesTarget = 18;
-  int _dailyGoalLinesTarget = 6;
-  int _dailyGoalScoreTarget = 350;
-  int _dailyGoalRewardCredits = 1;
   int _rewardedToolsHintCost = 1;
   int _rewardedToolsUndoCost = 1;
   int _undoHistoryLimit = 1;
@@ -237,9 +115,9 @@ class GameLoopController {
   Map<String, String> _abExperimentVariants = <String, String>{};
   Set<String> _ownedIapProductIds = <String>{};
   final List<_UndoSnapshot> _undoHistory = <_UndoSnapshot>[];
-  PlayerProgressState _playerProgressState = PlayerProgressState.initialForDay(
-    DateTime.utc(1970, 1, 1),
-  );
+  final List<_UndoSnapshot> _undoHistory = <_UndoSnapshot>[];
+
+  PlayerProgressState get _playerProgressState => progressionSyncService.state;
 
   ValueListenable<GameLoopViewState> get stateListenable => _stateNotifier;
   GameLoopViewState get state => _stateNotifier.value;
@@ -253,75 +131,56 @@ class GameLoopController {
     final RemoteConfigSnapshot remoteConfigSnapshot =
         await remoteConfigRepository.fetchLatestSnapshot();
     _remoteConfig = remoteConfigSnapshot.config;
+    _configReader = RemoteConfigReader(_remoteConfig);
     _remoteConfigVersion = remoteConfigSnapshot.version;
-    _onboardingEnabled = _readBoolConfig(
-      'onboarding.enabled',
-      fallback: true,
-    );
-    _streakEnabled = _readBoolConfig(
-      'progression.streak_enabled',
-      fallback: true,
-    );
-    _dailyGoalMovesTarget = _readIntConfig(
-      'progression.daily_goal_moves_target',
-      fallback: 18,
-    ).clamp(1, 500);
-    _dailyGoalLinesTarget = _readIntConfig(
-      'progression.daily_goal_lines_target',
-      fallback: 6,
-    ).clamp(1, 100);
-    _dailyGoalScoreTarget = _readIntConfig(
-      'progression.daily_goal_score_target',
-      fallback: 350,
-    ).clamp(20, 50000);
-    _dailyGoalRewardCredits = _readIntConfig(
-      'progression.daily_goal_reward_credits',
-      fallback: 1,
-    ).clamp(0, 50);
-    _rewardedToolsHintCost = _readIntConfig(
+    onboardingFlowController.configure(_configReader);
+    onboardingFlowController.configure(_configReader);
+    progressionSyncService.configure(_configReader);
+    _rewardedToolsHintCost = _configReader.readInt(
       'progression.rewarded_tools_hint_cost',
       fallback: 1,
     ).clamp(1, 20);
-    _rewardedToolsUndoCost = _readIntConfig(
+    _rewardedToolsUndoCost = _configReader.readInt(
       'progression.rewarded_tools_undo_cost',
       fallback: 1,
     ).clamp(1, 20);
-    _undoHistoryLimit = _readIntConfig(
+    _undoHistoryLimit = _configReader.readInt(
       'progression.undo_history_limit',
       fallback: 1,
     ).clamp(1, 5);
-    _rewardedToolsIapEnabled = _readBoolConfig(
+    _rewardedToolsIapEnabled = _configReader.readBool(
       'iap.rewarded_tools_unlimited_enabled',
       fallback: true,
     );
-    _rewardedToolsUnlimitedSku = _readStringConfig(
+    _rewardedToolsUnlimitedSku = _configReader.readString(
       'iap.rewarded_tools_unlimited_sku',
       fallback: 'utility_tools_pass',
     );
-    _abBucket = _readStringConfig(
-      'ab.bucket',
-      fallback: 'control',
-    );
-    _uxVariant = _readStringConfig(
-      'ab.ux_variant',
-      fallback: 'hud_standard_v1',
-    );
-    _difficultyVariant = _readStringConfig(
-      'ab.difficulty_variant',
-      fallback: 'balanced_v1',
-    );
-    _shareFlowEnabled = _readBoolConfig(
+    _shareFlowEnabled = _configReader.readBool(
       'social.share_enabled',
       fallback: true,
     );
-    _shareHashtag = _normalizeShareHashtag(
-      _readStringConfig(
+    _shareHashtag = ShareFlowService.normalizeHashtag(
+      _configReader.readString(
         'social.share_score_hashtag',
         fallback: _defaultShareHashtag,
       ),
     );
-    _abExperimentVariants = _collectAbExperimentVariants();
-    await _loadAndSyncProgressForCurrentDay();
+    abExperimentService.configure(_configReader);
+    _abBucket = abExperimentService.abBucket;
+    _uxVariant = abExperimentService.uxVariant;
+    _difficultyVariant = abExperimentService.difficultyVariant;
+    _abExperimentVariants = abExperimentService.experimentVariants;
+    
+    final int initialRewardedToolsCredits = _configReader.readInt(
+      'progression.rewarded_tools_initial_credits',
+      fallback: 3,
+    ).clamp(0, 500);
+    await progressionSyncService.loadAndSync(
+      initialRewardedToolsCredits: initialRewardedToolsCredits,
+    );
+    onboardingFlowController.restoreFromProgress(_playerProgressState);
+
     await _refreshOwnedIapProducts();
     await adService.preload();
 
@@ -344,14 +203,16 @@ class GameLoopController {
         'difficulty_variant': _difficultyVariant,
       },
     );
-    await _trackAbExperimentExposures();
+    await abExperimentService.trackExposures();
     await analyticsTracker.track('game_loop_initialized');
 
-    await startNewGame();
+    final GameSnapshot? snapshot = await gameSessionRepository.loadSnapshot();
+
+    await startNewGame(snapshot: snapshot);
   }
 
-  Future<void> startNewGame() async {
-    await _syncProgressForCurrentDay();
+  Future<void> startNewGame({GameSnapshot? snapshot}) async {
+    await progressionSyncService.syncForCurrentDay();
     await _refreshOwnedIapProducts();
 
     _currentGameNumber += 1;
@@ -359,32 +220,35 @@ class GameLoopController {
     _gameStartedAt = _nowUtc();
     _rewardedReviveUsedInCurrentGame = false;
     _undoHistory.clear();
-    final int nextGamesPlayed = state.gamesPlayed + 1;
+    final int nextGamesPlayed = snapshot != null ? snapshot.gamesPlayed : state.gamesPlayed + 1;
     final bool shouldShowOnboarding =
-        _onboardingEnabled && !_onboardingCompleted && nextGamesPlayed == 1;
-    final BoardState emptyBoard = GameLoopViewState.initial().boardState;
+        onboardingFlowController.shouldShowForGame(nextGamesPlayed) && snapshot == null;
+    final BoardState initialBoard = snapshot?.boardState ?? GameLoopViewState.initial().boardState;
 
     _sessionState = SessionState(
       roundsPlayed: nextGamesPlayed,
-      currentScore: 0,
-      movesPlayed: 0,
+      currentScore: snapshot?.scoreState.totalScore ?? 0,
+      movesPlayed: snapshot?.movesPlayed ?? 0,
     );
-    final int level = _resolveLevel(totalScore: 0);
+    final int level = snapshot?.level ?? _resolveLevel(totalScore: 0);
     final int colorThemeIndex = _resolveColorThemeIndex(level);
 
-    final List<Piece> rack = _nextRackPieces(
-      boardState: emptyBoard,
+    final List<Piece> rack = snapshot?.rackPieces ?? _nextRackPieces(
+      boardState: initialBoard,
       maxAttempts: 24,
     );
-    _onboardingMoveCount = 0;
+    if (snapshot == null) {
+      onboardingFlowController.resetMoveCount();
+    }
 
     _stateNotifier.value = state.copyWith(
-      boardState: emptyBoard,
-      scoreState: ScoreState.initial,
+      boardState: initialBoard,
+      scoreState: snapshot?.scoreState ?? ScoreState.initial,
       rackPieces: rack,
       level: level,
       colorThemeIndex: colorThemeIndex,
       uxVariant: _uxVariant,
+      phase: GameLoopPhase.playing,
       isShareFlowEnabled: _shareFlowEnabled,
       isGameOver: false,
       canUseRewardedRevive: false,
@@ -397,25 +261,24 @@ class GameLoopController {
       hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
       isBannerVisible: adGuardrailPolicy.isBannerEnabled(_remoteConfig),
       isOnboardingVisible: shouldShowOnboarding,
-      dailyGoals: _buildDailyGoalsSnapshot(),
-      streak: _buildStreakSnapshot(),
+      dailyGoals: progressionSyncService.buildDailyGoalsSnapshot(),
+      streak: progressionSyncService.buildStreakSnapshot(),
       bestScore: _playerProgressState.bestScore,
-      onboardingStepId: shouldShowOnboarding ? _tutorialStepWelcome : null,
-      onboardingTitle: shouldShowOnboarding ? 'Welcome to Classic Mode' : null,
+      onboardingStepId: shouldShowOnboarding ? onboardingFlowController.initialStepId : null,
+      onboardingTitle: shouldShowOnboarding ? onboardingFlowController.initialTitle : null,
       onboardingDescription: shouldShowOnboarding
-          ? 'Drag any piece from the rack onto the board to start your run.'
+          ? onboardingFlowController.initialDescription
           : null,
       resetHintSuggestion: true,
       gamesPlayed: nextGamesPlayed,
-      movesPlayed: 0,
+      movesPlayed: snapshot?.movesPlayed ?? 0,
       resetOnboarding: !shouldShowOnboarding,
       resetGameOverReason: true,
     );
 
     if (shouldShowOnboarding) {
-      await _trackTutorialStep(
-        stepId: _tutorialStepWelcome,
-        status: _tutorialStatusShown,
+      await onboardingFlowController.trackStepShown(
+        onboardingFlowController.initialStepId,
       );
     }
 
@@ -535,14 +398,16 @@ class GameLoopController {
     final double boardFillPct = lineResult.boardState.occupiedCells.length /
         (lineResult.boardState.size * lineResult.boardState.size);
 
-    final DailyGoalsSnapshot dailyGoalsBefore = _buildDailyGoalsSnapshot();
-    await _applyProgressAfterMove(
+    final DailyGoalsSnapshot dailyGoalsBefore =
+        progressionSyncService.buildDailyGoalsSnapshot();
+    await progressionSyncService.applyAfterMove(
       clearedLines: lineResult.clearedTotal,
       scoreDelta: scoreDelta,
       bestScore: nextBestScore,
     );
-    final DailyGoalsSnapshot dailyGoalsAfter = _buildDailyGoalsSnapshot();
-    await _trackNewGoalCompletions(
+    final DailyGoalsSnapshot dailyGoalsAfter =
+        progressionSyncService.buildDailyGoalsSnapshot();
+    await progressionSyncService.trackNewGoalCompletions(
       before: dailyGoalsBefore,
       after: dailyGoalsAfter,
     );
@@ -559,6 +424,7 @@ class GameLoopController {
       rackPieces: nextRack,
       level: nextLevel,
       colorThemeIndex: nextColorThemeIndex,
+      phase: isGameOver ? GameLoopPhase.gameOver : GameLoopPhase.playing,
       isGameOver: isGameOver,
       canUseRewardedRevive: isGameOver ? _isRewardedReviveAvailable() : false,
       canUseRewardedHint: _canUseRewardedHintForState(
@@ -595,10 +461,35 @@ class GameLoopController {
       },
     );
 
-    await _handleOnboardingAfterMove(
+    final OnboardingUpdate? onboardingUpdate =
+        await onboardingFlowController.handleAfterMove(
+      currentStepId: state.onboardingStepId,
+      isOnboardingVisible: state.isOnboardingVisible,
       clearedLines: lineResult.clearedTotal,
       comboStreak: nextScore.comboStreak,
+      progressState: _playerProgressState,
     );
+
+    if (onboardingUpdate != null) {
+      if (onboardingUpdate.type == OnboardingUpdateType.advanceStep) {
+        progressionSyncService.updateState(
+          await onboardingFlowController.activateStep(
+            stepId: onboardingUpdate.stepId!,
+            progressState: _playerProgressState,
+          ),
+        );
+        _stateNotifier.value = state.copyWith(
+          onboardingStepId: onboardingUpdate.stepId,
+          onboardingTitle: onboardingUpdate.title,
+          onboardingDescription: onboardingUpdate.description,
+        );
+      } else if (onboardingUpdate.type == OnboardingUpdateType.complete) {
+        _stateNotifier.value = state.copyWith(
+          isOnboardingVisible: false,
+          resetOnboarding: true,
+        );
+      }
+    }
 
     if (levelUp) {
       await analyticsTracker.track(
@@ -625,16 +516,20 @@ class GameLoopController {
 
     if (isGameOver) {
       if (state.isOnboardingVisible) {
-        await _completeOnboarding(
-          stepId: state.onboardingStepId ?? _tutorialFlow,
-          status: _tutorialStatusSkipped,
-          dropoffReason: 'game_over',
+        await onboardingFlowController.completeOnGameOver(
+          currentStepId: state.onboardingStepId,
+          progressState: _playerProgressState,
+        );
+        _stateNotifier.value = state.copyWith(
+          isOnboardingVisible: false,
+          resetOnboarding: true,
         );
       }
       await _trackGameEnd(
         reason: 'no_valid_moves',
         score: nextScore.totalScore,
       );
+      await gameSessionRepository.clearSnapshot();
       await _maybeShowInterstitialAfterGameEnd();
     }
 
@@ -693,6 +588,7 @@ class GameLoopController {
     _stateNotifier.value = state.copyWith(
       boardState: reviveSnapshot.boardState,
       rackPieces: reviveSnapshot.rackPieces,
+      phase: GameLoopPhase.playing,
       isGameOver: false,
       canUseRewardedRevive: false,
       canUseRewardedHint: _canUseRewardedHintForState(
@@ -737,8 +633,9 @@ class GameLoopController {
       return RewardedHintResult.failure('no_valid_move');
     }
 
-    final String source = await _consumeRewardedToolsCreditsIfNeeded(
+    final String source = await progressionSyncService.consumeCredits(
       cost: _rewardedToolsHintCost,
+      hasUnlimitedAccess: _hasUnlimitedRewardedToolsAccess,
     );
 
     _stateNotifier.value = state.copyWith(
@@ -778,8 +675,9 @@ class GameLoopController {
     }
 
     final _UndoSnapshot snapshot = _undoHistory.removeLast();
-    final String source = await _consumeRewardedToolsCreditsIfNeeded(
+    final String source = await progressionSyncService.consumeCredits(
       cost: _rewardedToolsUndoCost,
+      hasUnlimitedAccess: _hasUnlimitedRewardedToolsAccess,
     );
 
     _sessionState = SessionState(
@@ -794,6 +692,7 @@ class GameLoopController {
       rackPieces: snapshot.rackPieces,
       level: snapshot.level,
       colorThemeIndex: snapshot.colorThemeIndex,
+      phase: GameLoopPhase.playing,
       isGameOver: false,
       canUseRewardedRevive: false,
       canUseRewardedHint: _canUseRewardedHintForState(
@@ -824,36 +723,18 @@ class GameLoopController {
   }
 
   String buildShareScoreText() {
-    final int score = state.scoreState.totalScore;
-    final int best = state.bestScore;
-    final int level = state.level;
-    final int moves = state.movesPlayed;
-    final int goalsCompleted = state.dailyGoals.completedCount;
-    final int goalsTotal = state.dailyGoals.totalCount;
-
-    return 'I scored $score in Lumina Blocks! '
-        'Best: $best, Level: $level, Moves: $moves, '
-        'Daily goals: $goalsCompleted/$goalsTotal. '
-        'Can you beat it? $_shareHashtag';
+    return shareFlowService.buildShareText(state);
   }
 
   Future<void> trackShareScoreTapped({
     required String channel,
   }) async {
-    await analyticsTracker.track(
-      'share_score_tapped',
-      params: <String, Object?>{
-        'round_id': _currentGameNumber,
-        'channel': channel,
-        'score_total': state.scoreState.totalScore,
-        'best_score': state.bestScore,
-        'level': state.level,
-        'moves_played': state.movesPlayed,
-        'daily_goals_completed': state.dailyGoals.completedCount,
-        'daily_goals_total': state.dailyGoals.totalCount,
-        'ux_variant': _uxVariant,
-        'difficulty_variant': _difficultyVariant,
-      },
+    await shareFlowService.trackShareTapped(
+      channel: channel,
+      roundId: _currentGameNumber,
+      state: state,
+      uxVariant: _uxVariant,
+      difficultyVariant: _difficultyVariant,
     );
   }
 
@@ -862,23 +743,38 @@ class GameLoopController {
     required bool success,
     String? failureReason,
   }) async {
-    await analyticsTracker.track(
-      'share_score_result',
-      params: <String, Object?>{
-        'round_id': _currentGameNumber,
-        'channel': channel,
-        'success': success,
-        if (failureReason != null) 'failure_reason': failureReason,
-        'score_total': state.scoreState.totalScore,
-        'best_score': state.bestScore,
-        'level': state.level,
-        'moves_played': state.movesPlayed,
-        'daily_goals_completed': state.dailyGoals.completedCount,
-        'daily_goals_total': state.dailyGoals.totalCount,
-        'ux_variant': _uxVariant,
-        'difficulty_variant': _difficultyVariant,
-      },
+    await shareFlowService.trackShareResult(
+      channel: channel,
+      success: success,
+      roundId: _currentGameNumber,
+      state: state,
+      uxVariant: _uxVariant,
+      difficultyVariant: _difficultyVariant,
+      failureReason: failureReason,
     );
+  }
+
+  void pauseGame() {
+    if (state.phase == GameLoopPhase.playing) {
+      _stateNotifier.value = state.copyWith(phase: GameLoopPhase.paused);
+      final GameSnapshot snapshot = GameSnapshot(
+        boardState: state.boardState,
+        scoreState: state.scoreState,
+        rackPieces: state.rackPieces,
+        level: state.level,
+        movesPlayed: state.movesPlayed,
+        gamesPlayed: state.gamesPlayed,
+      );
+      gameSessionRepository.saveSnapshot(snapshot);
+      logger.info('Game paused: saved snapshot');
+    }
+  }
+
+  void resumeGame() {
+    if (state.phase == GameLoopPhase.paused) {
+      _stateNotifier.value = state.copyWith(phase: GameLoopPhase.playing);
+      logger.info('Game resumed');
+    }
   }
 
   Future<void> dismissOnboarding({
@@ -887,10 +783,14 @@ class GameLoopController {
     if (!state.isOnboardingVisible) {
       return;
     }
-    await _completeOnboarding(
-      stepId: state.onboardingStepId ?? _tutorialFlow,
-      status: _tutorialStatusSkipped,
-      dropoffReason: reason,
+    await onboardingFlowController.dismiss(
+      currentStepId: state.onboardingStepId,
+      progressState: _playerProgressState,
+      reason: reason,
+    );
+    _stateNotifier.value = state.copyWith(
+      isOnboardingVisible: false,
+      resetOnboarding: true,
     );
   }
 
@@ -1091,412 +991,11 @@ class GameLoopController {
       return false;
     }
     return _undoHistory.isNotEmpty;
-  }
 
-  Future<String> _consumeRewardedToolsCreditsIfNeeded({
-    required int cost,
-  }) async {
-    if (_hasUnlimitedRewardedToolsAccess) {
-      return _hintCostSourceIap;
-    }
 
-    final int nextCredits =
-        (_playerProgressState.rewardedToolsCredits - cost).clamp(0, 100000);
-    _playerProgressState = _playerProgressState.copyWith(
-      rewardedToolsCredits: nextCredits,
-      lastSeenUtc: _nowUtc(),
-    );
-    await playerProgressRepository.save(_playerProgressState);
-    return _hintCostSourceEarned;
-  }
 
-  Future<void> _handleOnboardingAfterMove({
-    required int clearedLines,
-    required int comboStreak,
-  }) async {
-    if (_onboardingCompleted || !state.isOnboardingVisible) {
-      return;
-    }
 
-    _onboardingMoveCount += 1;
-    final String? currentStep = state.onboardingStepId;
-    if (currentStep == null) {
-      return;
-    }
 
-    if (currentStep == _tutorialStepWelcome) {
-      await _trackTutorialStep(
-        stepId: _tutorialStepWelcome,
-        status: _tutorialStatusCompleted,
-      );
-      await _activateOnboardingStep(
-        stepId: _tutorialStepClearLine,
-        title: 'Clear Your First Line',
-        description:
-            'Fill a full row or column. Line clears give score boosts and open space.',
-      );
-      return;
-    }
-
-    if (currentStep == _tutorialStepClearLine) {
-      if (clearedLines > 0) {
-        await _trackTutorialStep(
-          stepId: _tutorialStepClearLine,
-          status: _tutorialStatusCompleted,
-        );
-        await _activateOnboardingStep(
-          stepId: _tutorialStepComboChain,
-          title: 'Chain a Combo',
-          description:
-              'Try to clear lines in consecutive moves to build combo multipliers.',
-        );
-        return;
-      }
-      if (_onboardingMoveCount >= _onboardingMaxGuidedMoves()) {
-        await _completeOnboarding(
-          stepId: _tutorialStepClearLine,
-          status: _tutorialStatusSkipped,
-          dropoffReason: 'max_guided_moves_reached',
-        );
-      }
-      return;
-    }
-
-    if (currentStep == _tutorialStepComboChain) {
-      if (comboStreak > 1) {
-        await _trackTutorialStep(
-          stepId: _tutorialStepComboChain,
-          status: _tutorialStatusCompleted,
-        );
-        await _completeOnboarding(
-          stepId: _tutorialFlow,
-          status: _tutorialStatusCompleted,
-        );
-        return;
-      }
-      if (_onboardingMoveCount >= _onboardingMaxGuidedMoves()) {
-        await _completeOnboarding(
-          stepId: _tutorialStepComboChain,
-          status: _tutorialStatusSkipped,
-          dropoffReason: 'max_guided_moves_reached',
-        );
-      }
-    }
-  }
-
-  Future<void> _activateOnboardingStep({
-    required String stepId,
-    required String title,
-    required String description,
-  }) async {
-    if (_onboardingCompleted) {
-      return;
-    }
-    _stateNotifier.value = state.copyWith(
-      isOnboardingVisible: true,
-      onboardingStepId: stepId,
-      onboardingTitle: title,
-      onboardingDescription: description,
-    );
-    _playerProgressState = _playerProgressState.copyWith(
-      onboardingStatus: _playerProgressState.onboardingStatus.copyWith(
-        lastStepId: stepId,
-        lastStatus: _tutorialStatusShown,
-      ),
-      lastSeenUtc: _nowUtc(),
-    );
-    await playerProgressRepository.save(_playerProgressState);
-    await _trackTutorialStep(
-      stepId: stepId,
-      status: _tutorialStatusShown,
-    );
-  }
-
-  Future<void> _completeOnboarding({
-    required String stepId,
-    required String status,
-    String? dropoffReason,
-  }) async {
-    if (_onboardingCompleted) {
-      return;
-    }
-    _onboardingCompleted = true;
-    _onboardingMoveCount = 0;
-    _stateNotifier.value = state.copyWith(
-      isOnboardingVisible: false,
-      resetOnboarding: true,
-    );
-    _playerProgressState = _playerProgressState.copyWith(
-      onboardingStatus: _playerProgressState.onboardingStatus.copyWith(
-        completed: true,
-        lastStepId: stepId,
-        lastStatus: status,
-      ),
-      lastSeenUtc: _nowUtc(),
-    );
-    await playerProgressRepository.save(_playerProgressState);
-    await _trackTutorialStep(
-      stepId: stepId,
-      status: status,
-      dropoffReason: dropoffReason,
-    );
-  }
-
-  Future<void> _trackTutorialStep({
-    required String stepId,
-    required String status,
-    String? dropoffReason,
-  }) async {
-    await analyticsTracker.track(
-      'tutorial_step',
-      params: <String, Object?>{
-        'step_id': stepId,
-        'status': status,
-        if (dropoffReason != null) 'dropoff_reason': dropoffReason,
-      },
-    );
-  }
-
-  int _onboardingMaxGuidedMoves() {
-    final int value = _readIntConfig(
-      'onboarding.max_guided_moves',
-      fallback: 8,
-    );
-    return value.clamp(2, 40);
-  }
-
-  Future<void> _loadAndSyncProgressForCurrentDay() async {
-    final DateTime todayUtc = PlayerProgressState.normalizeDayKeyUtc(_nowUtc());
-    final int initialRewardedToolsCredits = _readIntConfig(
-      'progression.rewarded_tools_initial_credits',
-      fallback: 3,
-    ).clamp(0, 500);
-    _playerProgressState = await playerProgressRepository.load() ??
-        PlayerProgressState.initialForDay(
-          todayUtc,
-          initialRewardedToolsCredits: initialRewardedToolsCredits,
-        );
-    _onboardingCompleted = _playerProgressState.onboardingStatus.completed;
-
-    if (!_streakEnabled) {
-      _playerProgressState = _playerProgressState.copyWith(
-        streakCurrentDays: 0,
-        streakBestDays: 0,
-      );
-    }
-
-    _playerProgressState = _playerProgressState.copyWith(
-      lastSeenUtc: _nowUtc(),
-    );
-    await _syncProgressForCurrentDay();
-    await playerProgressRepository.save(_playerProgressState);
-  }
-
-  Future<void> _syncProgressForCurrentDay() async {
-    final DateTime todayUtc = PlayerProgressState.normalizeDayKeyUtc(_nowUtc());
-    if (_playerProgressState.dayKeyUtc == todayUtc) {
-      return;
-    }
-
-    final int dayDelta =
-        todayUtc.difference(_playerProgressState.dayKeyUtc).inDays;
-    int nextStreakCurrent = _playerProgressState.streakCurrentDays;
-    int nextStreakBest = _playerProgressState.streakBestDays;
-    String streakReason = 'same_day';
-
-    if (_streakEnabled) {
-      if (dayDelta == 1) {
-        nextStreakCurrent = (_playerProgressState.streakCurrentDays + 1).clamp(
-          1,
-          10000,
-        );
-        streakReason = 'continued';
-      } else {
-        nextStreakCurrent = 1;
-        streakReason = 'reset_gap';
-      }
-      if (nextStreakCurrent > nextStreakBest) {
-        nextStreakBest = nextStreakCurrent;
-      }
-    } else {
-      nextStreakCurrent = 0;
-      nextStreakBest = 0;
-      streakReason = 'disabled';
-    }
-
-    _playerProgressState = _playerProgressState.copyWith(
-      dayKeyUtc: todayUtc,
-      streakCurrentDays: nextStreakCurrent,
-      streakBestDays: nextStreakBest,
-      dailyMoves: 0,
-      dailyLinesCleared: 0,
-      dailyScoreEarned: 0,
-      lastSeenUtc: _nowUtc(),
-    );
-    await playerProgressRepository.save(_playerProgressState);
-    await _trackStreakUpdated(reason: streakReason);
-  }
-
-  DailyGoalsSnapshot _buildDailyGoalsSnapshot() {
-    return DailyGoalsSnapshot(
-      movesProgress: _playerProgressState.dailyMoves,
-      movesTarget: _dailyGoalMovesTarget,
-      linesProgress: _playerProgressState.dailyLinesCleared,
-      linesTarget: _dailyGoalLinesTarget,
-      scoreProgress: _playerProgressState.dailyScoreEarned,
-      scoreTarget: _dailyGoalScoreTarget,
-    );
-  }
-
-  StreakSnapshot _buildStreakSnapshot() {
-    return StreakSnapshot(
-      currentDays: _streakEnabled ? _playerProgressState.streakCurrentDays : 0,
-      bestDays: _streakEnabled ? _playerProgressState.streakBestDays : 0,
-    );
-  }
-
-  Future<void> _applyProgressAfterMove({
-    required int clearedLines,
-    required int scoreDelta,
-    required int bestScore,
-  }) async {
-    _playerProgressState = _playerProgressState.copyWith(
-      dailyMoves: _playerProgressState.dailyMoves + 1,
-      dailyLinesCleared: _playerProgressState.dailyLinesCleared + clearedLines,
-      dailyScoreEarned: _playerProgressState.dailyScoreEarned + scoreDelta,
-      bestScore: bestScore > _playerProgressState.bestScore
-          ? bestScore
-          : _playerProgressState.bestScore,
-      lastSeenUtc: _nowUtc(),
-    );
-    await playerProgressRepository.save(_playerProgressState);
-  }
-
-  Future<void> _trackNewGoalCompletions({
-    required DailyGoalsSnapshot before,
-    required DailyGoalsSnapshot after,
-  }) async {
-    int newlyCompletedGoals = 0;
-    if (!before.movesCompleted && after.movesCompleted) {
-      newlyCompletedGoals += 1;
-      await _trackDailyGoalProgress(
-        goalId: _dailyGoalMoves,
-        progress: after.movesProgress,
-        target: after.movesTarget,
-        completedGoals: after.completedCount,
-      );
-    }
-    if (!before.linesCompleted && after.linesCompleted) {
-      newlyCompletedGoals += 1;
-      await _trackDailyGoalProgress(
-        goalId: _dailyGoalLines,
-        progress: after.linesProgress,
-        target: after.linesTarget,
-        completedGoals: after.completedCount,
-      );
-    }
-    if (!before.scoreCompleted && after.scoreCompleted) {
-      newlyCompletedGoals += 1;
-      await _trackDailyGoalProgress(
-        goalId: _dailyGoalScore,
-        progress: after.scoreProgress,
-        target: after.scoreTarget,
-        completedGoals: after.completedCount,
-      );
-    }
-
-    if (newlyCompletedGoals <= 0 || _dailyGoalRewardCredits <= 0) {
-      return;
-    }
-
-    final int creditsEarned = newlyCompletedGoals * _dailyGoalRewardCredits;
-    _playerProgressState = _playerProgressState.copyWith(
-      rewardedToolsCredits:
-          _playerProgressState.rewardedToolsCredits + creditsEarned,
-      lastSeenUtc: _nowUtc(),
-    );
-    await playerProgressRepository.save(_playerProgressState);
-
-    await analyticsTracker.track(
-      'rewarded_tools_credits_earned',
-      params: <String, Object?>{
-        'source': 'daily_goals',
-        'goals_completed_now': newlyCompletedGoals,
-        'credits_earned': creditsEarned,
-        'credits_balance': _playerProgressState.rewardedToolsCredits,
-      },
-    );
-  }
-
-  Future<void> _trackDailyGoalProgress({
-    required String goalId,
-    required int progress,
-    required int target,
-    required int completedGoals,
-  }) async {
-    await analyticsTracker.track(
-      'daily_goal_progress',
-      params: <String, Object?>{
-        'goal_id': goalId,
-        'progress': progress,
-        'target': target,
-        'is_completed': progress >= target,
-        'completed_goals': completedGoals,
-        'total_goals': 3,
-      },
-    );
-  }
-
-  Future<void> _trackStreakUpdated({
-    required String reason,
-  }) async {
-    await analyticsTracker.track(
-      'streak_updated',
-      params: <String, Object?>{
-        'current_streak': _playerProgressState.streakCurrentDays,
-        'best_streak': _playerProgressState.streakBestDays,
-        'reason': reason,
-      },
-    );
-  }
-
-  Map<String, String> _collectAbExperimentVariants() {
-    return <String, String>{
-      'tutorial_onboarding': _readStringConfig(
-        'ab.tutorial_variant',
-        fallback: _onboardingEnabled ? 'guided_v1' : 'off',
-      ),
-      'offer_strategy': _readStringConfig(
-        'ab.offer_strategy_variant',
-        fallback: _readStringConfig(
-          'iap.rollout_strategy',
-          fallback: 'cosmetics_first',
-        ),
-      ),
-      'difficulty_curve': _readStringConfig(
-        'ab.difficulty_variant',
-        fallback: _difficultyVariant,
-      ),
-      'hud_ux': _readStringConfig(
-        'ab.ux_variant',
-        fallback: _uxVariant,
-      ),
-    };
-  }
-
-  Future<void> _trackAbExperimentExposures() async {
-    for (final MapEntry<String, String> entry
-        in _abExperimentVariants.entries) {
-      await analyticsTracker.track(
-        'ab_experiment_exposure',
-        params: <String, Object?>{
-          'experiment_id': entry.key,
-          'variant_id': entry.value,
-          'source': 'remote_config',
-        },
-      );
-    }
-  }
 
   Future<void> _refreshOwnedIapProducts() async {
     try {
@@ -1530,70 +1029,10 @@ class GameLoopController {
     }
   }
 
-  bool _readBoolConfig(
-    String key, {
-    required bool fallback,
-  }) {
-    final Object? rawValue = _remoteConfig[key];
-    if (rawValue is bool) {
-      return rawValue;
-    }
-    if (rawValue is String) {
-      final String normalized = rawValue.trim().toLowerCase();
-      if (normalized == 'true') {
-        return true;
-      }
-      if (normalized == 'false') {
-        return false;
-      }
-    }
-    if (rawValue is num) {
-      return rawValue > 0;
-    }
-    return fallback;
-  }
 
-  int _readIntConfig(
-    String key, {
-    required int fallback,
-  }) {
-    final Object? rawValue = _remoteConfig[key];
-    if (rawValue is int) {
-      return rawValue;
-    }
-    if (rawValue is num) {
-      return rawValue.toInt();
-    }
-    if (rawValue is String) {
-      return int.tryParse(rawValue) ?? fallback;
-    }
-    return fallback;
-  }
-
-  String _readStringConfig(
-    String key, {
-    required String fallback,
-  }) {
-    final Object? rawValue = _remoteConfig[key];
-    if (rawValue is String && rawValue.trim().isNotEmpty) {
-      return rawValue.trim();
-    }
-    return fallback;
-  }
-
-  String _normalizeShareHashtag(String rawValue) {
-    final String trimmed = rawValue.trim();
-    if (trimmed.isEmpty) {
-      return _defaultShareHashtag;
-    }
-    if (trimmed.startsWith('#')) {
-      return trimmed;
-    }
-    return '#$trimmed';
-  }
 
   String _resolveBlocksVisualPreset() {
-    final String value = _readStringConfig(
+    final String value = _configReader.readString(
       'visual.blocks_preset',
       fallback: _playerProgressState.settings.selectedBlocksPreset,
     ).trim().toLowerCase();

@@ -7,6 +7,23 @@ class BoardState {
   final int size;
   final Set<BoardCell> occupiedCells;
 
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'size': size,
+      'occupied_cells': occupiedCells.map((BoardCell c) => c.toJson()).toList(growable: false),
+    };
+  }
+
+  factory BoardState.fromJson(Map<String, Object?> json) {
+    return BoardState(
+      size: json['size'] as int? ?? 8,
+      occupiedCells: (json['occupied_cells'] as List<dynamic>?)
+              ?.map((dynamic e) => BoardCell.fromJson(e as Map<String, Object?>))
+              .toSet() ??
+          <BoardCell>{},
+    );
+  }
+
   bool isOccupied(BoardCell cell) => occupiedCells.contains(cell);
 
   bool isInBounds(BoardCell cell) {
@@ -47,6 +64,20 @@ class BoardCell {
 
   final int x;
   final int y;
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'x': x,
+      'y': y,
+    };
+  }
+
+  factory BoardCell.fromJson(Map<String, Object?> json) {
+    return BoardCell(
+      x: json['x'] as int? ?? 0,
+      y: json['y'] as int? ?? 0,
+    );
+  }
 
   @override
   bool operator ==(Object other) {

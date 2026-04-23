@@ -3,14 +3,17 @@ import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'block_puzzle_app.dart';
 import '../core/logging/app_logger.dart';
 import '../core/di/di_container.dart';
 import '../data/analytics/analytics_tracker.dart';
+import '../infra/monitoring/crash_reporter.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   await SystemChrome.setPreferredOrientations(
     const <DeviceOrientation>[
       DeviceOrientation.portraitUp,
@@ -23,6 +26,7 @@ Future<void> bootstrap() async {
 
 void _configureGlobalErrorHandlers() {
   final AnalyticsTracker analyticsTracker = sl<AnalyticsTracker>();
+  final CrashReporter crashReporter = sl<CrashReporter>();
   final AppLogger logger = sl<AppLogger>();
 
   final previousFlutterErrorHandler = FlutterError.onError;
@@ -34,6 +38,13 @@ void _configureGlobalErrorHandlers() {
     }
 
     logger.error('FlutterError: ${details.exceptionAsString()}');
+    unawaited(
+      crashReporter.recordError(
+        details.exception,
+        details.stack,
+        reason: 'flutter_error',
+      ),
+    );
     unawaited(
       analyticsTracker.track(
         'ops_error',
@@ -53,6 +64,9 @@ void _configureGlobalErrorHandlers() {
     StackTrace stackTrace,
   ) {
     logger.error('Unhandled error: $error');
+    unawaited(
+      crashReporter.recordError(error, stackTrace, reason: 'platform_dispatcher'),
+    );
     unawaited(
       analyticsTracker.track(
         'ops_error',

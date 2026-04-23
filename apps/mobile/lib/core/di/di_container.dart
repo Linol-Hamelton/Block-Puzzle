@@ -1,13 +1,17 @@
 import 'package:get_it/get_it.dart';
 
 import '../../core/config/app_environment.dart';
+import '../../core/config/remote_config_reader.dart';
+import '../../infra/monitoring/crash_reporter.dart';
+import '../../infra/monitoring/noop_crash_reporter.dart';
 import '../../data/analytics/analytics_tracker.dart';
 import '../../data/analytics/debug_analytics_tracker.dart';
 import '../../data/analytics/queued_analytics_tracker.dart';
 import '../../data/remote_config/in_memory_remote_config_repository.dart';
 import '../../data/remote_config/remote_config_repository.dart';
 import '../../data/remote_config/versioned_remote_config_repository.dart';
-import '../../data/repositories/shared_preferences_player_progress_repository.dart';
+import '../../data/repositories/hive_game_session_repository.dart';
+import '../../data/repositories/hive_player_progress_repository.dart';
 import '../../domain/generator/basic_difficulty_tuner.dart';
 import '../../domain/generator/basic_piece_generation_service.dart';
 import '../../domain/generator/difficulty_tuner.dart';
@@ -19,9 +23,14 @@ import '../../domain/gameplay/move_validator.dart';
 import '../../domain/progression/player_progress_repository.dart';
 import '../../domain/scoring/basic_score_service.dart';
 import '../../domain/scoring/score_service.dart';
+import '../../domain/session/game_session_repository.dart';
 import '../../features/game_loop/audio/flame_game_sfx_player.dart';
 import '../../features/game_loop/audio/game_sfx_player.dart';
 import '../../features/game_loop/application/game_loop_controller.dart';
+import '../../features/game_loop/application/services/ab_experiment_service.dart';
+import '../../features/game_loop/application/services/onboarding_flow_controller.dart';
+import '../../features/game_loop/application/services/progression_sync_service.dart';
+import '../../features/game_loop/application/services/share_flow_service.dart';
 import '../../features/game_loop/application/use_cases/clear_lines_use_case.dart';
 import '../../features/game_loop/application/use_cases/compute_score_use_case.dart';
 import '../../features/game_loop/application/use_cases/place_piece_use_case.dart';
@@ -58,10 +67,11 @@ Future<void> configureDependencies() async {
         );
   final Map<String, Object?> bootstrapRemoteConfig =
       await bootstrapRemoteConfigRepository.getCached();
+  final RemoteConfigReader bootstrapConfigReader =
+      RemoteConfigReader(bootstrapRemoteConfig);
   final bool includeBundle = _resolveIapBundleEnabled(bootstrapRemoteConfig);
-  final bool includeUtilityPass = _readBoolConfig(
-    bootstrapRemoteConfig,
-    key: 'iap.rewarded_tools_unlimited_enabled',
+  final bool includeUtilityPass = bootstrapConfigReader.readBool(
+    'iap.rewarded_tools_unlimited_enabled',
     fallback: true,
   );
 
@@ -69,6 +79,10 @@ Future<void> configureDependencies() async {
     appConfig,
   );
   sl.registerSingleton<AppLogger>(logger);
+  // TODO(A3): Replace with FirebaseCrashReporter for release builds.
+  sl.registerLazySingleton<CrashReporter>(
+    () => const NoopCrashReporter(),
+  );
   sl.registerLazySingleton<GameSfxPlayer>(
     () => FlameGameSfxPlayer(logger: sl()),
   );
@@ -81,9 +95,10 @@ Future<void> configureDependencies() async {
     () => bootstrapRemoteConfigRepository,
   );
   sl.registerLazySingleton<PlayerProgressRepository>(
-    () => useDebugAdapters
-        ? SharedPreferencesPlayerProgressRepository(logger: sl())
-        : SharedPreferencesPlayerProgressRepository(logger: sl()),
+    () => HivePlayerProgressRepository(logger: sl()),
+  );
+  sl.registerLazySingleton<GameSessionRepository>(
+    () => HiveGameSessionRepository(logger: sl()),
   );
   sl.registerLazySingleton<IapStoreService>(
     () => useDebugAdapters
@@ -127,6 +142,40 @@ Future<void> configureDependencies() async {
     () => ComputeScoreUseCase(scoreService: sl()),
   );
 
+  sl.registerLazySingleton<ABExperimentService>(
+    () => ABExperimentService(
+      analyticsTracker: sl(),
+      logger: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<ShareFlowService>(
+    () => ShareFlowService(
+      analyticsTracker: sl(),
+      hashtag: ShareFlowService.normalizeHashtag(
+        bootstrapConfigReader.readString(
+          'social.share_score_hashtag',
+          fallback: '#BlockPuzzle',
+        ),
+      ),
+    ),
+  );
+  sl.registerLazySingleton<OnboardingFlowController>(
+    () => OnboardingFlowController(
+      playerProgressRepository: sl(),
+      analyticsTracker: sl(),
+      logger: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<ProgressionSyncService>(
+    () => ProgressionSyncService(
+      playerProgressRepository: sl(),
+      analyticsTracker: sl(),
+      logger: sl(),
+    ),
+  );
+
   sl.registerFactory<GameLoopController>(
     () => GameLoopController(
       placePieceUseCase: sl(),
@@ -139,7 +188,11 @@ Future<void> configureDependencies() async {
       adService: sl(),
       adGuardrailPolicy: sl(),
       iapStoreService: sl(),
-      playerProgressRepository: sl(),
+      gameSessionRepository: sl(),
+      progressionSyncService: sl(),
+      abExperimentService: sl(),
+      shareFlowService: sl(),
+      onboardingFlowController: sl(),
       logger: sl(),
       appVersion: sl<AppConfig>().appVersion,
     ),
@@ -187,26 +240,4 @@ bool _resolveIapBundleEnabled(Map<String, Object?> config) {
       rolloutStrategy == 'bundle_first';
 }
 
-bool _readBoolConfig(
-  Map<String, Object?> config, {
-  required String key,
-  required bool fallback,
-}) {
-  final Object? raw = config[key];
-  if (raw is bool) {
-    return raw;
-  }
-  if (raw is num) {
-    return raw > 0;
-  }
-  if (raw is String) {
-    final String normalized = raw.trim().toLowerCase();
-    if (normalized == 'true') {
-      return true;
-    }
-    if (normalized == 'false') {
-      return false;
-    }
-  }
-  return fallback;
 }

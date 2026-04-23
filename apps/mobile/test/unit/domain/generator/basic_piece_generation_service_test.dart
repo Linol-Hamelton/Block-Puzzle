@@ -56,6 +56,86 @@ void main() {
 
       expect(hardCount, greaterThanOrEqualTo(2));
     });
+    test('always returns exactly 3 pieces', () {
+      final service = BasicPieceGenerationService(random: Random(42));
+      final BoardState board = BoardState.empty();
+
+      final triplet = service.nextTriplet(
+        boardState: board,
+        profile: DifficultyProfile.initial,
+      );
+
+      expect(triplet.pieces.length, 3);
+    });
+
+    test('each piece has a unique id', () {
+      final service = BasicPieceGenerationService(random: Random(42));
+      final BoardState board = BoardState.empty();
+
+      final triplet = service.nextTriplet(
+        boardState: board,
+        profile: DifficultyProfile.initial,
+      );
+
+      final ids = triplet.pieces.map((p) => p.id).toSet();
+      expect(ids.length, 3, reason: 'All 3 piece IDs should be unique');
+    });
+
+    test('each piece has at least 1 cell', () {
+      final service = BasicPieceGenerationService(random: Random(42));
+      final BoardState board = BoardState.empty();
+
+      for (int i = 0; i < 20; i++) {
+        final triplet = service.nextTriplet(
+          boardState: board,
+          profile: DifficultyProfile.initial,
+        );
+        for (final piece in triplet.pieces) {
+          expect(piece.cells, isNotEmpty,
+              reason: 'Piece ${piece.id} should have at least 1 cell');
+        }
+      }
+    });
+
+    test('generates unique IDs across multiple calls', () {
+      final service = BasicPieceGenerationService(random: Random(7));
+      final BoardState board = BoardState.empty();
+      final Set<String> allIds = <String>{};
+
+      for (int i = 0; i < 10; i++) {
+        final triplet = service.nextTriplet(
+          boardState: board,
+          profile: DifficultyProfile.initial,
+        );
+        for (final piece in triplet.pieces) {
+          expect(allIds.contains(piece.id), isFalse,
+              reason: 'Duplicate ID found: ${piece.id}');
+          allIds.add(piece.id);
+        }
+      }
+      expect(allIds.length, 30);
+    });
+
+    test('deterministic with same Random seed', () {
+      final service1 = BasicPieceGenerationService(random: Random(123));
+      final service2 = BasicPieceGenerationService(random: Random(123));
+      final BoardState board = BoardState.empty();
+
+      final triplet1 = service1.nextTriplet(
+        boardState: board,
+        profile: DifficultyProfile.initial,
+      );
+      final triplet2 = service2.nextTriplet(
+        boardState: board,
+        profile: DifficultyProfile.initial,
+      );
+
+      for (int i = 0; i < 3; i++) {
+        expect(
+            triplet1.pieces[i].cells.length, triplet2.pieces[i].cells.length,
+            reason: 'Piece $i cell count should match with same seed');
+      }
+    });
   });
 }
 

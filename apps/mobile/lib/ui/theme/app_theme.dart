@@ -13,10 +13,10 @@ class LuminaPalette {
 }
 
 class AppTheme {
-  static ThemeData lightTheme() {
+  static ThemeData darkTheme() {
     final ColorScheme scheme = ColorScheme.fromSeed(
       seedColor: LuminaPalette.cyan,
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
     );
 
     return ThemeData(

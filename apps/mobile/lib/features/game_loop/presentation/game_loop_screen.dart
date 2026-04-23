@@ -6,7 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/di/di_container.dart';
+import '../../../ui/layout/game_layout_profile.dart';
 import '../../../ui/theme/app_theme.dart';
+import '../../../ui/widgets/game_over_overlay_card.dart';
+import '../../../ui/widgets/nebula_background.dart';
+import '../../../ui/widgets/onboarding_overlay_card.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -60,6 +64,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
 
     switch (state) {
       case AppLifecycleState.resumed:
+        _controller.resumeGame();
         _game.resumeEngine();
         unawaited(_sfxPlayer.onAppResumed());
         return;
@@ -67,6 +72,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
+        _controller.pauseGame();
         _game.pauseEngine();
         return;
     }
@@ -181,7 +187,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
           return LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final MediaQueryData mediaQuery = MediaQuery.of(context);
-              final _LayoutProfile layout = _LayoutProfile.resolve(
+              final GameLayoutProfile layout = GameLayoutProfile.resolve(
                 constraints: constraints,
                 mediaQuery: mediaQuery,
                 isBannerVisible: state.isBannerVisible,
@@ -202,7 +208,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
 
               return Stack(
                 children: <Widget>[
-                  const Positioned.fill(child: _NebulaBackground()),
+                  const Positioned.fill(child: NebulaBackground()),
                   Positioned.fill(
                     child: Center(
                       child: ConstrainedBox(
@@ -287,7 +293,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
                             constraints: BoxConstraints(
                               maxWidth: layout.surfaceMaxWidth,
                             ),
-                            child: _OnboardingOverlayCard(
+                            child: OnboardingOverlayCard(
                               title: state.onboardingTitle ??
                                   'Classic Mode Tutorial',
                               description: state.onboardingDescription ??
@@ -347,7 +353,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
                       child: Container(
                         color: const Color(0xB20A1222),
                         child: Center(
-                          child: _GameOverOverlayCard(
+                          child: GameOverOverlayCard(
                             state: state,
                             onRestartPressed: _controller.startNewGame,
                             onRevivePressed: state.canUseRewardedRevive
@@ -667,416 +673,6 @@ class _AssistActionsBar extends StatelessWidget {
                     ),
                   ],
                 ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LayoutProfile {
-  const _LayoutProfile({
-    required this.surfaceMaxWidth,
-    required this.surfaceHorizontalPadding,
-    required this.hudTop,
-    required this.hudHeightEstimate,
-    required this.comboTop,
-    required this.onboardingTop,
-    required this.assistBarBottom,
-    required this.bannerBottom,
-    required this.bannerHeight,
-    required this.gameTopInset,
-    required this.gameBottomInset,
-    required this.boardMaxPixels,
-    required this.boardMinPixels,
-    required this.rackCellSize,
-    required this.boardToRackGap,
-    required this.touchTargetMinSize,
-    required this.dragActivationDistance,
-    required this.uiScale,
-    required this.compactHud,
-    required this.compactActions,
-  });
-
-  final double surfaceMaxWidth;
-  final double surfaceHorizontalPadding;
-  final double hudTop;
-  final double hudHeightEstimate;
-  final double comboTop;
-  final double onboardingTop;
-  final double assistBarBottom;
-  final double bannerBottom;
-  final double bannerHeight;
-  final double gameTopInset;
-  final double gameBottomInset;
-  final double boardMaxPixels;
-  final double boardMinPixels;
-  final double rackCellSize;
-  final double boardToRackGap;
-  final double touchTargetMinSize;
-  final double dragActivationDistance;
-  final double uiScale;
-  final bool compactHud;
-  final bool compactActions;
-
-  static _LayoutProfile resolve({
-    required BoxConstraints constraints,
-    required MediaQueryData mediaQuery,
-    required bool isBannerVisible,
-    required bool isOnboardingVisible,
-  }) {
-    final double width = constraints.maxWidth;
-    final double height = constraints.maxHeight;
-    final double shortestSide = math.min(width, height);
-    final bool isTablet = shortestSide >= 600;
-    final bool isCompactPhone = shortestSide < 370;
-    final bool isLargePhone = shortestSide >= 410 && !isTablet;
-
-    final double uiScale = isTablet
-        ? (shortestSide / 700).clamp(1.08, 1.26).toDouble()
-        : (shortestSide / 390).clamp(0.9, 1.06).toDouble();
-
-    final double surfaceMaxWidth = isTablet ? 1100 : 920;
-    final double surfaceHorizontalPadding = isTablet
-        ? 22
-        : (isCompactPhone ? 11 : (isLargePhone ? 16 : 14)).toDouble();
-    const double hudTop = 8;
-    final double hudHeightEstimate =
-        isTablet ? 142 : (isCompactPhone ? 122 : 132).toDouble();
-    final double comboTop = hudTop + (isTablet ? 56 : 60);
-    final double onboardingTop = hudTop + hudHeightEstimate + 8;
-    final double assistBarHeight =
-        isTablet ? 86 : (isCompactPhone ? 78 : 80).toDouble();
-    final double bannerHeight = isTablet ? 60 : 54;
-    final double safeBottomInset = mediaQuery.padding.bottom;
-    final double assistBarBottom =
-        (isBannerVisible ? (bannerHeight + 14) : 12) + safeBottomInset;
-    final double bannerBottom = safeBottomInset + 8;
-    final double onboardingExtra =
-        isOnboardingVisible ? (isTablet ? 84 : 72) : 0;
-    final double gameTopInset =
-        hudTop + hudHeightEstimate + 26 + onboardingExtra;
-    final double gameBottomInset = assistBarHeight +
-        (isBannerVisible ? (bannerHeight + 18) : 14) +
-        safeBottomInset;
-
-    final double boardMaxPixels = isTablet
-        ? (width * 0.67).clamp(468, 614).toDouble()
-        : (width * (isCompactPhone ? 0.91 : 0.875)).clamp(318, 416).toDouble();
-    final double boardMinPixels =
-        isTablet ? 260 : (isCompactPhone ? 190 : 210).toDouble();
-    final double rackCellSize =
-        isTablet ? 30 : (isCompactPhone ? 22 : 24).toDouble();
-    final double boardToRackGap =
-        isTablet ? 30 : (isCompactPhone ? 26 : 28).toDouble();
-    final double touchTargetMinSize =
-        isTablet ? 56 : (isCompactPhone ? 48 : 52).toDouble();
-    final double dragActivationDistance =
-        isTablet ? 12 : (isCompactPhone ? 7 : 9).toDouble();
-
-    return _LayoutProfile(
-      surfaceMaxWidth: surfaceMaxWidth,
-      surfaceHorizontalPadding: surfaceHorizontalPadding,
-      hudTop: hudTop,
-      hudHeightEstimate: hudHeightEstimate,
-      comboTop: comboTop,
-      onboardingTop: onboardingTop,
-      assistBarBottom: assistBarBottom,
-      bannerBottom: bannerBottom,
-      bannerHeight: bannerHeight,
-      gameTopInset: gameTopInset,
-      gameBottomInset: gameBottomInset,
-      boardMaxPixels: boardMaxPixels,
-      boardMinPixels: boardMinPixels,
-      rackCellSize: rackCellSize,
-      boardToRackGap: boardToRackGap,
-      touchTargetMinSize: touchTargetMinSize,
-      dragActivationDistance: dragActivationDistance,
-      uiScale: uiScale,
-      compactHud: isCompactPhone,
-      compactActions: isCompactPhone,
-    );
-  }
-}
-
-class _GameOverOverlayCard extends StatelessWidget {
-  const _GameOverOverlayCard({
-    required this.state,
-    required this.onRestartPressed,
-    this.onRevivePressed,
-    this.onSharePressed,
-  });
-
-  final GameLoopViewState state;
-  final VoidCallback onRestartPressed;
-  final VoidCallback? onRevivePressed;
-  final VoidCallback? onSharePressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isNewBest = state.scoreState.totalScore >= state.bestScore &&
-        state.scoreState.totalScore > 0;
-    final ButtonStyle actionButtonStyle = FilledButton.styleFrom(
-      minimumSize: const Size(112, 48),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      textStyle: const TextStyle(
-        fontWeight: FontWeight.w700,
-      ),
-    );
-
-    return Card(
-      margin: const EdgeInsets.all(20),
-      color: const Color(0xFFF0F6FF),
-      elevation: 8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0x442B4E7A)),
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  const Icon(
-                    Icons.flag_circle_outlined,
-                    color: Color(0xFF1E5B82),
-                    size: 26,
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Round Complete',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (isNewBest)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDDF3E7),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Text(
-                        'New Best',
-                        style: TextStyle(
-                          color: Color(0xFF276642),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Score',
-                      value: '${state.scoreState.totalScore}',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Best',
-                      value: '${state.bestScore}',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Level',
-                      value: '${state.level}',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Moves',
-                      value: '${state.movesPlayed}',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE6F1FF),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Daily goals: ${state.dailyGoals.completedCount}/${state.dailyGoals.totalCount}',
-                        style: const TextStyle(
-                          color: Color(0xFF244A66),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'Streak ${state.streak.currentDays}d',
-                      style: const TextStyle(
-                        color: Color(0xFF244A66),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: <Widget>[
-                  if (onSharePressed != null)
-                    FilledButton.tonalIcon(
-                      onPressed: onSharePressed,
-                      style: actionButtonStyle,
-                      icon: const Icon(Icons.share_outlined),
-                      label: const Text('Share'),
-                    ),
-                  if (onRevivePressed != null)
-                    FilledButton.tonalIcon(
-                      onPressed: onRevivePressed,
-                      style: actionButtonStyle,
-                      icon: const Icon(Icons.favorite),
-                      label: const Text('Revive'),
-                    ),
-                  FilledButton.icon(
-                    onPressed: onRestartPressed,
-                    style: actionButtonStyle,
-                    icon: const Icon(Icons.replay),
-                    label: const Text('Restart'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RoundStatTile extends StatelessWidget {
-  const _RoundStatTile({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F2FD),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF3F617C),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF14293D),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OnboardingOverlayCard extends StatelessWidget {
-  const _OnboardingOverlayCard({
-    required this.title,
-    required this.description,
-    required this.onDismiss,
-  });
-
-  final String title;
-  final String description;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xEE172840),
-      borderRadius: BorderRadius.circular(14),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: <Widget>[
-            const Icon(
-              Icons.tips_and_updates_outlined,
-              color: LuminaPalette.amber,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      color: Color(0xFFCFE0F2),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            TextButton(
-              onPressed: onDismiss,
-              style: TextButton.styleFrom(
-                foregroundColor: LuminaPalette.cyan,
-                minimumSize: const Size(64, 48),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-              child: const Text('Hide'),
-            ),
-          ],
         ),
       ),
     );
@@ -1756,203 +1352,6 @@ class _BannerAdPlaceholder extends StatelessWidget {
   }
 }
 
-class _NebulaBackground extends StatelessWidget {
-  const _NebulaBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            Color(0xFF060C2A),
-            Color(0xFF101F51),
-            Color(0xFF1B235C),
-            Color(0xFF0B1645),
-          ],
-        ),
-      ),
-      child: CustomPaint(
-        painter: _NebulaBackgroundPainter(),
-        child: SizedBox.expand(),
-      ),
-    );
-  }
-}
-
-class _NebulaBackgroundPainter extends CustomPainter {
-  const _NebulaBackgroundPainter();
-
-  static const List<Offset> _stars = <Offset>[
-    Offset(0.08, 0.08),
-    Offset(0.14, 0.16),
-    Offset(0.23, 0.11),
-    Offset(0.31, 0.2),
-    Offset(0.42, 0.12),
-    Offset(0.56, 0.17),
-    Offset(0.63, 0.1),
-    Offset(0.74, 0.2),
-    Offset(0.86, 0.14),
-    Offset(0.92, 0.24),
-    Offset(0.12, 0.39),
-    Offset(0.24, 0.33),
-    Offset(0.39, 0.46),
-    Offset(0.51, 0.38),
-    Offset(0.67, 0.42),
-    Offset(0.8, 0.35),
-    Offset(0.89, 0.49),
-    Offset(0.06, 0.6),
-    Offset(0.19, 0.55),
-    Offset(0.34, 0.66),
-    Offset(0.46, 0.59),
-    Offset(0.62, 0.67),
-    Offset(0.76, 0.61),
-    Offset(0.87, 0.71),
-    Offset(0.11, 0.82),
-    Offset(0.28, 0.78),
-    Offset(0.43, 0.88),
-    Offset(0.58, 0.8),
-    Offset(0.71, 0.9),
-    Offset(0.9, 0.86),
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Rect rect = Offset.zero & size;
-
-    final Paint baseMist = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: <Color>[
-          Color(0x1C113064),
-          Color(0x181D3A73),
-          Color(0x151A376B),
-          Color(0x10142E5C),
-        ],
-      ).createShader(rect);
-    final Paint cyanNebula = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.16, -0.34),
-        radius: 1.04,
-        colors: <Color>[
-          _withAlpha(const Color(0xFF56D4FF), 0.3),
-          _withAlpha(const Color(0xFF56D4FF), 0.13),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    final Paint violetNebula = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.58, 0.1),
-        radius: 1.1,
-        colors: <Color>[
-          _withAlpha(const Color(0xFFA286FF), 0.27),
-          _withAlpha(const Color(0xFFA286FF), 0.13),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    final Paint lowerNebula = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.06, 0.84),
-        radius: 1.0,
-        colors: <Color>[
-          _withAlpha(const Color(0xFF4FA8FF), 0.18),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    final Paint rightNebula = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.88, -0.02),
-        radius: 1.08,
-        colors: <Color>[
-          _withAlpha(const Color(0xFF6CB8FF), 0.14),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    final Paint midNebula = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.58, 0.34),
-        radius: 0.82,
-        colors: <Color>[
-          _withAlpha(const Color(0xFF8B7FFF), 0.18),
-          _withAlpha(const Color(0xFF57D4FF), 0.13),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    final Paint boardHalo = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.1, 0.08),
-        radius: 0.82,
-        colors: <Color>[
-          _withAlpha(const Color(0xFF7DDCFF), 0.15),
-          _withAlpha(const Color(0xFF9E86FF), 0.13),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    final Paint bottomMist = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.0, 1.04),
-        radius: 0.95,
-        colors: <Color>[
-          _withAlpha(const Color(0xFF846FFF), 0.12),
-          _withAlpha(const Color(0xFF59CAFF), 0.1),
-          Colors.transparent,
-        ],
-      ).createShader(rect);
-    final Paint starAura = Paint()
-      ..color = const Color(0x2BBFEAFF)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.1);
-    final Paint starCore = Paint()..color = const Color(0x88DDF6FF);
-
-    canvas.drawRect(rect, baseMist);
-    canvas.drawRect(rect, cyanNebula);
-    canvas.drawRect(rect, violetNebula);
-    canvas.drawRect(rect, lowerNebula);
-    canvas.drawRect(rect, rightNebula);
-    canvas.drawRect(rect, midNebula);
-    canvas.drawRect(rect, boardHalo);
-    canvas.drawRect(rect, bottomMist);
-
-    for (int i = 0; i < _stars.length; i++) {
-      if (i.isOdd) {
-        continue;
-      }
-      final Offset star = _stars[i];
-      final Offset point = Offset(size.width * star.dx, size.height * star.dy);
-      final double auraRadius = (i % 6 == 0) ? 3.0 : 2.0;
-      final double coreRadius = (i % 5 == 0) ? 1.1 : 0.8;
-      canvas.drawCircle(point, auraRadius, starAura);
-      canvas.drawCircle(point, coreRadius, starCore);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
-  }
-}
-
-Color _withAlpha(
-  Color color,
-  double alpha,
-) {
-  final int a =
-      (alpha.clamp(0, 1).toDouble() * 255).round().clamp(0, 255).toInt();
-  final int rgb = _colorToArgb32(color) & 0x00FFFFFF;
-  return Color((a << 24) | rgb);
-}
-
-int _colorToArgb32(Color color) {
-  final dynamic dynamicColor = color;
-  try {
-    return dynamicColor.toARGB32() as int;
-  } catch (_) {
-    return dynamicColor.value as int;
-  }
-}
-
 class _ComboToastData {
   const _ComboToastData({
     required this.id,
@@ -1976,3 +1375,4 @@ class _ComboToastData {
     );
   }
 }
+

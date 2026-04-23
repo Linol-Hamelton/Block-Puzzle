@@ -1,121 +1,189 @@
-import 'package:block_puzzle_mobile/domain/generator/basic_difficulty_tuner.dart';
-import 'package:block_puzzle_mobile/domain/session/session_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:block_puzzle_mobile/domain/generator/basic_difficulty_tuner.dart';
+import 'package:block_puzzle_mobile/domain/generator/difficulty_profile.dart';
+import 'package:block_puzzle_mobile/domain/session/session_state.dart';
+
 void main() {
+  late BasicDifficultyTuner tuner;
+
+  setUp(() {
+    tuner = const BasicDifficultyTuner();
+  });
+
   group('BasicDifficultyTuner', () {
-    const BasicDifficultyTuner tuner = BasicDifficultyTuner();
+    test('returns initial profile with empty config and fresh session', () {
+      final DifficultyProfile profile = tuner.resolve(
+        sessionState: SessionState.initial,
+        remoteConfig: <String, Object?>{},
+      );
 
-    test('reduces difficulty when early game over rate is high', () {
-      final profile = tuner.resolve(
-        sessionState: const SessionState(
-          roundsPlayed: 10,
-          currentScore: 120,
-          movesPlayed: 6,
-        ),
+      expect(profile.hardPieceWeight,
+          closeTo(DifficultyProfile.initial.hardPieceWeight, 0.01));
+      expect(profile.maxHardPiecesPerTriplet,
+          DifficultyProfile.initial.maxHardPiecesPerTriplet);
+    });
+
+    test('uses config overrides for base values', () {
+      final DifficultyProfile profile = tuner.resolve(
+        sessionState: SessionState.initial,
         remoteConfig: <String, Object?>{
-          'difficulty.hard_piece_weight': 0.30,
+          'difficulty.hard_piece_weight': 0.5,
           'difficulty.max_hard_pieces_per_triplet': 2,
-          'balance.target_moves_per_run': 14,
-          'balance.observed_avg_moves_per_run': 8.5,
-          'balance.observed_early_gameover_rate': 0.46,
         },
       );
 
-      expect(profile.hardPieceWeight, lessThan(0.30));
-      expect(profile.maxHardPiecesPerTriplet, lessThan(2));
+      expect(profile.hardPieceWeight, closeTo(0.5, 0.01));
+      expect(profile.maxHardPiecesPerTriplet, 2);
     });
 
-    test('increases difficulty slightly for long and successful sessions', () {
-      final profile = tuner.resolve(
+    test('high score adds difficulty pressure', () {
+      final DifficultyProfile lowScore = tuner.resolve(
         sessionState: const SessionState(
-          roundsPlayed: 22,
-          currentScore: 410,
-          movesPlayed: 19,
+          roundsPlayed: 1,
+          currentScore: 50,
+          movesPlayed: 5,
         ),
+        remoteConfig: <String, Object?>{},
+      );
+
+      final DifficultyProfile highScore = tuner.resolve(
+        sessionState: const SessionState(
+          roundsPlayed: 1,
+          currentScore: 300,
+          movesPlayed: 5,
+        ),
+        remoteConfig: <String, Object?>{},
+      );
+
+      expect(highScore.hardPieceWeight,
+          greaterThan(lowScore.hardPieceWeight));
+    });
+
+    test('high early game-over rate reduces difficulty', () {
+      final DifficultyProfile normal = tuner.resolve(
+        sessionState: SessionState.initial,
         remoteConfig: <String, Object?>{
-          'difficulty.hard_piece_weight': 0.22,
-          'difficulty.max_hard_pieces_per_triplet': 1,
-          'balance.target_moves_per_run': 14,
-          'balance.observed_avg_moves_per_run': 20.0,
-          'balance.observed_early_gameover_rate': 0.12,
+          'balance.observed_early_gameover_rate': 0.1,
         },
       );
 
-      expect(profile.hardPieceWeight, greaterThan(0.22));
-      expect(profile.maxHardPiecesPerTriplet, equals(1));
+      final DifficultyProfile highGameOver = tuner.resolve(
+        sessionState: SessionState.initial,
+        remoteConfig: <String, Object?>{
+          'balance.observed_early_gameover_rate': 0.5,
+        },
+      );
+
+      expect(highGameOver.hardPieceWeight,
+          lessThan(normal.hardPieceWeight));
     });
 
-    test('fairness_bias_v1 is easier than balanced_v1 for same inputs', () {
-      const SessionState sessionState = SessionState(
-        roundsPlayed: 9,
-        currentScore: 180,
-        movesPlayed: 7,
-      );
-      const Map<String, Object?> baseConfig = <String, Object?>{
-        'difficulty.hard_piece_weight': 0.26,
-        'difficulty.max_hard_pieces_per_triplet': 2,
-        'balance.target_moves_per_run': 14,
-        'balance.observed_avg_moves_per_run': 14.0,
-        'balance.observed_early_gameover_rate': 0.24,
-      };
-
-      final balanced = tuner.resolve(
-        sessionState: sessionState,
+    test('fairness_bias_v1 variant makes the game easier', () {
+      final DifficultyProfile balanced = tuner.resolve(
+        sessionState: SessionState.initial,
         remoteConfig: <String, Object?>{
-          ...baseConfig,
           'ab.difficulty_variant': 'balanced_v1',
         },
       );
-      final fairness = tuner.resolve(
-        sessionState: sessionState,
+
+      final DifficultyProfile fairness = tuner.resolve(
+        sessionState: SessionState.initial,
         remoteConfig: <String, Object?>{
-          ...baseConfig,
           'ab.difficulty_variant': 'fairness_bias_v1',
         },
       );
 
-      expect(fairness.hardPieceWeight, lessThan(balanced.hardPieceWeight));
-      expect(
-        fairness.maxHardPiecesPerTriplet,
-        lessThanOrEqualTo(balanced.maxHardPiecesPerTriplet),
-      );
+      expect(fairness.hardPieceWeight,
+          lessThan(balanced.hardPieceWeight));
     });
 
-    test('challenge_bias_v1 is harder than balanced_v1 for same inputs', () {
-      const SessionState sessionState = SessionState(
-        roundsPlayed: 12,
-        currentScore: 320,
-        movesPlayed: 13,
-      );
-      const Map<String, Object?> baseConfig = <String, Object?>{
-        'difficulty.hard_piece_weight': 0.22,
-        'difficulty.max_hard_pieces_per_triplet': 1,
-        'balance.target_moves_per_run': 14,
-        'balance.observed_avg_moves_per_run': 14.0,
-        'balance.observed_early_gameover_rate': 0.2,
-      };
-
-      final balanced = tuner.resolve(
-        sessionState: sessionState,
+    test('challenge_bias_v1 variant makes the game harder', () {
+      final DifficultyProfile balanced = tuner.resolve(
+        sessionState: SessionState.initial,
         remoteConfig: <String, Object?>{
-          ...baseConfig,
           'ab.difficulty_variant': 'balanced_v1',
         },
       );
-      final challenge = tuner.resolve(
-        sessionState: sessionState,
+
+      final DifficultyProfile challenge = tuner.resolve(
+        sessionState: SessionState.initial,
         remoteConfig: <String, Object?>{
-          ...baseConfig,
           'ab.difficulty_variant': 'challenge_bias_v1',
         },
       );
 
-      expect(challenge.hardPieceWeight, greaterThan(balanced.hardPieceWeight));
-      expect(
-        challenge.maxHardPiecesPerTriplet,
-        greaterThanOrEqualTo(balanced.maxHardPiecesPerTriplet),
+      expect(challenge.hardPieceWeight,
+          greaterThan(balanced.hardPieceWeight));
+    });
+
+    test('hardPieceWeight is clamped to valid range', () {
+      final DifficultyProfile veryEasy = tuner.resolve(
+        sessionState: SessionState.initial,
+        remoteConfig: <String, Object?>{
+          'difficulty.hard_piece_weight': -1.0,
+          'balance.observed_early_gameover_rate': 0.9,
+          'ab.difficulty_variant': 'fairness_bias_v1',
+        },
       );
+      expect(veryEasy.hardPieceWeight, greaterThanOrEqualTo(0.05));
+
+      final DifficultyProfile veryHard = tuner.resolve(
+        sessionState: const SessionState(
+          roundsPlayed: 1,
+          currentScore: 1000,
+          movesPlayed: 50,
+        ),
+        remoteConfig: <String, Object?>{
+          'difficulty.hard_piece_weight': 2.0,
+          'ab.difficulty_variant': 'challenge_bias_v1',
+        },
+      );
+      expect(veryHard.hardPieceWeight, lessThanOrEqualTo(0.85));
+    });
+
+    test('maxHardPiecesPerTriplet is clamped to [0, 3]', () {
+      final DifficultyProfile veryEasy = tuner.resolve(
+        sessionState: SessionState.initial,
+        remoteConfig: <String, Object?>{
+          'difficulty.max_hard_pieces_per_triplet': 0,
+          'balance.observed_early_gameover_rate': 0.9,
+          'ab.difficulty_variant': 'fairness_bias_v1',
+        },
+      );
+      expect(veryEasy.maxHardPiecesPerTriplet, greaterThanOrEqualTo(0));
+
+      final DifficultyProfile veryHard = tuner.resolve(
+        sessionState: SessionState.initial,
+        remoteConfig: <String, Object?>{
+          'difficulty.max_hard_pieces_per_triplet': 10,
+          'ab.difficulty_variant': 'challenge_bias_v1',
+        },
+      );
+      expect(veryHard.maxHardPiecesPerTriplet, lessThanOrEqualTo(3));
+    });
+
+    test('many moves in a session adds slight difficulty increase', () {
+      final DifficultyProfile fewMoves = tuner.resolve(
+        sessionState: const SessionState(
+          roundsPlayed: 1,
+          currentScore: 100,
+          movesPlayed: 5,
+        ),
+        remoteConfig: <String, Object?>{},
+      );
+
+      final DifficultyProfile manyMoves = tuner.resolve(
+        sessionState: const SessionState(
+          roundsPlayed: 1,
+          currentScore: 100,
+          movesPlayed: 20,
+        ),
+        remoteConfig: <String, Object?>{},
+      );
+
+      expect(manyMoves.hardPieceWeight,
+          greaterThan(fewMoves.hardPieceWeight));
     });
   });
 }

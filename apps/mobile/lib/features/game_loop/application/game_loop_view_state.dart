@@ -2,6 +2,7 @@ import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/piece.dart';
 import '../../../domain/progression/progression_snapshots.dart';
 import '../../../domain/scoring/score_state.dart';
+import 'game_loop_phase.dart';
 
 class GameLoopViewState {
   const GameLoopViewState({
@@ -30,8 +31,10 @@ class GameLoopViewState {
     this.onboardingDescription,
     this.hintSuggestion,
     this.gameOverReason,
+    required this.phase,
   });
 
+  final GameLoopPhase phase;
   final BoardState boardState;
   final ScoreState scoreState;
   final List<Piece> rackPieces;
@@ -84,6 +87,7 @@ class GameLoopViewState {
       onboardingTitle: null,
       onboardingDescription: null,
       hintSuggestion: null,
+      phase: GameLoopPhase.idle,
     );
   }
 
@@ -116,8 +120,10 @@ class GameLoopViewState {
     bool resetOnboarding = false,
     bool resetHintSuggestion = false,
     bool resetGameOverReason = false,
+    GameLoopPhase? phase,
   }) {
     return GameLoopViewState(
+      phase: phase ?? this.phase,
       boardState: boardState ?? this.boardState,
       scoreState: scoreState ?? this.scoreState,
       rackPieces: rackPieces ?? this.rackPieces,
