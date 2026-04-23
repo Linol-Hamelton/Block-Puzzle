@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../features/game_loop/application/game_loop_view_state.dart';
-import '../theme/app_theme.dart';
 
 /// Game-over overlay card showing round summary and action buttons.
 ///

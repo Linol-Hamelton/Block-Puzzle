@@ -58,11 +58,10 @@ void main() {
         logger: logger,
       ),
       abExperimentService: ABExperimentService(
-        remoteConfigRepository: configRepository,
         analyticsTracker: analytics,
         logger: logger,
       ),
-      shareFlowService: ShareFlowService(analyticsTracker: analytics),
+      shareFlowService: ShareFlowService(analyticsTracker: analytics, hashtag: '#BlockPuzzle'),
       onboardingFlowController: OnboardingFlowController(
         playerProgressRepository: progressRepository,
         analyticsTracker: analytics,
@@ -91,7 +90,7 @@ void main() {
           break;
         }
 
-        final dynamic result = await controller.processMove(move);
+        final MoveProcessingResult result = await controller.processMove(move);
         if (!result.isSuccess) {
           break;
         }

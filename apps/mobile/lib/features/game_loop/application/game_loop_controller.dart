@@ -64,7 +64,6 @@ class GameLoopController {
     OnboardingFlowController? onboardingFlowController,
   })  : gameSessionRepository = gameSessionRepository ?? _NoopGameSessionRepository(),
         abExperimentService = abExperimentService ?? ABExperimentService(
-          remoteConfigRepository: remoteConfigRepository,
           analyticsTracker: analyticsTracker,
           logger: logger,
         ),
@@ -98,6 +97,7 @@ class GameLoopController {
   final AnalyticsTracker analyticsTracker;
   final AdService adService;
   final AdGuardrailPolicy adGuardrailPolicy;
+  final RemoteConfigRepository remoteConfigRepository;
   final IapStoreService iapStoreService;
   final GameSessionRepository gameSessionRepository;
   final ProgressionSyncService progressionSyncService;

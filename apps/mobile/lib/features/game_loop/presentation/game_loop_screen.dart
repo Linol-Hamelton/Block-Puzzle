@@ -13,7 +13,6 @@ import '../../../ui/widgets/nebula_background.dart';
 import '../../../ui/widgets/onboarding_overlay_card.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
-import '../application/game_loop_phase.dart';
 import '../application/game_loop_view_state.dart';
 import '../application/models/models.dart';
 import 'block_puzzle_game.dart';
