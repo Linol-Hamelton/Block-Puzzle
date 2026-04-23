@@ -62,8 +62,7 @@ class GameLoopController {
     ProgressionSyncService? progressionSyncService,
     ShareFlowService? shareFlowService,
     OnboardingFlowController? onboardingFlowController,
-  })  : this.remoteConfigRepository = remoteConfigRepository,
-        gameSessionRepository = gameSessionRepository ?? _NoopGameSessionRepository(),
+  })  : gameSessionRepository = gameSessionRepository ?? _NoopGameSessionRepository(),
         abExperimentService = abExperimentService ?? ABExperimentService(
           analyticsTracker: analyticsTracker,
           logger: logger,
