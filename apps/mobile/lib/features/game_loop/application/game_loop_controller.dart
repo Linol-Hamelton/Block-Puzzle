@@ -15,6 +15,7 @@ import '../../../domain/generator/piece_generation_service.dart';
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
+import '../../../domain/progression/player_progress_repository.dart';
 import '../../../domain/progression/player_progress_state.dart';
 import '../../../domain/progression/progression_snapshots.dart';
 import '../../../domain/scoring/score_state.dart';
@@ -50,17 +51,39 @@ class GameLoopController {
     required this.adService,
     required this.adGuardrailPolicy,
     required this.iapStoreService,
-    required this.gameSessionRepository,
-    required this.abExperimentService,
-    required this.progressionSyncService,
-    required this.shareFlowService,
-    required this.onboardingFlowController,
     required this.logger,
     this.appVersion = 'dev-local',
     GuardrailAlertEvaluator? guardrailAlertEvaluator,
     SessionObservabilityTracker? observabilityTracker,
     DateTime Function()? nowUtcProvider,
-  })  : _guardrailAlertEvaluator =
+    PlayerProgressRepository? playerProgressRepository,
+    GameSessionRepository? gameSessionRepository,
+    ABExperimentService? abExperimentService,
+    ProgressionSyncService? progressionSyncService,
+    ShareFlowService? shareFlowService,
+    OnboardingFlowController? onboardingFlowController,
+  })  : gameSessionRepository = gameSessionRepository ?? _NoopGameSessionRepository(),
+        abExperimentService = abExperimentService ?? ABExperimentService(
+          remoteConfigRepository: remoteConfigRepository,
+          analyticsTracker: analyticsTracker,
+          logger: logger,
+        ),
+        progressionSyncService = progressionSyncService ?? ProgressionSyncService(
+          playerProgressRepository: playerProgressRepository!,
+          analyticsTracker: analyticsTracker,
+          logger: logger,
+          nowUtcProvider: nowUtcProvider,
+        ),
+        shareFlowService = shareFlowService ?? ShareFlowService(
+          analyticsTracker: analyticsTracker,
+          hashtag: '#BlockPuzzle',
+        ),
+        onboardingFlowController = onboardingFlowController ?? OnboardingFlowController(
+          playerProgressRepository: playerProgressRepository!,
+          analyticsTracker: analyticsTracker,
+          logger: logger,
+        ),
+        _guardrailAlertEvaluator =
             guardrailAlertEvaluator ?? const GuardrailAlertEvaluator(),
         _observabilityTracker =
             observabilityTracker ?? SessionObservabilityTracker(),
@@ -158,17 +181,10 @@ class GameLoopController {
       'social.share_enabled',
       fallback: true,
     );
-    _shareHashtag = ShareFlowService.normalizeHashtag(
-      _configReader.readString(
-        'social.share_score_hashtag',
-        fallback: _defaultShareHashtag,
-      ),
-    );
     abExperimentService.configure(_configReader);
     _abBucket = abExperimentService.abBucket;
     _uxVariant = abExperimentService.uxVariant;
     _difficultyVariant = abExperimentService.difficultyVariant;
-    _abExperimentVariants = abExperimentService.experimentVariants;
     
     final int initialRewardedToolsCredits = _configReader.readInt(
       'progression.rewarded_tools_initial_credits',
@@ -424,7 +440,7 @@ class GameLoopController {
       colorThemeIndex: nextColorThemeIndex,
       phase: isGameOver ? GameLoopPhase.gameOver : GameLoopPhase.playing,
       isGameOver: isGameOver,
-      canUseRewardedRevive: isGameOver ? _isRewardedReviveAvailable() : false,
+      canUseRewardedRevive: isGameOver ? (adGuardrailPolicy.isRewardedReviveEnabled(_remoteConfig) && !_rewardedReviveUsedInCurrentGame) : false,
       canUseRewardedHint: _canUseRewardedHintForState(
         isGameOver: isGameOver,
         rackPieces: nextRack,
@@ -433,7 +449,7 @@ class GameLoopController {
       rewardedToolsCredits: _playerProgressState.rewardedToolsCredits,
       hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
       dailyGoals: dailyGoalsAfter,
-      streak: _buildStreakSnapshot(),
+      streak: progressionSyncService.buildStreakSnapshot(),
       bestScore: nextBestScore,
       movesPlayed: nextMovesPlayed,
       gameOverReason: isGameOver ? 'no_valid_moves' : null,
@@ -1202,6 +1218,15 @@ class GameLoopController {
     );
     _stateNotifier.dispose();
   }
+}
+
+class _NoopGameSessionRepository implements GameSessionRepository {
+  @override
+  Future<GameSnapshot?> loadSnapshot() async => null;
+  @override
+  Future<void> saveSnapshot(GameSnapshot snapshot) async {}
+  @override
+  Future<void> clearSnapshot() async {}
 }
 
 class _ReviveSnapshot {

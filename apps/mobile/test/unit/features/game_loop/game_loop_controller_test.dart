@@ -15,6 +15,7 @@ import 'package:block_puzzle_mobile/domain/gameplay/piece.dart';
 import 'package:block_puzzle_mobile/domain/scoring/basic_score_service.dart';
 import 'package:block_puzzle_mobile/domain/session/session_state.dart';
 import 'package:block_puzzle_mobile/features/game_loop/application/game_loop_controller.dart';
+import 'package:block_puzzle_mobile/features/game_loop/application/models/models.dart';
 import 'package:block_puzzle_mobile/features/game_loop/application/use_cases/clear_lines_use_case.dart';
 import 'package:block_puzzle_mobile/features/game_loop/application/use_cases/compute_score_use_case.dart';
 import 'package:block_puzzle_mobile/features/game_loop/application/use_cases/place_piece_use_case.dart';

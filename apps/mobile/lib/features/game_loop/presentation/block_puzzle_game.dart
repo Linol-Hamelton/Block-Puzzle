@@ -14,6 +14,8 @@ import '../../../domain/gameplay/piece.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
+import '../application/models/models.dart';
+import '../application/models/models.dart';
 
 class BlockPuzzleGame extends FlameGame {
   static const double _touchDragLiftPixels = 50;

@@ -237,7 +237,4 @@ bool _resolveIapBundleEnabled(Map<String, Object?> config) {
   final String rolloutStrategy =
       (config['iap.rollout_strategy'] as String?)?.trim() ?? 'cosmetics_first';
   return rolloutStrategy == 'cosmetics_bundle' ||
-      rolloutStrategy == 'bundle_first';
-}
-
 }

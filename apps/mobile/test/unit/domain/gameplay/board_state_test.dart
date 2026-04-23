@@ -116,11 +116,10 @@ void main() {
     });
 
     test('cells work correctly in Sets', () {
-      final set = <BoardCell>{
-        const BoardCell(x: 0, y: 0),
-        const BoardCell(x: 0, y: 0),
-        const BoardCell(x: 1, y: 0),
-      };
+      final set = <BoardCell>{};
+      set.add(const BoardCell(x: 0, y: 0));
+      set.add(const BoardCell(x: 0, y: 0));
+      set.add(const BoardCell(x: 1, y: 0));
 
       expect(set.length, 2);
     });
