@@ -3,10 +3,12 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
@@ -292,6 +294,7 @@ class BlockPuzzleGame extends FlameGame {
       pieceComponent.resetToHome();
       _boardComponent.clearPreview();
       unawaited(sfxPlayer.playInvalidMove());
+      unawaited(HapticFeedback.vibrate());
       return;
     }
 
@@ -310,13 +313,16 @@ class BlockPuzzleGame extends FlameGame {
     if (!result.isSuccess) {
       pieceComponent.resetToHome();
       unawaited(sfxPlayer.playInvalidMove());
+      unawaited(HapticFeedback.vibrate());
       return;
     }
 
     unawaited(sfxPlayer.playPiecePlaced());
+    unawaited(HapticFeedback.mediumImpact());
 
     if (result.clearedLines > 0) {
       unawaited(sfxPlayer.playLineClear(clearedLines: result.clearedLines));
+      unawaited(HapticFeedback.heavyImpact());
       _playLineClearAnimation(
         strength: result.clearedLines,
         clearedCells: result.clearedCells,
@@ -619,6 +625,14 @@ class BlockPuzzleGame extends FlameGame {
     required int strength,
     required Set<BoardCell> clearedCells,
   }) {
+    final double shakeAmount = strength * 3.0;
+    camera.viewfinder.add(
+      MoveEffect.by(
+        Vector2(shakeAmount, shakeAmount),
+        NoiseEffectController(duration: 0.2, frequency: 20),
+      ),
+    );
+
     add(
       LineClearFlashComponent(
         boardOrigin: _boardOrigin.clone(),
@@ -1225,12 +1239,24 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   void updateHome(Vector2 newHome) {
     _homePosition = newHome.clone();
     if (!_dragging) {
-      position = _homePosition.clone();
+      removeAll(children.whereType<MoveToEffect>());
+      add(
+        MoveToEffect(
+          _homePosition.clone(),
+          EffectController(duration: 0.2, curve: Curves.easeOutQuad),
+        ),
+      );
     }
   }
 
   void resetToHome() {
-    position = _homePosition.clone();
+    removeAll(children.whereType<MoveToEffect>());
+    add(
+      MoveToEffect(
+        _homePosition.clone(),
+        EffectController(duration: 0.25, curve: Curves.easeOutQuad),
+      ),
+    );
     _clearDragState();
   }
 
@@ -1313,6 +1339,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
 
   @override
   void onDragStart(DragStartEvent event) {
+    removeAll(children.whereType<MoveToEffect>());
     _dragPending = true;
     _pendingDistance = 0;
     _pendingDelta.setZero();
@@ -1323,6 +1350,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
       _dragLiftPixels = touchDragLiftPixels;
       // Keep the dragged piece above finger from the very first touch frame.
       position.y -= _dragLiftPixels;
+      unawaited(HapticFeedback.lightImpact());
     }
     onDragMoved(this);
     super.onDragStart(event);
