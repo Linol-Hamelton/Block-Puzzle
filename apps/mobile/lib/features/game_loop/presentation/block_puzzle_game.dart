@@ -629,7 +629,11 @@ class BlockPuzzleGame extends FlameGame {
     camera.viewfinder.add(
       MoveEffect.by(
         Vector2(shakeAmount, shakeAmount),
-        NoiseEffectController(duration: 0.2, frequency: 20),
+        EffectController(
+          duration: 0.05,
+          alternate: true,
+          repeatCount: 4,
+        ),
       ),
     );
 
