@@ -1,18 +1,26 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import 'block_puzzle_app.dart';
-import '../core/logging/app_logger.dart';
 import '../core/di/di_container.dart';
+import '../core/logging/app_logger.dart';
 import '../data/analytics/analytics_tracker.dart';
 import '../infra/monitoring/crash_reporter.dart';
+import 'block_puzzle_app.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    // Ignore if not configured yet via flutterfire
+  }
+  
   await Hive.initFlutter();
   await SystemChrome.setPreferredOrientations(
     const <DeviceOrientation>[

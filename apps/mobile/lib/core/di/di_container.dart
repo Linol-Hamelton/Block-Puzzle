@@ -3,10 +3,14 @@ import 'package:get_it/get_it.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/config/remote_config_reader.dart';
 import '../../infra/monitoring/crash_reporter.dart';
+import '../../infra/monitoring/firebase_crash_reporter.dart';
 import '../../infra/monitoring/noop_crash_reporter.dart';
 import '../../data/analytics/analytics_tracker.dart';
 import '../../data/analytics/debug_analytics_tracker.dart';
+import '../../data/analytics/firebase_analytics_tracker.dart';
 import '../../data/analytics/queued_analytics_tracker.dart';
+import '../../data/progression/cloud_player_progress_repository.dart';
+import '../../data/remote_config/firebase_remote_config_repository.dart';
 import '../../data/remote_config/in_memory_remote_config_repository.dart';
 import '../../data/remote_config/remote_config_repository.dart';
 import '../../data/remote_config/versioned_remote_config_repository.dart';
@@ -61,7 +65,7 @@ Future<void> configureDependencies() async {
 
   final RemoteConfigRepository bootstrapRemoteConfigRepository = useDebugAdapters
       ? InMemoryRemoteConfigRepository(appConfig: appConfig)
-      : VersionedRemoteConfigRepository(
+      : FirebaseRemoteConfigRepository(
           appConfig: appConfig,
           logger: logger,
         );
@@ -79,9 +83,8 @@ Future<void> configureDependencies() async {
     appConfig,
   );
   sl.registerSingleton<AppLogger>(logger);
-  // TODO(A3): Replace with FirebaseCrashReporter for release builds.
   sl.registerLazySingleton<CrashReporter>(
-    () => const NoopCrashReporter(),
+    () => useDebugAdapters ? const NoopCrashReporter() : const FirebaseCrashReporter(),
   );
   sl.registerLazySingleton<GameSfxPlayer>(
     () => FlameGameSfxPlayer(logger: sl()),
@@ -95,7 +98,10 @@ Future<void> configureDependencies() async {
     () => bootstrapRemoteConfigRepository,
   );
   sl.registerLazySingleton<PlayerProgressRepository>(
-    () => HivePlayerProgressRepository(logger: sl()),
+    () => CloudPlayerProgressRepository(
+      localRepository: HivePlayerProgressRepository(logger: sl()),
+      logger: sl(),
+    ),
   );
   sl.registerLazySingleton<GameSessionRepository>(
     () => HiveGameSessionRepository(logger: sl()),
@@ -118,10 +124,7 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<AnalyticsTracker>(
     () => useDebugAdapters
         ? DebugAnalyticsTracker(logger: sl())
-        : QueuedAnalyticsTracker(
-            appConfig: sl(),
-            logger: sl(),
-          ),
+        : FirebaseAnalyticsTracker(),
   );
 
   sl.registerLazySingleton<MoveValidator>(BasicMoveValidator.new);
