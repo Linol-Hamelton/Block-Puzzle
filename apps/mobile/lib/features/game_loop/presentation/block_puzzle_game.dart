@@ -947,8 +947,12 @@ class BoardComponent extends PositionComponent {
   Color _occupiedColor = const Color(0xFF55CEFF);
   BlockVisualPreset _visualPreset = BlockVisualPreset.soft;
 
+  Picture? _cachedBoardPicture;
+  Vector2 _cachedBoardSize = Vector2.zero();
+
   void setBoardState(BoardState boardState) {
     _boardState = boardState;
+    _cachedBoardPicture = null;
   }
 
   void setPreview({
@@ -991,10 +995,12 @@ class BoardComponent extends PositionComponent {
   }) {
     _boardBackgroundColor = boardBackgroundColor;
     _occupiedColor = occupiedColor;
+    _cachedBoardPicture = null;
   }
 
   void setVisualPreset(BlockVisualPreset preset) {
     _visualPreset = preset;
+    _cachedBoardPicture = null;
   }
 
   @override
@@ -1002,129 +1008,140 @@ class BoardComponent extends PositionComponent {
     super.render(canvas);
 
     final double cellSize = size.x / _boardState.size;
-    final Rect boardRect = Rect.fromLTWH(0, 0, size.x, size.y);
-    final RRect boardRRect = RRect.fromRectAndRadius(
-      boardRect,
-      const Radius.circular(18),
-    );
-    final Color boardTop = _withAlpha(
-      _mixColor(_boardBackgroundColor, const Color(0xFF4E7AD2), 0.42),
-      0.12,
-    );
-    final Color boardBottom = _withAlpha(
-      _mixColor(_boardBackgroundColor, const Color(0xFF090F24), 0.5),
-      0.04,
-    );
 
-    final Paint boardBackground = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.0, -0.12),
-        radius: 1.24,
-        colors: <Color>[
-          boardTop,
-          _mixColor(boardTop, boardBottom, 0.45),
-          boardBottom,
-        ],
-        stops: const <double>[0, 0.56, 1],
-      ).createShader(boardRect);
-    final Paint boardGlow = Paint()
-      ..shader = const RadialGradient(
-        center: Alignment(0, -0.2),
-        radius: 1.08,
-        colors: <Color>[
-          Color(0x4E9EE8FF),
-          Colors.transparent,
-        ],
-      ).createShader(boardRect);
-    final Paint boardPrismGlow = Paint()
-      ..shader = const RadialGradient(
-        center: Alignment(0.34, 0.22),
-        radius: 1.15,
-        colors: <Color>[
-          Color(0x289882FF),
-          Colors.transparent,
-        ],
-      ).createShader(boardRect);
-    final Paint boardOuterGlow = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.95
-      ..color = const Color(0x76ACEFFF)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.8);
-    final Paint borderPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.15
-      ..color = const Color(0xB6DCF7FF);
-    final Paint minorGridPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..color = const Color(0x4778B5DE);
-    final Paint majorGridPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.12
-      ..color = const Color(0x639CD4F1);
-    final Paint starCorePaint = Paint()..color = const Color(0x2999D3EE);
-    final Paint starAuraPaint = Paint()
-      ..color = const Color(0x1492D3F4)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.8);
+    if (_cachedBoardPicture == null || _cachedBoardSize != size) {
+      _cachedBoardSize = size.clone();
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas cacheCanvas = Canvas(recorder);
 
-    canvas.drawRRect(boardRRect, boardBackground);
-    canvas.drawRRect(boardRRect, boardGlow);
-    canvas.drawRRect(boardRRect, boardPrismGlow);
+      final Rect boardRect = Rect.fromLTWH(0, 0, size.x, size.y);
+      final RRect boardRRect = RRect.fromRectAndRadius(
+        boardRect,
+        const Radius.circular(18),
+      );
+      final Color boardTop = _withAlpha(
+        _mixColor(_boardBackgroundColor, const Color(0xFF4E7AD2), 0.42),
+        0.12,
+      );
+      final Color boardBottom = _withAlpha(
+        _mixColor(_boardBackgroundColor, const Color(0xFF090F24), 0.5),
+        0.04,
+      );
 
-    canvas.save();
-    canvas.clipRRect(boardRRect);
-    for (int i = 0; i < _starMap.length; i++) {
-      if (i % 2 != 0) {
-        continue;
+      final Paint boardBackground = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0.0, -0.12),
+          radius: 1.24,
+          colors: <Color>[
+            boardTop,
+            _mixColor(boardTop, boardBottom, 0.45),
+            boardBottom,
+          ],
+          stops: const <double>[0, 0.56, 1],
+        ).createShader(boardRect);
+      final Paint boardGlow = Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(0, -0.2),
+          radius: 1.08,
+          colors: <Color>[
+            Color(0x4E9EE8FF),
+            Colors.transparent,
+          ],
+        ).createShader(boardRect);
+      final Paint boardPrismGlow = Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(0.34, 0.22),
+          radius: 1.15,
+          colors: <Color>[
+            Color(0x289882FF),
+            Colors.transparent,
+          ],
+        ).createShader(boardRect);
+      final Paint boardOuterGlow = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.95
+        ..color = const Color(0x76ACEFFF)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.8);
+      final Paint borderPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.15
+        ..color = const Color(0xB6DCF7FF);
+      final Paint minorGridPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = const Color(0x4778B5DE);
+      final Paint majorGridPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.12
+        ..color = const Color(0x639CD4F1);
+      final Paint starCorePaint = Paint()..color = const Color(0x2999D3EE);
+      final Paint starAuraPaint = Paint()
+        ..color = const Color(0x1492D3F4)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.8);
+
+      cacheCanvas.drawRRect(boardRRect, boardBackground);
+      cacheCanvas.drawRRect(boardRRect, boardGlow);
+      cacheCanvas.drawRRect(boardRRect, boardPrismGlow);
+
+      cacheCanvas.save();
+      cacheCanvas.clipRRect(boardRRect);
+      for (int i = 0; i < _starMap.length; i++) {
+        if (i % 2 != 0) {
+          continue;
+        }
+        final Offset uv = _starMap[i];
+        final Offset point = Offset(size.x * uv.dx, size.y * uv.dy);
+        cacheCanvas.drawCircle(point, cellSize * 0.013, starAuraPaint);
+        cacheCanvas.drawCircle(point, cellSize * 0.005, starCorePaint);
       }
-      final Offset uv = _starMap[i];
-      final Offset point = Offset(size.x * uv.dx, size.y * uv.dy);
-      canvas.drawCircle(point, cellSize * 0.013, starAuraPaint);
-      canvas.drawCircle(point, cellSize * 0.005, starCorePaint);
-    }
-    for (int i = 0; i <= _boardState.size; i++) {
-      final double lineOffset = i * cellSize;
-      final Paint paint = (i % 2 == 0) ? majorGridPaint : minorGridPaint;
-      canvas.drawLine(
-        Offset(lineOffset, 0),
-        Offset(lineOffset, size.y),
-        paint,
-      );
-      canvas.drawLine(
-        Offset(0, lineOffset),
-        Offset(size.x, lineOffset),
-        paint,
-      );
-    }
-    canvas.restore();
-    canvas.drawRRect(boardRRect.inflate(0.4), boardOuterGlow);
-    canvas.drawRRect(boardRRect, borderPaint);
+      for (int i = 0; i <= _boardState.size; i++) {
+        final double lineOffset = i * cellSize;
+        final Paint paint = (i % 2 == 0) ? majorGridPaint : minorGridPaint;
+        cacheCanvas.drawLine(
+          Offset(lineOffset, 0),
+          Offset(lineOffset, size.y),
+          paint,
+        );
+        cacheCanvas.drawLine(
+          Offset(0, lineOffset),
+          Offset(size.x, lineOffset),
+          paint,
+        );
+      }
+      cacheCanvas.restore();
+      cacheCanvas.drawRRect(boardRRect.inflate(0.4), boardOuterGlow);
+      cacheCanvas.drawRRect(boardRRect, borderPaint);
 
-    for (final BoardCell cell in _boardState.occupiedCells) {
-      final double tone =
-          ((math.sin((cell.x * 0.92) + (cell.y * 1.17)) + 1) / 2)
-              .clamp(0, 1)
-              .toDouble();
-      final Color coolTint =
-          _mixColor(_occupiedColor, const Color(0xFFA9EEFF), 0.34);
-      final Color violetTint =
-          _mixColor(_occupiedColor, const Color(0xFFCAAFFF), 0.3);
-      final Color occupiedTint = _mixColor(violetTint, coolTint, tone);
-      final Rect occupiedRect = Rect.fromLTWH(
-        cell.x * cellSize + 4,
-        cell.y * cellSize + 4,
-        cellSize - 8,
-        cellSize - 8,
-      );
-      _drawGlassBlockCell(
-        canvas,
-        rect: occupiedRect,
-        tint: occupiedTint,
-        preset: _visualPreset,
-        opacity: 0.88,
-        intenseGlow: true,
-      );
+      for (final BoardCell cell in _boardState.occupiedCells) {
+        final double tone =
+            ((math.sin((cell.x * 0.92) + (cell.y * 1.17)) + 1) / 2)
+                .clamp(0, 1)
+                .toDouble();
+        final Color coolTint =
+            _mixColor(_occupiedColor, const Color(0xFFA9EEFF), 0.34);
+        final Color violetTint =
+            _mixColor(_occupiedColor, const Color(0xFFCAAFFF), 0.3);
+        final Color occupiedTint = _mixColor(violetTint, coolTint, tone);
+        final Rect occupiedRect = Rect.fromLTWH(
+          cell.x * cellSize + 4,
+          cell.y * cellSize + 4,
+          cellSize - 8,
+          cellSize - 8,
+        );
+        _drawGlassBlockCell(
+          cacheCanvas,
+          rect: occupiedRect,
+          tint: occupiedTint,
+          preset: _visualPreset,
+          opacity: 0.88,
+          intenseGlow: true,
+        );
+      }
+      _cachedBoardPicture = recorder.endRecording();
     }
+
+    canvas.drawPicture(_cachedBoardPicture!);
+
 
     final _HintState? hint = _hintState;
     if (hint != null) {
@@ -1221,6 +1238,9 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   double _pendingDistance = 0;
   double _dragLiftPixels = 0;
   double _dragVisualProgress = 0;
+  
+  Picture? _cachedPicture;
+  bool _cachedIsDragging = false;
 
   static Vector2 visualSize({
     required Piece piece,
@@ -1270,10 +1290,12 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   }) {
     _baseColor = baseColor;
     _dragColor = dragColor;
+    _cachedPicture = null;
   }
 
   void updateVisualPreset(BlockVisualPreset preset) {
     _visualPreset = preset;
+    _cachedPicture = null;
   }
 
   @override
@@ -1289,7 +1311,40 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final Color tint = _dragging ? _dragColor : _baseColor;
+    
+    final bool isDragging = _dragging;
+    if (_cachedPicture == null || _cachedIsDragging != isDragging) {
+      _cachedIsDragging = isDragging;
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas cacheCanvas = Canvas(recorder);
+      
+      final Color tint = isDragging ? _dragColor : _baseColor;
+      for (final PieceCellOffset cell in piece.cells) {
+        final double tone =
+            ((math.sin((cell.dx * 0.95) + (cell.dy * 1.12)) + 1) / 2)
+                .clamp(0, 1)
+                .toDouble();
+        final Color coolTint = _mixColor(tint, const Color(0xFFA9EEFF), 0.34);
+        final Color violetTint = _mixColor(tint, const Color(0xFFCAAFFF), 0.3);
+        final Color cellTint = _mixColor(violetTint, coolTint, tone);
+        final Rect rect = Rect.fromLTWH(
+          (cell.dx * cellSize) + 3,
+          (cell.dy * cellSize) + 3,
+          cellSize - 6,
+          cellSize - 6,
+        );
+        _drawGlassBlockCell(
+          cacheCanvas,
+          rect: rect,
+          tint: cellTint,
+          preset: _visualPreset,
+          opacity: 0.9,
+          intenseGlow: true,
+        );
+      }
+      _cachedPicture = recorder.endRecording();
+    }
+
     final double scale = lerpDouble(1, 1.035, _dragVisualProgress) ?? 1;
     if ((scale - 1).abs() > 0.0001) {
       canvas.save();
@@ -1298,33 +1353,10 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
       canvas.translate(cx, cy);
       canvas.scale(scale, scale);
       canvas.translate(-cx, -cy);
-    }
-
-    for (final PieceCellOffset cell in piece.cells) {
-      final double tone =
-          ((math.sin((cell.dx * 0.95) + (cell.dy * 1.12)) + 1) / 2)
-              .clamp(0, 1)
-              .toDouble();
-      final Color coolTint = _mixColor(tint, const Color(0xFFA9EEFF), 0.34);
-      final Color violetTint = _mixColor(tint, const Color(0xFFCAAFFF), 0.3);
-      final Color cellTint = _mixColor(violetTint, coolTint, tone);
-      final Rect rect = Rect.fromLTWH(
-        (cell.dx * cellSize) + 3,
-        (cell.dy * cellSize) + 3,
-        cellSize - 6,
-        cellSize - 6,
-      );
-      _drawGlassBlockCell(
-        canvas,
-        rect: rect,
-        tint: cellTint,
-        preset: _visualPreset,
-        opacity: 0.9,
-        intenseGlow: true,
-      );
-    }
-    if ((scale - 1).abs() > 0.0001) {
+      canvas.drawPicture(_cachedPicture!);
       canvas.restore();
+    } else {
+      canvas.drawPicture(_cachedPicture!);
     }
   }
 

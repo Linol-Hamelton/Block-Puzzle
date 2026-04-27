@@ -119,6 +119,54 @@ class BasicPieceGenerationService implements PieceGenerationService {
       ],
       isHard: true,
     ),
+    _PieceTemplate(
+      key: 'vline4',
+      cells: <PieceCellOffset>[
+        PieceCellOffset(dx: 0, dy: 0),
+        PieceCellOffset(dx: 0, dy: 1),
+        PieceCellOffset(dx: 0, dy: 2),
+        PieceCellOffset(dx: 0, dy: 3),
+      ],
+      isHard: true,
+    ),
+    _PieceTemplate(
+      key: 'vline5',
+      cells: <PieceCellOffset>[
+        PieceCellOffset(dx: 0, dy: 0),
+        PieceCellOffset(dx: 0, dy: 1),
+        PieceCellOffset(dx: 0, dy: 2),
+        PieceCellOffset(dx: 0, dy: 3),
+        PieceCellOffset(dx: 0, dy: 4),
+      ],
+      isHard: true,
+    ),
+    _PieceTemplate(
+      key: 'square3',
+      cells: <PieceCellOffset>[
+        PieceCellOffset(dx: 0, dy: 0), PieceCellOffset(dx: 1, dy: 0), PieceCellOffset(dx: 2, dy: 0),
+        PieceCellOffset(dx: 0, dy: 1), PieceCellOffset(dx: 1, dy: 1), PieceCellOffset(dx: 2, dy: 1),
+        PieceCellOffset(dx: 0, dy: 2), PieceCellOffset(dx: 1, dy: 2), PieceCellOffset(dx: 2, dy: 2),
+      ],
+      isHard: true,
+    ),
+    _PieceTemplate(
+      key: 'cross5',
+      cells: <PieceCellOffset>[
+        PieceCellOffset(dx: 1, dy: 0),
+        PieceCellOffset(dx: 0, dy: 1), PieceCellOffset(dx: 1, dy: 1), PieceCellOffset(dx: 2, dy: 1),
+        PieceCellOffset(dx: 1, dy: 2),
+      ],
+      isHard: true,
+    ),
+    _PieceTemplate(
+      key: 'corner5',
+      cells: <PieceCellOffset>[
+        PieceCellOffset(dx: 0, dy: 0),
+        PieceCellOffset(dx: 0, dy: 1),
+        PieceCellOffset(dx: 0, dy: 2), PieceCellOffset(dx: 1, dy: 2), PieceCellOffset(dx: 2, dy: 2),
+      ],
+      isHard: true,
+    ),
   ];
 
   @override
