@@ -9,11 +9,19 @@ class FirebaseAnalyticsTracker implements AnalyticsTracker {
   final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   @override
-  Future<void> track(String eventName, [Map<String, Object>? parameters]) async {
+  Future<void> track(
+    String eventName, {
+    Map<String, Object?> params = const <String, Object?>{},
+  }) async {
     await _analytics.logEvent(
       name: eventName,
-      parameters: parameters,
+      parameters: params,
     );
+  }
+
+  @override
+  Future<void> flush({bool force = false}) async {
+    // Firebase Analytics handles flushing automatically
   }
 
   @override

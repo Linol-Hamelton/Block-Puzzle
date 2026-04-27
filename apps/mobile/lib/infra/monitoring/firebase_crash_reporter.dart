@@ -8,17 +8,27 @@ class FirebaseCrashReporter implements CrashReporter {
 
   @override
   Future<void> recordError(
-    dynamic exception,
+    Object error,
     StackTrace? stack, {
     dynamic reason,
     bool fatal = false,
   }) async {
     await FirebaseCrashlytics.instance.recordError(
-      exception,
+      error,
       stack,
       reason: reason,
       fatal: fatal,
     );
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {
+    await FirebaseCrashlytics.instance.setCustomKey(key, value);
+  }
+
+  @override
+  Future<void> setUserId(String userId) async {
+    await FirebaseCrashlytics.instance.setUserIdentifier(userId);
   }
 
   @override

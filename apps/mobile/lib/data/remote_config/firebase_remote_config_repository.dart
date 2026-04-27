@@ -65,7 +65,7 @@ class FirebaseRemoteConfigRepository implements RemoteConfigRepository {
       return _inMemorySnapshot!;
     } catch (e) {
       _logger.warn('Failed to fetch from Firebase Remote Config: $e');
-      return await getCachedSnapshot();
+      return getCachedSnapshot();
     }
   }
 
