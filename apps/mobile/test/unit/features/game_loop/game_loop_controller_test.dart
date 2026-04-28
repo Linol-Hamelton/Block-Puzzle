@@ -689,6 +689,9 @@ class _SingleCellPieceGenerationService implements PieceGenerationService {
   int _counter = 0;
 
   @override
+  void setSeed(int? seed) {}
+
+  @override
   PieceTriplet nextTriplet({
     required BoardState boardState,
     required DifficultyProfile profile,

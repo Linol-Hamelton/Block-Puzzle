@@ -8,6 +8,9 @@ import '../../domain/session/session_state.dart';
 
 class StubPieceGenerationService implements PieceGenerationService {
   @override
+  void setSeed(int? seed) {}
+
+  @override
   PieceTriplet nextTriplet({
     required BoardState boardState,
     required DifficultyProfile profile,

@@ -107,7 +107,7 @@ class HomeScreen extends StatelessWidget {
                       width: double.infinity,
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: LuminaPalette.accentPurple,
+                          backgroundColor: LuminaPalette.violet,
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () {
