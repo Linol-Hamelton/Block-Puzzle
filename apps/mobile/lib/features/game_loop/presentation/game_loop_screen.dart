@@ -18,7 +18,12 @@ import '../application/models/models.dart';
 import 'block_puzzle_game.dart';
 
 class GameLoopScreen extends StatefulWidget {
-  const GameLoopScreen({super.key});
+  const GameLoopScreen({
+    super.key,
+    this.isDailyChallenge = false,
+  });
+
+  final bool isDailyChallenge;
 
   @override
   State<GameLoopScreen> createState() => _GameLoopScreenState();
@@ -43,6 +48,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     _game = BlockPuzzleGame(
       controller: _controller,
       sfxPlayer: _sfxPlayer,
+      isDailyChallenge: widget.isDailyChallenge,
     );
     _controller.stateListenable.addListener(_onControllerStateChanged);
   }

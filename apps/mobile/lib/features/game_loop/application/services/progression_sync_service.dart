@@ -135,16 +135,49 @@ class ProgressionSyncService {
   Future<void> applyAfterMove({
     required int clearedLines,
     required int scoreDelta,
-    required int bestScore,
+    required int totalScore,
+    required bool isDailyChallenge,
   }) async {
-    _state = _state.copyWith(
-      dailyMoves: _state.dailyMoves + 1,
-      dailyLinesCleared: _state.dailyLinesCleared + clearedLines,
-      dailyScoreEarned: _state.dailyScoreEarned + scoreDelta,
-      bestScore: bestScore > _state.bestScore ? bestScore : _state.bestScore,
-      lastSeenUtc: _nowUtc(),
-    );
-    await playerProgressRepository.save(_state);
+    if (isDailyChallenge) {
+      final int previousBestDay = _state.dailyChallengeHighScoreDay;
+      final int nextBestDay = totalScore > previousBestDay ? totalScore : previousBestDay;
+      final int nextBestMonth = totalScore > _state.dailyChallengeHighScoreMonth ? totalScore : _state.dailyChallengeHighScoreMonth;
+      final int nextBestYear = totalScore > _state.dailyChallengeHighScoreYear ? totalScore : _state.dailyChallengeHighScoreYear;
+      final int nextBestAllTime = totalScore > _state.dailyChallengeHighScoreAllTime ? totalScore : _state.dailyChallengeHighScoreAllTime;
+
+      // Milestone rewards
+      final int previousMilestone = previousBestDay ~/ 1000;
+      final int nextMilestone = nextBestDay ~/ 1000;
+      final int creditsEarned = nextMilestone > previousMilestone ? (nextMilestone - previousMilestone) : 0;
+
+      Set<String> nextOwnedProductIds = _state.ownedProductIds;
+      if (nextBestDay >= 10000 && !nextOwnedProductIds.contains('badge_daily_10k')) {
+        nextOwnedProductIds = Set.from(_state.ownedProductIds)..add('badge_daily_10k');
+      }
+
+      _state = _state.copyWith(
+        dailyMoves: _state.dailyMoves + 1,
+        dailyLinesCleared: _state.dailyLinesCleared + clearedLines,
+        dailyScoreEarned: _state.dailyScoreEarned + scoreDelta,
+        lastSeenUtc: _nowUtc(),
+        dailyChallengeHighScoreDay: nextBestDay,
+        dailyChallengeHighScoreMonth: nextBestMonth,
+        dailyChallengeHighScoreYear: nextBestYear,
+        dailyChallengeHighScoreAllTime: nextBestAllTime,
+        rewardedToolsCredits: _state.rewardedToolsCredits + creditsEarned,
+        ownedProductIds: nextOwnedProductIds,
+      );
+      await playerProgressRepository.save(_state);
+    } else {
+      _state = _state.copyWith(
+        dailyMoves: _state.dailyMoves + 1,
+        dailyLinesCleared: _state.dailyLinesCleared + clearedLines,
+        dailyScoreEarned: _state.dailyScoreEarned + scoreDelta,
+        bestScore: totalScore > _state.bestScore ? totalScore : _state.bestScore,
+        lastSeenUtc: _nowUtc(),
+      );
+      await playerProgressRepository.save(_state);
+    }
   }
 
   /// Build snapshot of current daily goals.

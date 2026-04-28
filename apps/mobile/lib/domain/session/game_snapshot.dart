@@ -12,6 +12,7 @@ class GameSnapshot {
     required this.level,
     required this.movesPlayed,
     required this.gamesPlayed,
+    this.isDailyChallenge = false,
   });
 
   final BoardState boardState;
@@ -20,6 +21,7 @@ class GameSnapshot {
   final int level;
   final int movesPlayed;
   final int gamesPlayed;
+  final bool isDailyChallenge;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -29,6 +31,7 @@ class GameSnapshot {
       'level': level,
       'moves_played': movesPlayed,
       'games_played': gamesPlayed,
+      'is_daily_challenge': isDailyChallenge,
     };
   }
 
@@ -49,6 +52,7 @@ class GameSnapshot {
       level: json['level'] as int? ?? 1,
       movesPlayed: json['moves_played'] as int? ?? 0,
       gamesPlayed: json['games_played'] as int? ?? 0,
+      isDailyChallenge: json['is_daily_challenge'] as bool? ?? false,
     );
   }
 

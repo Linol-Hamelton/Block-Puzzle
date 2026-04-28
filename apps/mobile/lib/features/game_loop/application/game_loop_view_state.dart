@@ -13,6 +13,7 @@ class GameLoopViewState {
     required this.colorThemeIndex,
     required this.uxVariant,
     required this.isShareFlowEnabled,
+    required this.isDailyChallenge,
     required this.isGameOver,
     required this.canUseRewardedRevive,
     required this.canUseRewardedHint,
@@ -42,6 +43,7 @@ class GameLoopViewState {
   final int colorThemeIndex;
   final String uxVariant;
   final bool isShareFlowEnabled;
+  final bool isDailyChallenge;
   final bool isGameOver;
   final bool canUseRewardedRevive;
   final bool canUseRewardedHint;
@@ -70,6 +72,7 @@ class GameLoopViewState {
       colorThemeIndex: 0,
       uxVariant: 'hud_standard_v1',
       isShareFlowEnabled: true,
+      isDailyChallenge: false,
       isGameOver: false,
       canUseRewardedRevive: false,
       canUseRewardedHint: false,
@@ -99,6 +102,7 @@ class GameLoopViewState {
     int? colorThemeIndex,
     String? uxVariant,
     bool? isShareFlowEnabled,
+    bool? isDailyChallenge,
     bool? isGameOver,
     bool? canUseRewardedRevive,
     bool? canUseRewardedHint,
@@ -131,6 +135,7 @@ class GameLoopViewState {
       colorThemeIndex: colorThemeIndex ?? this.colorThemeIndex,
       uxVariant: uxVariant ?? this.uxVariant,
       isShareFlowEnabled: isShareFlowEnabled ?? this.isShareFlowEnabled,
+      isDailyChallenge: isDailyChallenge ?? this.isDailyChallenge,
       isGameOver: isGameOver ?? this.isGameOver,
       canUseRewardedRevive: canUseRewardedRevive ?? this.canUseRewardedRevive,
       canUseRewardedHint: canUseRewardedHint ?? this.canUseRewardedHint,

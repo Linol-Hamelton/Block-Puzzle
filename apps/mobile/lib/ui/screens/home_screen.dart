@@ -105,6 +105,25 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: LuminaPalette.accentPurple,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const GameLoopScreen(isDailyChallenge: true),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.star_rounded),
+                        label: const Text('Daily Challenge'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.of(context).push(

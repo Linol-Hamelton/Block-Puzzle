@@ -143,7 +143,7 @@ class GameLoopController {
   GameLoopViewState get state => _stateNotifier.value;
   String get blocksVisualPreset => _resolveBlocksVisualPreset();
 
-  Future<void> initialize() async {
+  Future<void> initialize({bool isDailyChallenge = false}) async {
     if (_initialized) {
       return;
     }
@@ -221,10 +221,26 @@ class GameLoopController {
 
     final GameSnapshot? snapshot = await gameSessionRepository.loadSnapshot();
 
-    await startNewGame(snapshot: snapshot);
+    if (snapshot != null && snapshot.isDailyChallenge != isDailyChallenge) {
+      // Switched game modes, discard old snapshot
+      await gameSessionRepository.clearSnapshot();
+      await startNewGame(snapshot: null, isDailyChallenge: isDailyChallenge);
+    } else {
+      await startNewGame(snapshot: snapshot, isDailyChallenge: isDailyChallenge);
+    }
   }
 
-  Future<void> startNewGame({GameSnapshot? snapshot}) async {
+  Future<void> startNewGame({
+    GameSnapshot? snapshot,
+    bool isDailyChallenge = false,
+  }) async {
+    final bool dailyMode = snapshot?.isDailyChallenge ?? isDailyChallenge;
+    if (dailyMode) {
+      final DateTime now = _nowUtc();
+      pieceGenerationService.setSeed(now.year * 10000 + now.month * 100 + now.day);
+    } else {
+      pieceGenerationService.setSeed(null);
+    }
     await progressionSyncService.syncForCurrentDay();
     await _refreshOwnedIapProducts();
 
@@ -263,6 +279,7 @@ class GameLoopController {
       uxVariant: _uxVariant,
       phase: GameLoopPhase.playing,
       isShareFlowEnabled: _shareFlowEnabled,
+      isDailyChallenge: dailyMode,
       isGameOver: false,
       canUseRewardedRevive: false,
       canUseRewardedHint: _canUseRewardedHintForState(
@@ -276,7 +293,7 @@ class GameLoopController {
       isOnboardingVisible: shouldShowOnboarding,
       dailyGoals: progressionSyncService.buildDailyGoalsSnapshot(),
       streak: progressionSyncService.buildStreakSnapshot(),
-      bestScore: _playerProgressState.bestScore,
+      bestScore: dailyMode ? _playerProgressState.dailyChallengeHighScoreDay : _playerProgressState.bestScore,
       onboardingStepId: shouldShowOnboarding ? onboardingFlowController.initialStepId : null,
       onboardingTitle: shouldShowOnboarding ? onboardingFlowController.initialTitle : null,
       onboardingDescription: shouldShowOnboarding
@@ -416,7 +433,8 @@ class GameLoopController {
     await progressionSyncService.applyAfterMove(
       clearedLines: lineResult.clearedTotal,
       scoreDelta: scoreDelta,
-      bestScore: nextBestScore,
+      totalScore: nextScore.totalScore,
+      isDailyChallenge: state.isDailyChallenge,
     );
     final DailyGoalsSnapshot dailyGoalsAfter =
         progressionSyncService.buildDailyGoalsSnapshot();

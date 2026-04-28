@@ -14,6 +14,12 @@ class PlayerProgressState {
     required this.lastSeenUtc,
     required this.economyState,
     required this.cosmeticsState,
+    required this.dailyChallengeHighScoreDay,
+    required this.dailyChallengeHighScoreMonth,
+    required this.dailyChallengeHighScoreYear,
+    required this.dailyChallengeHighScoreAllTime,
+    required this.dailyChallengeMonthKey,
+    required this.dailyChallengeYearKey,
   });
 
   static const int schemaVersion = 2;
@@ -30,6 +36,13 @@ class PlayerProgressState {
   final DateTime lastSeenUtc;
   final PlayerEconomyState economyState;
   final PlayerCosmeticsState cosmeticsState;
+  
+  final int dailyChallengeHighScoreDay;
+  final int dailyChallengeHighScoreMonth;
+  final int dailyChallengeHighScoreYear;
+  final int dailyChallengeHighScoreAllTime;
+  final String dailyChallengeMonthKey;
+  final String dailyChallengeYearKey;
 
   int get rewardedToolsCredits => economyState.rewardedToolsCredits;
 
@@ -56,6 +69,12 @@ class PlayerProgressState {
         ownedProductIds: const <String>{},
       ),
       cosmeticsState: const PlayerCosmeticsState(),
+      dailyChallengeHighScoreDay: 0,
+      dailyChallengeHighScoreMonth: 0,
+      dailyChallengeHighScoreYear: 0,
+      dailyChallengeHighScoreAllTime: 0,
+      dailyChallengeMonthKey: '${normalizedDay.year}-${normalizedDay.month.toString().padLeft(2, '0')}',
+      dailyChallengeYearKey: '${normalizedDay.year}',
     );
   }
 
@@ -72,6 +91,12 @@ class PlayerProgressState {
     DateTime? lastSeenUtc,
     PlayerEconomyState? economyState,
     PlayerCosmeticsState? cosmeticsState,
+    int? dailyChallengeHighScoreDay,
+    int? dailyChallengeHighScoreMonth,
+    int? dailyChallengeHighScoreYear,
+    int? dailyChallengeHighScoreAllTime,
+    String? dailyChallengeMonthKey,
+    String? dailyChallengeYearKey,
     int? rewardedToolsCredits,
     Set<String>? ownedProductIds,
   }) {
@@ -100,6 +125,12 @@ class PlayerProgressState {
       lastSeenUtc: lastSeenUtc ?? this.lastSeenUtc,
       economyState: nextEconomyState,
       cosmeticsState: cosmeticsState ?? this.cosmeticsState,
+      dailyChallengeHighScoreDay: dailyChallengeHighScoreDay ?? this.dailyChallengeHighScoreDay,
+      dailyChallengeHighScoreMonth: dailyChallengeHighScoreMonth ?? this.dailyChallengeHighScoreMonth,
+      dailyChallengeHighScoreYear: dailyChallengeHighScoreYear ?? this.dailyChallengeHighScoreYear,
+      dailyChallengeHighScoreAllTime: dailyChallengeHighScoreAllTime ?? this.dailyChallengeHighScoreAllTime,
+      dailyChallengeMonthKey: dailyChallengeMonthKey ?? this.dailyChallengeMonthKey,
+      dailyChallengeYearKey: dailyChallengeYearKey ?? this.dailyChallengeYearKey,
     );
   }
 
@@ -118,6 +149,12 @@ class PlayerProgressState {
       'last_seen_utc': lastSeenUtc.toIso8601String(),
       'economy_state': economyState.toJson(),
       'cosmetics_state': cosmeticsState.toJson(),
+      'daily_challenge_high_score_day': dailyChallengeHighScoreDay,
+      'daily_challenge_high_score_month': dailyChallengeHighScoreMonth,
+      'daily_challenge_high_score_year': dailyChallengeHighScoreYear,
+      'daily_challenge_high_score_all_time': dailyChallengeHighScoreAllTime,
+      'daily_challenge_month_key': dailyChallengeMonthKey,
+      'daily_challenge_year_key': dailyChallengeYearKey,
     };
   }
 
@@ -165,6 +202,12 @@ class PlayerProgressState {
       cosmeticsState: PlayerCosmeticsState.fromJson(
         _readMap(json['cosmetics_state']),
       ),
+      dailyChallengeHighScoreDay: _readInt(json['daily_challenge_high_score_day'], fallback: 0),
+      dailyChallengeHighScoreMonth: _readInt(json['daily_challenge_high_score_month'], fallback: 0),
+      dailyChallengeHighScoreYear: _readInt(json['daily_challenge_high_score_year'], fallback: 0),
+      dailyChallengeHighScoreAllTime: _readInt(json['daily_challenge_high_score_all_time'], fallback: 0),
+      dailyChallengeMonthKey: json['daily_challenge_month_key'] as String? ?? '',
+      dailyChallengeYearKey: json['daily_challenge_year_key'] as String? ?? '',
     );
   }
 
@@ -204,6 +247,12 @@ class PlayerProgressState {
         ownedProductIds: const <String>{},
       ),
       cosmeticsState: const PlayerCosmeticsState(),
+      dailyChallengeHighScoreDay: 0,
+      dailyChallengeHighScoreMonth: 0,
+      dailyChallengeHighScoreYear: 0,
+      dailyChallengeHighScoreAllTime: 0,
+      dailyChallengeMonthKey: '${dayKeyUtc.year}-${dayKeyUtc.month.toString().padLeft(2, '0')}',
+      dailyChallengeYearKey: '${dayKeyUtc.year}',
     );
   }
 

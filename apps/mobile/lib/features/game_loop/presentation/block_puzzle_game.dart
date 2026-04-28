@@ -24,10 +24,12 @@ class BlockPuzzleGame extends FlameGame {
   BlockPuzzleGame({
     required this.controller,
     required this.sfxPlayer,
+    this.isDailyChallenge = false,
   });
 
   final GameLoopController controller;
   final GameSfxPlayer sfxPlayer;
+  final bool isDailyChallenge;
 
   final BoardComponent _boardComponent = BoardComponent();
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
@@ -101,7 +103,7 @@ class BlockPuzzleGame extends FlameGame {
   @override
   Future<void> onLoad() async {
     await sfxPlayer.preload();
-    await controller.initialize();
+    await controller.initialize(isDailyChallenge: isDailyChallenge);
 
     if (_isShuttingDown) {
       return;

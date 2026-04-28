@@ -11,8 +11,19 @@ class BasicPieceGenerationService implements PieceGenerationService {
     Random? random,
   }) : _random = random ?? Random();
 
-  final Random _random;
+  Random _random;
   int _idSequence = 0;
+
+  @override
+  void setSeed(int? seed) {
+    if (seed == null) {
+      _random = Random();
+    } else {
+      _random = Random(seed);
+    }
+    // Also reset id sequence so IDs are deterministic for the same seed
+    _idSequence = 0;
+  }
 
   static const List<_PieceTemplate> _easyTemplates = <_PieceTemplate>[
     _PieceTemplate(
