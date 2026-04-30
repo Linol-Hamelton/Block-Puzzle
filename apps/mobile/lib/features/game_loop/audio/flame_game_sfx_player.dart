@@ -27,6 +27,9 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   final Map<String, AudioPool> _pools = <String, AudioPool>{};
 
   @override
+  bool isEnabled = true;
+
+  @override
   Future<void> preload() async {
     if (_initialized && _pools.isNotEmpty) {
       return;
@@ -122,6 +125,10 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
     String fileName, {
     double volume = 0.75,
   }) async {
+    if (!isEnabled) {
+      return;
+    }
+
     final double normalizedVolume = volume.clamp(0, 1).toDouble();
 
     try {

@@ -279,6 +279,8 @@ class GameLoopController {
       uxVariant: _uxVariant,
       phase: GameLoopPhase.playing,
       isShareFlowEnabled: _shareFlowEnabled,
+      soundEnabled: _playerProgressState.settings.soundEnabled,
+      hapticsEnabled: _playerProgressState.settings.hapticsEnabled,
       isDailyChallenge: dailyMode,
       isGameOver: false,
       canUseRewardedRevive: false,

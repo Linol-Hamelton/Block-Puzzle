@@ -10,6 +10,7 @@ import 'package:flame/text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/device/haptics_controller.dart';
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
@@ -24,11 +25,13 @@ class BlockPuzzleGame extends FlameGame {
   BlockPuzzleGame({
     required this.controller,
     required this.sfxPlayer,
+    required this.haptics,
     this.isDailyChallenge = false,
   });
 
   final GameLoopController controller;
   final GameSfxPlayer sfxPlayer;
+  final HapticsController haptics;
   final bool isDailyChallenge;
 
   final BoardComponent _boardComponent = BoardComponent();
@@ -296,7 +299,7 @@ class BlockPuzzleGame extends FlameGame {
       pieceComponent.resetToHome();
       _boardComponent.clearPreview();
       unawaited(sfxPlayer.playInvalidMove());
-      unawaited(HapticFeedback.vibrate());
+      unawaited(haptics.heavyImpact());
       return;
     }
 
@@ -315,16 +318,16 @@ class BlockPuzzleGame extends FlameGame {
     if (!result.isSuccess) {
       pieceComponent.resetToHome();
       unawaited(sfxPlayer.playInvalidMove());
-      unawaited(HapticFeedback.vibrate());
+      unawaited(haptics.heavyImpact());
       return;
     }
 
     unawaited(sfxPlayer.playPiecePlaced());
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(haptics.mediumImpact());
 
     if (result.clearedLines > 0) {
       unawaited(sfxPlayer.playLineClear(clearedLines: result.clearedLines));
-      unawaited(HapticFeedback.heavyImpact());
+      unawaited(haptics.heavyImpact());
       _playLineClearAnimation(
         strength: result.clearedLines,
         clearedCells: result.clearedCells,
@@ -472,6 +475,7 @@ class BlockPuzzleGame extends FlameGame {
         homePosition: homePositions[i],
         baseColor: palette.rackColor,
         dragColor: palette.rackDragColor,
+        haptics: haptics,
         onDragMoved: onRackPieceDragged,
         onDropped: onRackPieceDropped,
       );
@@ -1210,6 +1214,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     required Vector2 homePosition,
     required Color baseColor,
     required Color dragColor,
+    required this.haptics,
     required this.onDragMoved,
     required this.onDropped,
   })  : _homePosition = homePosition.clone(),
@@ -1228,6 +1233,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   final double minTouchTargetSize;
   final double dragActivationDistance;
   final double touchDragLiftPixels;
+  final HapticsController haptics;
   final void Function(RackPieceComponent component) onDragMoved;
   final Future<void> Function(RackPieceComponent component) onDropped;
   Vector2 _homePosition;
@@ -1388,7 +1394,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
       _dragLiftPixels = touchDragLiftPixels;
       // Keep the dragged piece above finger from the very first touch frame.
       position.y -= _dragLiftPixels;
-      unawaited(HapticFeedback.lightImpact());
+      unawaited(haptics.lightImpact());
     }
     onDragMoved(this);
     super.onDragStart(event);

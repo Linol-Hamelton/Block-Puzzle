@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../core/config/app_environment.dart';
 import '../../core/config/remote_config_reader.dart';
+import '../../core/device/haptics_controller.dart';
 import '../../infra/monitoring/crash_reporter.dart';
 import '../../infra/monitoring/firebase_crash_reporter.dart';
 import '../../infra/monitoring/noop_crash_reporter.dart';
@@ -81,6 +82,7 @@ Future<void> configureDependencies() async {
     appConfig,
   );
   sl.registerSingleton<AppLogger>(logger);
+  sl.registerSingleton<HapticsController>(HapticsController());
   sl.registerLazySingleton<CrashReporter>(
     () => useDebugAdapters ? const NoopCrashReporter() : const FirebaseCrashReporter(),
   );

@@ -1,4 +1,7 @@
 abstract interface class GameSfxPlayer {
+  bool get isEnabled;
+  set isEnabled(bool value);
+
   Future<void> preload();
 
   Future<void> onAppResumed();

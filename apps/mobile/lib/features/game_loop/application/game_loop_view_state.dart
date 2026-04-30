@@ -13,6 +13,8 @@ class GameLoopViewState {
     required this.colorThemeIndex,
     required this.uxVariant,
     required this.isShareFlowEnabled,
+    required this.soundEnabled,
+    required this.hapticsEnabled,
     required this.isDailyChallenge,
     required this.isGameOver,
     required this.canUseRewardedRevive,
@@ -43,6 +45,8 @@ class GameLoopViewState {
   final int colorThemeIndex;
   final String uxVariant;
   final bool isShareFlowEnabled;
+  final bool soundEnabled;
+  final bool hapticsEnabled;
   final bool isDailyChallenge;
   final bool isGameOver;
   final bool canUseRewardedRevive;
@@ -72,6 +76,8 @@ class GameLoopViewState {
       colorThemeIndex: 0,
       uxVariant: 'hud_standard_v1',
       isShareFlowEnabled: true,
+      soundEnabled: true,
+      hapticsEnabled: true,
       isDailyChallenge: false,
       isGameOver: false,
       canUseRewardedRevive: false,
@@ -102,6 +108,8 @@ class GameLoopViewState {
     int? colorThemeIndex,
     String? uxVariant,
     bool? isShareFlowEnabled,
+    bool? soundEnabled,
+    bool? hapticsEnabled,
     bool? isDailyChallenge,
     bool? isGameOver,
     bool? canUseRewardedRevive,
@@ -135,6 +143,8 @@ class GameLoopViewState {
       colorThemeIndex: colorThemeIndex ?? this.colorThemeIndex,
       uxVariant: uxVariant ?? this.uxVariant,
       isShareFlowEnabled: isShareFlowEnabled ?? this.isShareFlowEnabled,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
+      hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
       isDailyChallenge: isDailyChallenge ?? this.isDailyChallenge,
       isGameOver: isGameOver ?? this.isGameOver,
       canUseRewardedRevive: canUseRewardedRevive ?? this.canUseRewardedRevive,

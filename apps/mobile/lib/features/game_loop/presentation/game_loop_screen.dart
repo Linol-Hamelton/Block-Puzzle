@@ -5,6 +5,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/device/haptics_controller.dart';
 import '../../../core/di/di_container.dart';
 import '../../../ui/layout/game_layout_profile.dart';
 import '../../../ui/theme/app_theme.dart';
@@ -33,6 +34,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     with WidgetsBindingObserver {
   late final GameLoopController _controller;
   late final GameSfxPlayer _sfxPlayer;
+  late final HapticsController _haptics;
   late final BlockPuzzleGame _game;
   final List<_ComboToastData> _comboToasts = <_ComboToastData>[];
   int _comboToastSeq = 0;
@@ -45,9 +47,11 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     WidgetsBinding.instance.addObserver(this);
     _controller = sl<GameLoopController>();
     _sfxPlayer = sl<GameSfxPlayer>();
+    _haptics = sl<HapticsController>();
     _game = BlockPuzzleGame(
       controller: _controller,
       sfxPlayer: _sfxPlayer,
+      haptics: _haptics,
       isDailyChallenge: widget.isDailyChallenge,
     );
     _controller.stateListenable.addListener(_onControllerStateChanged);
@@ -91,7 +95,16 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     _lastObservedState = current;
 
     if (previous == null) {
+      _haptics.isEnabled = current.hapticsEnabled;
+      _sfxPlayer.isEnabled = current.soundEnabled;
       return;
+    }
+
+    if (current.hapticsEnabled != previous.hapticsEnabled) {
+      _haptics.isEnabled = current.hapticsEnabled;
+    }
+    if (current.soundEnabled != previous.soundEnabled) {
+      _sfxPlayer.isEnabled = current.soundEnabled;
     }
 
     if (current.movesPlayed != previous.movesPlayed &&

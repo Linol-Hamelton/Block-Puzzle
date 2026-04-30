@@ -9,6 +9,9 @@ class DebugGameSfxPlayer implements GameSfxPlayer {
   final AppLogger _logger;
 
   @override
+  bool isEnabled = true;
+
+  @override
   Future<void> preload() async {
     _logger.info('SFX hook: preload');
   }
