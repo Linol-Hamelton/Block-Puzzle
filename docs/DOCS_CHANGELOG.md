@@ -2,6 +2,9 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-19 (Tetris — presentation + input)
+- Added `features/tetris/`: `TetrisController` (ChangeNotifier + SFX/haptics event routing), `TetrisFlameGame` (board/ghost/active render + frame clock), and `TetrisScreen` (HUD with hold/next previews, on-screen controls with auto-repeat, lifecycle, game-over overlay). Added a "Play Tetris" button to the home screen. Plan doc updated. Still unverified (no toolchain); DI/persistence/analytics wiring + feel tuning remain.
+
 ## 2026-06-19 (Tetris — domain core started)
 - New pure-domain module `apps/mobile/lib/domain/tetris/` (tetromino + SRS rotation/kicks, W×H board with gravity collapse, falling piece, 7-bag, scoring, engine) + 5 unit-test files. Plan + remaining work: [architecture/05_TETRIS_IMPLEMENTATION_PLAN.md](architecture/05_TETRIS_IMPLEMENTATION_PLAN.md). ADR-002 updated with the implementation note. Presentation/input/wiring still to come; SRS tables to be confirmed by running the tests on a real toolchain.
 

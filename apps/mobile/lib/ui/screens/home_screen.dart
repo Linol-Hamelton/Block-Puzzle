@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/game_loop/presentation/game_loop_screen.dart';
 import '../../features/store/presentation/store_screen.dart';
+import '../../features/tetris/presentation/tetris_screen.dart';
 import '../theme/app_theme.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -119,6 +120,25 @@ class HomeScreen extends StatelessWidget {
                         },
                         icon: const Icon(Icons.star_rounded),
                         label: const Text('Daily Challenge'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E88E5),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const TetrisScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.grid_view_rounded),
+                        label: const Text('Play Tetris'),
                       ),
                     ),
                     const SizedBox(height: 10),
