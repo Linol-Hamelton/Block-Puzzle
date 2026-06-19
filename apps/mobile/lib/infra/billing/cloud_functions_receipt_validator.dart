@@ -35,7 +35,8 @@ class CloudFunctionsReceiptValidator implements PurchaseReceiptValidator {
         'verifyPurchase',
         options: HttpsCallableOptions(timeout: _timeout),
       );
-      final HttpsCallableResult result = await callable.call(<String, Object?>{
+      final HttpsCallableResult<Object?> result =
+          await callable.call<Object?>(<String, Object?>{
         'platform': 'android',
         'productId': productId,
         'purchaseToken': purchaseToken,

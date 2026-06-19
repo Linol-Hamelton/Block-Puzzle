@@ -1,6 +1,5 @@
 import 'package:block_puzzle_mobile/domain/tetris/tetris_board.dart';
 import 'package:block_puzzle_mobile/domain/tetris/tetris_engine.dart';
-import 'package:block_puzzle_mobile/domain/tetris/tetromino.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 int filledCells(TetrisBoard board) {

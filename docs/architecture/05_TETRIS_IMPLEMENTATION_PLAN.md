@@ -3,7 +3,7 @@
 Date started: 2026-06-19
 Strategy: per [ADR-002](../adr/002-multi-game-engine-strategy.md) and the [Multi-Game Engine Plan](04_MULTI_GAME_ENGINE_PLAN.md), Tetris is built as a **separate, pure domain module** (`lib/domain/tetris/`) that does **not** touch Classic's `BoardState`/`GameLoopController`. The model layer was implemented first because it is the highest-correctness-risk, fully toolchain-independent part. Presentation (Flame) and input UI wire onto it next.
 
-> **Verification caveat:** authored without a Flutter/Dart toolchain available. The code is written to compile and the unit tests encode the correctness contracts, but **`flutter pub get` / `flutter analyze` / `flutter test` must be run on a real machine** to confirm. The SRS kick tables in particular are transcribed from spec and validated by `srs_rotation_test.dart` — run that first.
+> **Verification (2026-06-19):** `flutter analyze` reports no issues and all 153 tests pass (Flutter 3.44.2 / Dart 3.12.2), including the Tetris domain suites — so the SRS kick tables, board collapse, 7-bag, scoring, and engine behave as specified. What remains is **on-device play-testing** (input feel, gravity cadence) and the wiring items below.
 
 ## Done (domain core + tests)
 
@@ -35,7 +35,7 @@ Tests (the safety net — run on a real toolchain):
 
 ## Remaining work (ordered)
 
-1. **Verify on a real toolchain**: `flutter pub get` / `analyze` / `test`, then run the app and play-test feel on a device (the renderer/input were authored without a compiler).
+1. **On-device play-test** (analyze + unit tests already pass): validate input feel, gravity cadence, and rendering on a real device/emulator.
 2. **Persistence**: a `TetrisGameSnapshot` (engine serialize/deserialize) behind the existing `GameSessionRepository` pattern, per-game Hive key so a paused Tetris and Classic coexist (Multi-Game plan §8).
 3. **Analytics**: emit `game_start`/`game_end`/etc. with `game_id: 'tetris'` + Tetris params (level, lines, tetris/t-spin counts); register new fields in `AnalyticsSchemaValidator` or `ValidatedAnalyticsTracker` will quarantine them.
 4. **DI / Mode Hub**: register the Tetris graph in `di_container.dart` (currently the screen builds its own controller from `sl<GameSfxPlayer>()`/`sl<HapticsController>()`); fold into the `GameId`/`GameRegistry` seam when Phase 0 of the Multi-Game plan lands.

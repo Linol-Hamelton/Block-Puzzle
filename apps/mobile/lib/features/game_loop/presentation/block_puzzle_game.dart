@@ -8,7 +8,6 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/text.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/device/haptics_controller.dart';
 import '../../../domain/gameplay/board_state.dart';

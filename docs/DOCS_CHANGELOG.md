@@ -2,6 +2,9 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-19 (Verification)
+- Toolchain installed (Flutter 3.44.2 / Dart 3.12.2). `flutter analyze` → **No issues found**; `flutter test` → **all 153 tests passed** (including the Tetris domain suites and the analytics-decorator test). Resolved 4 analyzer lints (3 from this work + 1 pre-existing unnecessary import in `block_puzzle_game.dart`). Still pending: billing deploy + Play sandbox before transacting; Tetris DI/persistence/analytics wiring + on-device feel tuning.
+
 ## 2026-06-19 (Tetris — presentation + input)
 - Added `features/tetris/`: `TetrisController` (ChangeNotifier + SFX/haptics event routing), `TetrisFlameGame` (board/ghost/active render + frame clock), and `TetrisScreen` (HUD with hold/next previews, on-screen controls with auto-repeat, lifecycle, game-over overlay). Added a "Play Tetris" button to the home screen. Plan doc updated. Still unverified (no toolchain); DI/persistence/analytics wiring + feel tuning remain.
 
