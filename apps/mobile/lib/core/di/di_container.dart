@@ -3,12 +3,15 @@ import 'package:get_it/get_it.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/config/remote_config_reader.dart';
 import '../../core/device/haptics_controller.dart';
+import '../../infra/billing/cloud_functions_receipt_validator.dart';
+import '../../infra/billing/google_play_billing_service.dart';
 import '../../infra/monitoring/crash_reporter.dart';
 import '../../infra/monitoring/firebase_crash_reporter.dart';
 import '../../infra/monitoring/noop_crash_reporter.dart';
 import '../../data/analytics/analytics_tracker.dart';
 import '../../data/analytics/debug_analytics_tracker.dart';
 import '../../data/analytics/firebase_analytics_tracker.dart';
+import '../../data/analytics/validated_analytics_tracker.dart';
 import '../../data/progression/cloud_player_progress_repository.dart';
 import '../../data/remote_config/firebase_remote_config_repository.dart';
 import '../../data/remote_config/in_memory_remote_config_repository.dart';
@@ -107,16 +110,30 @@ Future<void> configureDependencies() async {
     () => HiveGameSessionRepository(logger: sl()),
   );
   sl.registerLazySingleton<IapStoreService>(
-    () => useDebugAdapters
-        ? DebugIapStoreService(
-            includeBundle: includeBundle,
-            includeUtilityPass: includeUtilityPass,
-          )
-        : LocalCatalogIapStoreService(
-            playerProgressRepository: sl(),
-            remoteConfigRepository: sl(),
-            logger: sl(),
-          ),
+    () {
+      if (useDebugAdapters) {
+        return DebugIapStoreService(
+          includeBundle: includeBundle,
+          includeUtilityPass: includeUtilityPass,
+        );
+      }
+      // Real Google Play Billing + server-side receipt validation in
+      // production. Stage/QA release builds use the local catalog so they can
+      // be exercised without Play Console SKUs configured.
+      if (appConfig.environment.isProduction) {
+        return GooglePlayBillingService(
+          playerProgressRepository: sl(),
+          remoteConfigRepository: sl(),
+          receiptValidator: CloudFunctionsReceiptValidator(logger: sl()),
+          logger: sl(),
+        );
+      }
+      return LocalCatalogIapStoreService(
+        playerProgressRepository: sl(),
+        remoteConfigRepository: sl(),
+        logger: sl(),
+      );
+    },
   );
   sl.registerLazySingleton<AdGuardrailPolicy>(
     BasicAdGuardrailPolicy.new,
@@ -124,7 +141,10 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<AnalyticsTracker>(
     () => useDebugAdapters
         ? DebugAnalyticsTracker(logger: sl())
-        : FirebaseAnalyticsTracker(),
+        : ValidatedAnalyticsTracker(
+            inner: FirebaseAnalyticsTracker(),
+            logger: sl(),
+          ),
   );
 
   sl.registerLazySingleton<MoveValidator>(BasicMoveValidator.new);
@@ -205,6 +225,7 @@ Future<void> configureDependencies() async {
     () => BlockPuzzleGame(
       controller: sl(),
       sfxPlayer: sl(),
+      haptics: sl(),
     ),
   );
 

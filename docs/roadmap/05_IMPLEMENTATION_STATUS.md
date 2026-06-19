@@ -1,6 +1,8 @@
 # Implementation Status (Source Of Truth)
 
-Last updated: 2026-04-12
+Last updated: 2026-06-19 (reconciled against code by the full audit — see [../audit/01_FULL_PROJECT_AUDIT_2026-06-19.md](../audit/01_FULL_PROJECT_AUDIT_2026-06-19.md))
+
+> Reconciliation note (2026-06-19): a feature is listed as **Implemented In Code** only if it is wired in DI and reachable from a code path — not merely present as a class. Hive persistence and Firebase Crashlytics were verified wired and have been moved up accordingly; the "release-safe analytics queue" was verified orphaned and reworded.
 
 ## Overall
 - Product maturity: `pre-production`
@@ -25,13 +27,16 @@ Last updated: 2026-04-12
   - version field
   - rollback snapshot slot
   - TTL-based freshness model
-- Release-safe local analytics queue with batched HTTP transport hook
 - Environment-aware DI with `AppEnvironment` + `BuildFlavor`
+- Hive-backed persistence for player progress and game snapshot — `HivePlayerProgressRepository` + `HiveGameSessionRepository` wired in DI (`di_container.dart:100-107`); `schemaVersion=2` migration + corrupt-cache self-heal
+- Firebase Crashlytics reporting — `FirebaseCrashReporter` routes to `FirebaseCrashlytics.instance` (`firebase_crash_reporter.dart`), selected in production via DI (dedicated ANR bridge still pending)
+- Daily Challenge variant of Classic (deterministic seed + milestone rewards) — shipped via the `isDailyChallenge` flow (commit `945ab1b`); distinct from the standalone Phase 4 Daily Challenge mode + leaderboard
 
 ## Simulated / Scaffolded
 - `services/config-api` API boundary is documented but deferred — Firebase Remote Config will replace it in Phase 1
 - `services/analytics-pipeline` ingestion boundary is documented but deferred — Firebase Analytics + BigQuery export will replace it in Phase 1
-- Stage/prod premium flow persists local entitlements and does not perform real store billing (Phase 1 wires `in_app_purchase` + Cloud Functions `verifyPurchase`)
+- **Analytics integrity — RESOLVED in code (2026-06-19, P0):** production now wraps the Firebase transport in `ValidatedAnalyticsTracker` (schema validation + quarantine of malformed events), so the release path is validated. `QueuedAnalyticsTracker` is retained as the transport for the deferred HTTP `services/analytics-pipeline`. See [adr/001](../adr/001-analytics-tracker-choice.md). Runtime verification (analyze/test) pending a real toolchain.
+- **Billing — implemented in code (2026-06-19, P0), NOT yet shippable:** `GooglePlayBillingService` (real `in_app_purchase`, Billing v7) + `CloudFunctionsReceiptValidator` + the `verifyPurchase` Cloud Function now exist and are wired in DI for production. Before it can transact real money it still needs: `flutter pub get`, Anonymous Auth sign-in at bootstrap, Play Console SKUs + service-account linkage, function deploy, and a Play sandbox purchase+restore+reinstall test. See [adr/003](../adr/003-billing-receipt-validation.md).
 - Rollout/AB logic exists on the client side, but not yet under a live remote control plane (Phase 1 moves this to Firebase Remote Config + Firebase A/B Testing)
 - Internal playtests and dashboards exist as simulations, but production telemetry aggregation is not active (Phase 2 stands up Looker Studio + BigQuery)
 
@@ -44,12 +49,12 @@ Last updated: 2026-04-12
 These are allowed only for `dev/debug` builds.
 
 ## Not Implemented Yet
-- Firebase Crashlytics + ANR bridge (Phase 1 Week 1)
-- Google Play Billing v7 + RuStore billing with server-side receipt validation via Cloud Functions (Phase 1 Week 3)
+- Dedicated ANR bridge + native symbol upload for Crashlytics (the Crashlytics error/log reporter itself is implemented — see above) (Phase 1 Week 1)
+- Google Play Billing v7 **deployment + verification** (the client `GooglePlayBillingService` + `verifyPurchase` function are written; `pub get`, Anonymous Auth, Play Console SKUs/linkage, deploy, and sandbox test remain) + **RuStore billing** adapter (Phase 1 Week 3 / Phase 2)
 - Firebase Remote Config adapter with kill switches and typed schema (Phase 1 Week 3)
-- Firebase Analytics adapter + BigQuery export + Looker Studio dashboards (Phase 1 Week 3, Phase 2 Week 6)
-- Hive-backed persistence for player progress, game snapshot, entitlements, config cache (Phase 1 Week 2)
-- Explicit lifecycle state machine with cold-kill recovery (Phase 1 Week 1)
+- BigQuery export + Looker Studio dashboards (production schema validation is now in place via `ValidatedAnalyticsTracker`) (Phase 2 Week 6)
+- Hive-backed persistence for **entitlements and config cache** (player progress + game snapshot are implemented — see above) (Phase 1 Week 2)
+- Explicit lifecycle state machine with cold-kill recovery; `cold_kill_recovery_test` confirmed green (Phase 1 Week 1)
 - Device-matrix QA smoke pack on Redmi/Samsung/Honor/Xiaomi (Phase 1 Week 4)
 - Meta-progression, soft currency, revive, missions, cosmetics shop, Season Pass, achievements, events, juice pack, localization, accessibility, FCM push (Phase 3)
 - Mode Hub, Time Rush, Puzzle Pack, Daily Challenge, Leaderboards (Phase 4)

@@ -45,6 +45,8 @@ dependencies:
   firebase_remote_config: ^5.0.0
   firebase_auth: ^5.0.0
   cloud_firestore: ^5.0.0
+  cloud_functions: ^5.0.0
+  in_app_purchase: ^3.2.0
 
 dev_dependencies:
   flutter_test:
