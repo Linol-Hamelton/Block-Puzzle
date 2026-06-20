@@ -2,6 +2,9 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-21 (Review follow-ups — batch 2)
+- Closed the remaining engine/analytics follow-ups from the PR #42 review: **#4** revive-once flag now persisted in the snapshot; **#6** perfect-clear awarded on the zero-delay path; **#7** lock-flash uses engine-captured `lastLockedCells` (correct on hard drop); **#8** gravity no longer consumes the lock-reset cap; **#9** `restore()` re-spawns when the active piece collides; **#12** Classic `move_rejected` reason defaults to `invalid_move`; **#13** `game_start` carries a `resumed` flag (schema updated). Plus perf (cached board-background `Picture`) and `reviveClearTop` combo/b2b reset. `flutter analyze` clean; **167 tests** (+4). Billing edges **#10/#11 deferred** (need Play sandbox + deployed function). Details: [audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md](audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md).
+
 ## 2026-06-21 (Review follow-ups — batch 1)
 - Closed the 4 priority follow-ups from the PR #42 review: (1) billing token binding is now atomic (check inside `runTransaction` in `verifyPurchase`); (2) `game_end` de-duplicated per round in both Tetris and Classic (`_gameEndEmitted` guard); (3) mid-clear snapshot no longer loses the lock/score (`TetrisEngine.flushPendingClear` invoked from `saveActiveGame`); (4) Tetris teardown hardened (controller `_disposed` guard + `onVisualEvent` cleared + Flame loop paused on dispose). `flutter analyze` clean; 163 tests. Details: [audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md](audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md).
 

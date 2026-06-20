@@ -385,7 +385,7 @@ class GameLoopController {
       await analyticsTracker.track(
         'move_rejected',
         params: <String, Object?>{
-          'reason': placeResult.failureReason,
+          'reason': placeResult.failureReason ?? 'invalid_move',
           'piece_id': move.piece.id,
           'anchor_x': move.anchorX,
           'anchor_y': move.anchorY,
