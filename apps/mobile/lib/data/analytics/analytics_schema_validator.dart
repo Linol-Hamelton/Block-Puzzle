@@ -160,6 +160,7 @@ class AnalyticsSchemaValidator {
         'rack_size',
         'ux_variant',
         'difficulty_variant',
+        'resumed',
       },
     ),
     'move_made': AnalyticsEventSchema(
