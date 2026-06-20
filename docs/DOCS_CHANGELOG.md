@@ -2,6 +2,9 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-21 (Pre-merge review of PR #42)
+- Multi-agent pre-merge review (5 dimensions + adversarial verification). Verdict: **GO_WITH_NITS** — no merge blockers; branch analyze-clean, 162 tests, CI green. Confirmed P1/P2 follow-ups captured in [audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md](audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md) (top priorities: billing token atomicity in `verifyPurchase`, and the duplicate `game_end` after revive — affects both Tetris and Classic). Two findings were adversarially refuted/downgraded (music pause-on-background works; the music "race" is a deterministic cosmetic pop-back issue).
+
 ## 2026-06-20 (Game-feel follow-ups — shared particles in Classic + Settings)
 - **Classic adopts `BurstField`:** line-clear particles in Classic now use the shared `ui/effects/BurstField` (a `_BurstLayer` Flame component); the old `CellBurstComponent` was removed. Both games now share one particle system.
 - **Settings screen:** new `features/settings/presentation/settings_screen.dart` with Music / Sound effects / Haptics toggles (music via `MusicController`; sound/haptics persisted to `PlayerSettings` and applied to the live singletons). Reachable from a gear icon on the home screen. The in-game AppBar music toggle was removed in favor of Settings.
