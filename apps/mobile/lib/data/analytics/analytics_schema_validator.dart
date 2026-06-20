@@ -160,6 +160,7 @@ class AnalyticsSchemaValidator {
         'rack_size',
         'ux_variant',
         'difficulty_variant',
+        'resumed',
       },
     ),
     'move_made': AnalyticsEventSchema(
@@ -198,6 +199,7 @@ class AnalyticsSchemaValidator {
         'game_id',
         'round_id',
         'score_total',
+        'cascade',
       },
     ),
     'game_end': AnalyticsEventSchema(
@@ -211,6 +213,7 @@ class AnalyticsSchemaValidator {
         'game_id',
         'level',
         'lines',
+        'moves_used',
         'ux_variant',
         'difficulty_variant',
       },
