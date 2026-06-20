@@ -125,6 +125,7 @@ class GameLoopController {
   String _rewardedToolsUnlimitedSku = 'utility_tools_pass';
   bool _bannerRequestedInSession = false;
   bool _rewardedReviveUsedInCurrentGame = false;
+  bool _gameEndEmitted = false;
   int _currentGameNumber = 0;
   int? _lastInterstitialRound;
   DateTime? _sessionStartedAt;
@@ -248,6 +249,7 @@ class GameLoopController {
     _observabilityTracker.onRoundStarted();
     _gameStartedAt = _nowUtc();
     _rewardedReviveUsedInCurrentGame = false;
+    _gameEndEmitted = false;
     _undoHistory.clear();
     final int nextGamesPlayed = snapshot != null ? snapshot.gamesPlayed : state.gamesPlayed + 1;
     final bool shouldShowOnboarding =
@@ -561,10 +563,15 @@ class GameLoopController {
           resetOnboarding: true,
         );
       }
-      await _trackGameEnd(
-        reason: 'no_valid_moves',
-        score: nextScore.totalScore,
-      );
+      // Emit game_end at most once per round_id: a rewarded revive resumes the
+      // same round, so a post-revive game-over must not duplicate the event.
+      if (!_gameEndEmitted) {
+        _gameEndEmitted = true;
+        await _trackGameEnd(
+          reason: 'no_valid_moves',
+          score: nextScore.totalScore,
+        );
+      }
       await gameSessionRepository.clearSnapshot();
       await _maybeShowInterstitialAfterGameEnd();
     }

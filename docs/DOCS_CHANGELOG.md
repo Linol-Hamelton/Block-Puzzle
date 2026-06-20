@@ -2,6 +2,9 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-21 (Review follow-ups — batch 1)
+- Closed the 4 priority follow-ups from the PR #42 review: (1) billing token binding is now atomic (check inside `runTransaction` in `verifyPurchase`); (2) `game_end` de-duplicated per round in both Tetris and Classic (`_gameEndEmitted` guard); (3) mid-clear snapshot no longer loses the lock/score (`TetrisEngine.flushPendingClear` invoked from `saveActiveGame`); (4) Tetris teardown hardened (controller `_disposed` guard + `onVisualEvent` cleared + Flame loop paused on dispose). `flutter analyze` clean; 163 tests. Details: [audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md](audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md).
+
 ## 2026-06-21 (Pre-merge review of PR #42)
 - Multi-agent pre-merge review (5 dimensions + adversarial verification). Verdict: **GO_WITH_NITS** — no merge blockers; branch analyze-clean, 162 tests, CI green. Confirmed P1/P2 follow-ups captured in [audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md](audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md) (top priorities: billing token atomicity in `verifyPurchase`, and the duplicate `game_end` after revive — affects both Tetris and Classic). Two findings were adversarially refuted/downgraded (music pause-on-background works; the music "race" is a deterministic cosmetic pop-back issue).
 

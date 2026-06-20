@@ -4,6 +4,15 @@ Date: 2026-06-21
 Source: multi-agent pre-merge review of `feat/p0-fixes-and-tetris-domain` (5 review dimensions → adversarial verification of 12 P0/P1 findings → verdict).
 Verdict: **GO_WITH_NITS** — no merge blockers (`mustFix` empty). Branch is `flutter analyze`-clean, 162 tests pass, CI green. Items below are tracked follow-ups to do *after* the merge; none break a core game/payment flow or crash.
 
+## Resolved — batch 1 (2026-06-21)
+Done on branch `fix/review-followups-p1` (analyze clean, 163 tests):
+- ✅ **#1 Billing token atomicity** — the cross-account/replay check now runs inside `runTransaction` (`tx.get(tokenRef)` before the writes) in `infra/cloud_functions/functions/index.js`.
+- ✅ **#2 Duplicate `game_end` after revive** — `game_end` is now emitted at most once per round via a `_gameEndEmitted` guard, in **both** Tetris (`tetris_controller.dart`) and Classic (`game_loop_controller.dart`, reset in `startNewGame`).
+- ✅ **#3 Snapshot lost during the clear window** — `saveActiveGame()` now calls `engine.flushPendingClear()` (collapse + commit) before snapshotting; added `TetrisEngine.flushPendingClear` + test.
+- ✅ **#5 Tetris teardown** — `TetrisController` is now disposed-guarded (`_disposed` short-circuits tick/input/revive) and clears `onVisualEvent` on dispose; `TetrisScreen.dispose()` pauses the Flame loop before disposing.
+
+Remaining items (#4, #6–#13, perf/polish, test gaps) are still open below.
+
 ## Confirmed — prioritize first
 1. **Billing token binding is not atomic (TOCTOU).** `verifyPurchase` reads the token doc with a plain `get()` outside the transaction and never re-reads it inside `runTransaction`, so two concurrent calls with the same `purchaseToken` under different UIDs can both grant. Move the existence/uid check inside `runTransaction` (`tx.get` before `tx.set`). `infra/cloud_functions/functions/index.js:60-116`. (Function not yet deployed — fix before deploy.)
 2. **Duplicate `game_end` after revive.** `revive()` does not call `_beginRound()`, so a post-revive top-out emits a second `game_end` with the same `round_id` → one `game_start`, two `game_end` per round (skews funnels). Add a `_gameEndEmitted` guard reset only in `_beginRound`, or a `post_revive` flag. `tetris_controller.dart` (`revive`/`_onGameEnd`). **Note (verified):** Classic's `useRewardedRevive` has the same exposure — fix both.
