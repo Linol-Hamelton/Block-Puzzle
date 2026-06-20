@@ -79,6 +79,7 @@ class TetrisEngine {
   int _gravityAccumMs = 0;
   int _lockAccumMs = 0;
   int _lockResets = 0;
+  bool _lastActionWasRotation = false;
 
   final List<TetrisEvent> _events = <TetrisEvent>[];
 
@@ -91,6 +92,7 @@ class TetrisEngine {
   int get level => _level;
   bool get isGameOver => _gameOver;
   bool get isStarted => _started;
+  bool get hasActiveGame => _started && !_gameOver && _active != null;
 
   List<TetrominoType> get nextQueue => _bag.peek(_nextPreviewCount);
 
@@ -201,6 +203,7 @@ class TetrisEngine {
       return false;
     }
     _active = moved;
+    _lastActionWasRotation = false;
     if (dx != 0) {
       _events.add(const TetrisEvent(TetrisEventType.move));
     }
@@ -221,6 +224,7 @@ class TetrisEngine {
           piece.withRotation(to).movedBy(kick.x, kick.y);
       if (!_board.collides(candidate)) {
         _active = candidate;
+        _lastActionWasRotation = true;
         _events.add(const TetrisEvent(TetrisEventType.rotate));
         _onPieceShifted();
         return true;
@@ -248,6 +252,7 @@ class TetrisEngine {
       _active = piece.movedBy(0, distance);
       _score += TetrisScoring.hardDropScore(distance);
     }
+    _lastActionWasRotation = false;
     _events.add(TetrisEvent(TetrisEventType.hardDrop, distance));
     _lockActivePiece();
   }
@@ -257,6 +262,11 @@ class TetrisEngine {
     if (piece == null) {
       return;
     }
+
+    final TSpinType spin =
+        (piece.type == TetrominoType.t && _lastActionWasRotation)
+            ? _detectTSpin(piece)
+            : TSpinType.none;
 
     // Top-out: a piece that locks entirely above the visible field ends the run.
     final bool anyVisible =
@@ -272,28 +282,31 @@ class TetrisEngine {
 
     final LineClearOutcome outcome = _board.clearFullRows();
     _board = outcome.board;
-    if (outcome.clearedRows > 0) {
-      _onLinesCleared(outcome.clearedRows);
-    } else {
-      _combo = -1; // combo breaks on a non-clearing placement
-    }
+    _applyScoring(outcome.clearedRows, spin);
 
     _canHold = true;
     _spawnNext();
   }
 
-  void _onLinesCleared(int rows) {
-    final bool difficult = TetrisScoring.isDifficultClear(rows);
-    _score += TetrisScoring.lineClearScore(
-      clearedRows: rows,
+  void _applyScoring(int rows, TSpinType spin) {
+    _score += TetrisScoring.actionScore(
+      rows: rows,
       level: _level,
-      backToBack: difficult && _backToBack,
+      spin: spin,
+      backToBack:
+          _backToBack && TetrisScoring.isDifficult(rows: rows, spin: spin),
     );
+
+    if (rows <= 0) {
+      _combo = -1; // combo breaks on a non-clearing placement
+      return;
+    }
+
     _combo += 1;
     if (_combo > 0) {
       _score += TetrisScoring.comboScore(combo: _combo, level: _level);
     }
-    _backToBack = difficult;
+    _backToBack = TetrisScoring.isDifficult(rows: rows, spin: spin);
 
     final int previousLevel = _level;
     _linesCleared += rows;
@@ -302,6 +315,37 @@ class TetrisEngine {
     if (_level != previousLevel) {
       _events.add(TetrisEvent(TetrisEventType.levelUp, _level));
     }
+  }
+
+  TSpinType _detectTSpin(FallingPiece piece) {
+    final int cx = piece.originX + 1;
+    final int cy = piece.originY + 1;
+    bool filled(int x, int y) {
+      if (x < 0 || x >= _board.width || y >= _board.height) {
+        return true; // walls and floor count as filled
+      }
+      if (y < 0) {
+        return false; // open space above the field
+      }
+      return _board.cellAt(x, y) != null;
+    }
+
+    final bool tl = filled(cx - 1, cy - 1);
+    final bool tr = filled(cx + 1, cy - 1);
+    final bool bl = filled(cx - 1, cy + 1);
+    final bool br = filled(cx + 1, cy + 1);
+    final int count =
+        (tl ? 1 : 0) + (tr ? 1 : 0) + (bl ? 1 : 0) + (br ? 1 : 0);
+    if (count < 3) {
+      return TSpinType.none;
+    }
+    final (bool, bool) front = switch (piece.rotationIndex & 3) {
+      0 => (tl, tr), // T points up
+      1 => (tr, br), // right
+      2 => (bl, br), // down
+      _ => (tl, bl), // left
+    };
+    return (front.$1 && front.$2) ? TSpinType.full : TSpinType.mini;
   }
 
   void _holdPiece() {
@@ -332,6 +376,7 @@ class TetrisEngine {
     _gravityAccumMs = 0;
     _lockAccumMs = 0;
     _lockResets = 0;
+    _lastActionWasRotation = false;
     if (_board.collides(piece)) {
       // Block-out: no room to spawn.
       _active = piece;
@@ -356,5 +401,61 @@ class TetrisEngine {
   void _endGame() {
     _gameOver = true;
     _events.add(const TetrisEvent(TetrisEventType.gameOver));
+  }
+
+  /// Serializes the live run for resume-after-kill. The 7-bag is intentionally
+  /// not serialized; on [restore] the upcoming pieces are re-rolled.
+  Map<String, Object?> toSnapshot() {
+    return <String, Object?>{
+      'board': _board.toJson(),
+      'active': _active?.toJson(),
+      'hold': _hold?.name,
+      'can_hold': _canHold,
+      'score': _score,
+      'lines': _linesCleared,
+      'level': _level,
+      'combo': _combo,
+      'back_to_back': _backToBack,
+    };
+  }
+
+  /// Restores a run from [toSnapshot]. Marks the engine started; spawns a fresh
+  /// active piece if the snapshot had none.
+  void restore(Map<String, Object?> json) {
+    _started = true;
+    _gameOver = false;
+    _board = TetrisBoard.fromJson(
+      (json['board'] as Map?)?.cast<String, Object?>() ?? <String, Object?>{},
+    );
+    final Object? rawActive = json['active'];
+    _active = rawActive is Map
+        ? FallingPiece.fromJson(rawActive.cast<String, Object?>())
+        : null;
+    _hold = _typeFromName(json['hold']);
+    _canHold = json['can_hold'] as bool? ?? true;
+    _score = json['score'] as int? ?? 0;
+    _linesCleared = json['lines'] as int? ?? 0;
+    _level = json['level'] as int? ?? 1;
+    _combo = json['combo'] as int? ?? -1;
+    _backToBack = json['back_to_back'] as bool? ?? false;
+    _gravityAccumMs = 0;
+    _lockAccumMs = 0;
+    _lockResets = 0;
+    _lastActionWasRotation = false;
+    if (_active == null) {
+      _spawnNext();
+    }
+  }
+
+  static TetrominoType? _typeFromName(Object? name) {
+    if (name is! String) {
+      return null;
+    }
+    for (final TetrominoType t in TetrominoType.values) {
+      if (t.name == name) {
+        return t;
+      }
+    }
+    return null;
   }
 }

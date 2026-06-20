@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 
 import '../../../core/device/haptics_controller.dart';
 import '../../../core/di/di_container.dart';
+import '../../../data/analytics/analytics_tracker.dart';
 import '../../../domain/tetris/tetris_engine.dart';
 import '../../../domain/tetris/tetromino.dart';
 import '../../../ui/theme/app_theme.dart';
 import '../../../ui/widgets/nebula_background.dart';
 import '../../game_loop/audio/game_sfx_player.dart';
 import '../application/tetris_controller.dart';
+import '../application/tetris_session_store.dart';
 import 'tetris_game.dart';
 
 class TetrisScreen extends StatefulWidget {
@@ -34,10 +36,15 @@ class _TetrisScreenState extends State<TetrisScreen>
     WidgetsBinding.instance.addObserver(this);
     _sfx = sl<GameSfxPlayer>();
     _haptics = sl<HapticsController>();
-    _controller = TetrisController(sfx: _sfx, haptics: _haptics);
+    _controller = TetrisController(
+      sfx: _sfx,
+      haptics: _haptics,
+      analyticsTracker: sl<AnalyticsTracker>(),
+      store: sl<TetrisSessionStore>(),
+    );
     _game = TetrisFlameGame(controller: _controller);
     unawaited(_sfx.preload());
-    _controller.start();
+    unawaited(_controller.initialize());
   }
 
   @override
@@ -62,6 +69,7 @@ class _TetrisScreenState extends State<TetrisScreen>
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
+        _controller.saveActiveGame();
         _game.pauseEngine();
         break;
     }
@@ -129,6 +137,7 @@ class _TetrisScreenState extends State<TetrisScreen>
                   child: Center(
                     child: _GameOverCard(
                       score: _controller.score,
+                      best: _controller.bestScore,
                       lines: _controller.lines,
                       level: _controller.level,
                       onRestart: _controller.restart,
@@ -159,36 +168,53 @@ class _TetrisHud extends StatelessWidget {
         color: LuminaPalette.panel,
         border: Border.all(color: LuminaPalette.panelBorder),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _Metric(label: 'Score', value: '${controller.score}'),
-          const SizedBox(width: 14),
-          _Metric(label: 'Lines', value: '${controller.lines}'),
-          const SizedBox(width: 14),
-          _Metric(label: 'Level', value: '${controller.level}'),
-          const Spacer(),
-          _PieceSlot(label: 'Hold', type: controller.hold),
-          const SizedBox(width: 12),
-          Column(
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _Metric(label: 'Score', value: '${controller.score}'),
+              ),
+              Expanded(
+                child: _Metric(label: 'Best', value: '${controller.bestScore}'),
+              ),
+              Expanded(
+                child: _Metric(label: 'Lines', value: '${controller.lines}'),
+              ),
+              Expanded(
+                child: _Metric(label: 'Level', value: '${controller.level}'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
-                'Next',
-                style: TextStyle(
-                  color: LuminaPalette.textSecondary,
-                  fontSize: 11,
-                  letterSpacing: 0.4,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
+              _PieceSlot(label: 'Hold', type: controller.hold),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
-                  for (int i = 0; i < next.length && i < 3; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: _PiecePreview(type: next[i], size: 26),
+                  const Text(
+                    'Next',
+                    style: TextStyle(
+                      color: LuminaPalette.textSecondary,
+                      fontSize: 11,
+                      letterSpacing: 0.4,
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (int i = 0; i < next.length && i < 3; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: _PiecePreview(type: next[i], size: 26),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ],
@@ -506,12 +532,14 @@ class _PadButtonState extends State<_PadButton> {
 class _GameOverCard extends StatelessWidget {
   const _GameOverCard({
     required this.score,
+    required this.best,
     required this.lines,
     required this.level,
     required this.onRestart,
   });
 
   final int score;
+  final int best;
   final int lines;
   final int level;
   final VoidCallback onRestart;
@@ -540,7 +568,15 @@ class _GameOverCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Score $score   ·   Lines $lines   ·   Level $level',
+            'Score $score   ·   Best $best',
+            style: const TextStyle(
+              color: Color(0xFFD5F4FF),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Lines $lines   ·   Level $level',
             style: const TextStyle(color: LuminaPalette.textSecondary),
           ),
           const SizedBox(height: 20),

@@ -1,36 +1,79 @@
 import 'dart:math' as math;
 
+/// Spin classification at lock time (T-spins only in this baseline).
+enum TSpinType { none, mini, full }
+
 /// Tetris Guideline scoring and the level/gravity curve. Pure functions, no
-/// state — the engine threads level/combo/back-to-back through them.
+/// state — the engine threads level/combo/back-to-back/spin through them.
 class TetrisScoring {
   const TetrisScoring._();
 
-  /// Base score for clearing [clearedRows] (1..4) at [level]. A back-to-back
-  /// "difficult" clear (a Tetris, or later a T-spin) is multiplied by 1.5.
+  /// Score for a lock action: [rows] cleared (0..4) at [level], with an
+  /// optional T-spin [spin]. A back-to-back "difficult" clear (a Tetris, or a
+  /// T-spin that clears lines) is multiplied by 1.5.
+  static int actionScore({
+    required int rows,
+    required int level,
+    TSpinType spin = TSpinType.none,
+    bool backToBack = false,
+  }) {
+    final int base;
+    switch (spin) {
+      case TSpinType.full:
+        base = switch (rows) {
+          0 => 400,
+          1 => 800,
+          2 => 1200,
+          3 => 1600,
+          _ => 1600,
+        };
+      case TSpinType.mini:
+        base = switch (rows) {
+          0 => 100,
+          1 => 200,
+          2 => 400,
+          _ => 400,
+        };
+      case TSpinType.none:
+        base = switch (rows) {
+          1 => 100,
+          2 => 300,
+          3 => 500,
+          4 => 800,
+          _ => 0,
+        };
+    }
+    if (base == 0) {
+      return 0;
+    }
+    final num scaled = base * level;
+    return (isDifficult(rows: rows, spin: spin) && backToBack
+            ? scaled * 1.5
+            : scaled)
+        .round();
+  }
+
+  /// Back-compat alias for a plain line clear (no spin).
   static int lineClearScore({
     required int clearedRows,
     required int level,
     bool backToBack = false,
   }) {
-    final int base = switch (clearedRows) {
-      1 => 100,
-      2 => 300,
-      3 => 500,
-      4 => 800,
-      _ => 0,
-    };
-    if (base == 0) {
-      return 0;
-    }
-    final num scaled = base * level;
-    // Only a Tetris (4 lines) is "difficult" for back-to-back in this baseline
-    // (T-spin recognition lands later).
-    final bool difficult = clearedRows == 4;
-    return (difficult && backToBack ? scaled * 1.5 : scaled).round();
+    return actionScore(
+      rows: clearedRows,
+      level: level,
+      backToBack: backToBack,
+    );
   }
 
-  /// Whether a clear counts as "difficult" for back-to-back chaining.
-  static bool isDifficultClear(int clearedRows) => clearedRows == 4;
+  /// Whether an action counts as "difficult" for back-to-back chaining: a
+  /// Tetris, or any T-spin that clears at least one line.
+  static bool isDifficult({required int rows, TSpinType spin = TSpinType.none}) {
+    if (rows == 4) {
+      return true;
+    }
+    return spin != TSpinType.none && rows > 0;
+  }
 
   /// Combo bonus. [combo] is the number of consecutive piece placements that
   /// cleared at least one line, counting from 0 for the first.

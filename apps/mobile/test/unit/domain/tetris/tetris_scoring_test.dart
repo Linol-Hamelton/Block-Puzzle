@@ -66,4 +66,47 @@ void main() {
       expect(TetrisScoring.gravityInterval(20).inMilliseconds, greaterThanOrEqualTo(1));
     });
   });
+
+  group('TetrisScoring T-spins', () {
+    test('full T-spin base scores at level 1', () {
+      expect(
+          TetrisScoring.actionScore(rows: 0, level: 1, spin: TSpinType.full),
+          400);
+      expect(
+          TetrisScoring.actionScore(rows: 1, level: 1, spin: TSpinType.full),
+          800);
+      expect(
+          TetrisScoring.actionScore(rows: 2, level: 1, spin: TSpinType.full),
+          1200);
+      expect(
+          TetrisScoring.actionScore(rows: 3, level: 1, spin: TSpinType.full),
+          1600);
+    });
+
+    test('mini T-spin base scores at level 1', () {
+      expect(
+          TetrisScoring.actionScore(rows: 0, level: 1, spin: TSpinType.mini),
+          100);
+      expect(
+          TetrisScoring.actionScore(rows: 1, level: 1, spin: TSpinType.mini),
+          200);
+    });
+
+    test('T-spin scales with level and back-to-back', () {
+      expect(
+          TetrisScoring.actionScore(rows: 1, level: 2, spin: TSpinType.full),
+          1600);
+      expect(
+          TetrisScoring.actionScore(
+              rows: 1, level: 1, spin: TSpinType.full, backToBack: true),
+          1200);
+    });
+
+    test('difficulty: a Tetris and line-clearing T-spins are difficult', () {
+      expect(TetrisScoring.isDifficult(rows: 4), isTrue);
+      expect(TetrisScoring.isDifficult(rows: 1), isFalse);
+      expect(TetrisScoring.isDifficult(rows: 1, spin: TSpinType.full), isTrue);
+      expect(TetrisScoring.isDifficult(rows: 0, spin: TSpinType.full), isFalse);
+    });
+  });
 }

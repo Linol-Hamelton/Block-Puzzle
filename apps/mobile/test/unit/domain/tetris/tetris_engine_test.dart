@@ -72,5 +72,20 @@ void main() {
       engine.tick(const Duration(milliseconds: 16));
       expect(engine.isGameOver, isFalse);
     });
+
+    test('snapshot round-trips engine state', () {
+      final TetrisEngine engine = TetrisEngine(seed: 5)..start();
+      engine.applyInput(TetrisInput.hardDrop); // lock one piece
+      final Map<String, Object?> snap = engine.toSnapshot();
+
+      final TetrisEngine restored = TetrisEngine(seed: 99)..restore(snap);
+      expect(restored.score, engine.score);
+      expect(restored.level, engine.level);
+      expect(restored.linesCleared, engine.linesCleared);
+      expect(restored.isStarted, isTrue);
+      expect(restored.isGameOver, isFalse);
+      expect(restored.active, isNotNull);
+      expect(filledCells(restored.board), filledCells(engine.board));
+    });
   });
 }

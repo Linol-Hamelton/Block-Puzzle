@@ -2,6 +2,9 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-20 (Tetris — completion)
+- Finished Tetris feature work: **T-spin** detection + scoring (`actionScore`, 3-corner rule), **resume persistence + best score** via `TetrisSessionStore` (engine `toSnapshot`/`restore`, saved on pause / restored on launch / cleared on game over, DI-registered), and **analytics** (`game_start`/`game_end`/`line_clear` with `game_id:'tetris'`; schema extended). HUD shows best score. `flutter analyze` clean; **158 tests pass** (+5). Remaining: on-device feel tuning, Mode Hub seam, daily seed, VFX/perf — see [architecture/05_TETRIS_IMPLEMENTATION_PLAN.md](architecture/05_TETRIS_IMPLEMENTATION_PLAN.md).
+
 ## 2026-06-19 (Verification)
 - Toolchain installed (Flutter 3.44.2 / Dart 3.12.2). `flutter analyze` → **No issues found**; `flutter test` → **all 153 tests passed** (including the Tetris domain suites and the analytics-decorator test). Resolved 4 analyzer lints (3 from this work + 1 pre-existing unnecessary import in `block_puzzle_game.dart`). Still pending: billing deploy + Play sandbox before transacting; Tetris DI/persistence/analytics wiring + on-device feel tuning.
 

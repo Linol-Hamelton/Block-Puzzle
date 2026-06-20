@@ -33,15 +33,21 @@ Tests (the safety net — run on a real toolchain):
 | `lib/features/tetris/presentation/tetris_screen.dart` | Screen: `GameWidget` in a 10:20 box, HUD (score/lines/level + hold + next-3 previews via a mini painter), on-screen controls (rotate L/R, hold, move L/R + soft drop with **press-and-hold auto-repeat**, hard drop), lifecycle pause/resume, game-over overlay with restart. |
 | `lib/ui/screens/home_screen.dart` | "Play Tetris" button routes to `TetrisScreen`. |
 
+## Done (completion, 2026-06-20)
+
+- **T-spin detection + scoring**: 3-corner rule with front/back full-vs-mini classification (`_detectTSpin`); `TetrisScoring.actionScore` covers T-spin / Tetris / back-to-back / combo.
+- **Persistence**: engine `toSnapshot`/`restore` + `TetrisSessionStore` (SharedPreferences) for best score and resume-after-kill — saved on app pause, restored on launch, cleared on game over; registered in DI.
+- **Analytics**: `game_start` / `game_end` / `line_clear` emitted with `game_id: 'tetris'`, mode, level, lines, duration; new optional fields registered in `AnalyticsSchemaValidator` so `ValidatedAnalyticsTracker` does not quarantine them.
+- **HUD**: best score shown live and on the game-over card.
+- Verified: `flutter analyze` clean, 158 tests pass (incl. T-spin scoring + snapshot round-trip).
+
 ## Remaining work (ordered)
 
-1. **On-device play-test** (analyze + unit tests already pass): validate input feel, gravity cadence, and rendering on a real device/emulator.
-2. **Persistence**: a `TetrisGameSnapshot` (engine serialize/deserialize) behind the existing `GameSessionRepository` pattern, per-game Hive key so a paused Tetris and Classic coexist (Multi-Game plan §8).
-3. **Analytics**: emit `game_start`/`game_end`/etc. with `game_id: 'tetris'` + Tetris params (level, lines, tetris/t-spin counts); register new fields in `AnalyticsSchemaValidator` or `ValidatedAnalyticsTracker` will quarantine them.
-4. **DI / Mode Hub**: register the Tetris graph in `di_container.dart` (currently the screen builds its own controller from `sl<GameSfxPlayer>()`/`sl<HapticsController>()`); fold into the `GameId`/`GameRegistry` seam when Phase 0 of the Multi-Game plan lands.
-5. **Feel / parity tuning**: DAS/ARR repeat timing, lock-delay reset feel, spawn buffer, level-curve, and **T-spin detection + scoring**.
-6. **Daily-challenge**: wire the deterministic seed (the engine + 7-bag already accept one) to the existing daily pattern; add a Tetris daily leaderboard later.
-7. **Polish**: line-clear flash / lock flash VFX, next-queue depth, perf validation (60fps at high gravity on Redmi 9/10).
+1. **On-device play-test**: input feel, gravity cadence, rendering, and the resume flow on a real device/emulator.
+2. **Mode Hub seam**: fold the Tetris controller/engine into the `GameId`/`GameRegistry` abstraction (Multi-Game plan Phase 0/1); migrate the SharedPreferences snapshot into the unified per-game envelope.
+3. **Feel / parity tuning**: DAS/ARR repeat timing, lock-delay reset feel, spawn buffer; the wall-kick mini→full T-spin upgrade nuance.
+4. **Daily-challenge**: wire the deterministic seed (engine + 7-bag already accept one) to the daily pattern; Tetris daily leaderboard later.
+5. **Polish**: line-clear / lock flash VFX, next-queue depth, perf validation (60fps at high gravity on low-end Android).
 
 ## Notes / open decisions
 - Spawn currently places pieces at `originY = 0` (top of the visible field). If top-out feels too eager, add a 1–2 row hidden spawn buffer.
