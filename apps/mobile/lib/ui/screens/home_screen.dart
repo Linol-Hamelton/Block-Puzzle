@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/game_loop/presentation/game_loop_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/store/presentation/store_screen.dart';
 import '../../features/tetris/presentation/tetris_screen.dart';
 import '../theme/app_theme.dart';
@@ -11,7 +12,22 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lumina Blocks')),
+      appBar: AppBar(
+        title: const Text('Lumina Blocks'),
+        actions: <Widget>[
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: Stack(
         children: <Widget>[
           Positioned.fill(

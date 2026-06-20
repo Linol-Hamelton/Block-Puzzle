@@ -2,6 +2,11 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-20 (Game-feel follow-ups — shared particles in Classic + Settings)
+- **Classic adopts `BurstField`:** line-clear particles in Classic now use the shared `ui/effects/BurstField` (a `_BurstLayer` Flame component); the old `CellBurstComponent` was removed. Both games now share one particle system.
+- **Settings screen:** new `features/settings/presentation/settings_screen.dart` with Music / Sound effects / Haptics toggles (music via `MusicController`; sound/haptics persisted to `PlayerSettings` and applied to the live singletons). Reachable from a gear icon on the home screen. The in-game AppBar music toggle was removed in favor of Settings.
+- `flutter analyze` clean; 162 tests pass.
+
 ## 2026-06-20 (Game-feel P3 — music & shared juice)
 - **Background music:** `MusicController` (looping via `FlameAudio.bgm`) with a persisted enable flag; a placeholder seamless ambient loop (`assets/audio/music_loop.wav`, project-generated). Wired into Classic and Tetris screens with lifecycle pause/resume and an AppBar music on/off toggle. (Settings-screen integration is a follow-up; final music is a content debt.)
 - **Shared juice module:** extracted the Tetris particle system into a reusable `lib/ui/effects/burst_field.dart` (`BurstField`); Tetris now uses it. Classic adoption is a follow-up toward the unified engine.

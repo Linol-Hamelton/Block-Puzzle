@@ -31,7 +31,6 @@ class _TetrisScreenState extends State<TetrisScreen>
   late final TetrisController _controller;
   late final TetrisFlameGame _game;
   bool _isDisposed = false;
-  bool _musicOn = true;
 
   @override
   void initState() {
@@ -57,15 +56,7 @@ class _TetrisScreenState extends State<TetrisScreen>
     if (!mounted) {
       return;
     }
-    setState(() => _musicOn = _music.isEnabled);
     await _music.play();
-  }
-
-  Future<void> _toggleMusic() async {
-    await _music.setEnabled(!_music.isEnabled);
-    if (mounted) {
-      setState(() => _musicOn = _music.isEnabled);
-    }
   }
 
   @override
@@ -116,16 +107,6 @@ class _TetrisScreenState extends State<TetrisScreen>
             ],
           ),
         ),
-        actions: <Widget>[
-          IconButton(
-            tooltip: _musicOn ? 'Music: on' : 'Music: off',
-            icon: Icon(
-              _musicOn ? Icons.music_note_rounded : Icons.music_off_rounded,
-              color: const Color(0xFFC5F2FF),
-            ),
-            onPressed: _toggleMusic,
-          ),
-        ],
       ),
       body: Stack(
         children: <Widget>[

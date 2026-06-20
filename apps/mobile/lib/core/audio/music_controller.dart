@@ -48,9 +48,9 @@ class MusicController {
     } catch (error) {
       _logger.warn('Music preference save failed: $error');
     }
-    if (value) {
-      await play();
-    } else {
+    // Enabling only persists the preference (the active game screen starts
+    // playback); disabling stops any current playback immediately.
+    if (!value) {
       await stop();
     }
   }

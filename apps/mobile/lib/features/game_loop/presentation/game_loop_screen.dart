@@ -42,7 +42,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
   int _comboToastSeq = 0;
   GameLoopViewState? _lastObservedState;
   bool _isDisposed = false;
-  bool _musicOn = true;
 
   @override
   void initState() {
@@ -67,15 +66,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     if (!mounted) {
       return;
     }
-    setState(() => _musicOn = _music.isEnabled);
     await _music.play();
-  }
-
-  Future<void> _toggleMusic() async {
-    await _music.setEnabled(!_music.isEnabled);
-    if (mounted) {
-      setState(() => _musicOn = _music.isEnabled);
-    }
   }
 
   @override
@@ -221,16 +212,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
             ],
           ),
         ),
-        actions: <Widget>[
-          IconButton(
-            tooltip: _musicOn ? 'Music: on' : 'Music: off',
-            icon: Icon(
-              _musicOn ? Icons.music_note_rounded : Icons.music_off_rounded,
-              color: const Color(0xFFC5F2FF),
-            ),
-            onPressed: _toggleMusic,
-          ),
-        ],
       ),
       body: ValueListenableBuilder<GameLoopViewState>(
         valueListenable: _controller.stateListenable,

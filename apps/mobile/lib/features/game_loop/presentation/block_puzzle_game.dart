@@ -13,6 +13,7 @@ import '../../../core/device/haptics_controller.dart';
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
+import '../../../ui/effects/burst_field.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -34,6 +35,7 @@ class BlockPuzzleGame extends FlameGame {
   final bool isDailyChallenge;
 
   final BoardComponent _boardComponent = BoardComponent();
+  final BurstField _burst = BurstField();
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
   VoidCallback? _stateListener;
   String _rackSignature = '';
@@ -112,6 +114,7 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     add(_boardComponent);
+    add(_BurstLayer(_burst));
 
     _stateListener = _syncWithState;
     controller.stateListenable.addListener(_stateListener!);
@@ -660,17 +663,15 @@ class BlockPuzzleGame extends FlameGame {
     );
 
     final double cellSize = _boardCellSize;
+    final Color burstColor = _currentPalette.occupiedColor;
     for (final BoardCell cell in clearedCells) {
-      final Vector2 cellCenter = Vector2(
-        _boardOrigin.x + (cell.x * cellSize) + (cellSize / 2),
-        _boardOrigin.y + (cell.y * cellSize) + (cellSize / 2),
-      );
-      add(
-        CellBurstComponent(
-          burstCenter: cellCenter,
-          cellSize: cellSize,
-          intensity: strength,
-        ),
+      _burst.spawnBurst(
+        x: _boardOrigin.x + (cell.x * cellSize) + (cellSize / 2),
+        y: _boardOrigin.y + (cell.y * cellSize) + (cellSize / 2),
+        color: burstColor,
+        count: 3,
+        sizeBase: cellSize * 0.12,
+        sizeJitter: cellSize * 0.1,
       );
     }
   }
@@ -1722,56 +1723,24 @@ class ScorePopComponent extends PositionComponent {
   }
 }
 
-class CellBurstComponent extends PositionComponent {
-  CellBurstComponent({
-    required this.burstCenter,
-    required this.cellSize,
-    required this.intensity,
-  }) {
-    priority = 205;
+/// Thin Flame layer that advances and draws the shared [BurstField] on top of
+/// the board.
+class _BurstLayer extends PositionComponent {
+  _BurstLayer(this._field) {
+    priority = 220;
   }
 
-  final Vector2 burstCenter;
-  final double cellSize;
-  final int intensity;
-  static const double _duration = 0.30;
-  double _elapsed = 0;
+  final BurstField _field;
 
   @override
   void update(double dt) {
     super.update(dt);
-    _elapsed += dt;
-    if (_elapsed >= _duration) {
-      removeFromParent();
-    }
+    _field.update(dt);
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final double t = (_elapsed / _duration).clamp(0, 1);
-    final double alpha = (1 - t).clamp(0, 1);
-    final double maxRadius = (cellSize * 0.52) + (intensity * 1.5);
-    final double radius = maxRadius * (0.35 + (0.65 * t));
-
-    final Paint ringPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2 + (intensity * 0.3)
-      ..color = Color.fromRGBO(176, 236, 255, 0.9 * alpha);
-
-    final Paint corePaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Color.fromRGBO(112, 199, 255, 0.34 * alpha);
-
-    canvas.drawCircle(
-      Offset(burstCenter.x, burstCenter.y),
-      radius * 0.48,
-      corePaint,
-    );
-    canvas.drawCircle(
-      Offset(burstCenter.x, burstCenter.y),
-      radius,
-      ringPaint,
-    );
+    _field.render(canvas);
   }
 }
