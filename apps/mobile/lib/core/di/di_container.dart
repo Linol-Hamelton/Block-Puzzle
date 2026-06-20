@@ -51,6 +51,7 @@ import '../../features/monetization/debug_ad_service.dart';
 import '../../features/monetization/iap_store_service.dart';
 import '../../features/monetization/local_catalog_iap_store_service.dart';
 import '../../features/store/application/store_controller.dart';
+import '../../features/match3/application/match3_session_store.dart';
 import '../../features/tetris/application/tetris_session_store.dart';
 import '../config/app_config.dart';
 import '../logging/app_logger.dart';
@@ -236,6 +237,10 @@ Future<void> configureDependencies() async {
 
   sl.registerLazySingleton<TetrisSessionStore>(
     () => TetrisSessionStore(logger: sl()),
+  );
+
+  sl.registerLazySingleton<Match3SessionStore>(
+    () => Match3SessionStore(logger: sl()),
   );
 
   sl.registerFactory<StoreController>(

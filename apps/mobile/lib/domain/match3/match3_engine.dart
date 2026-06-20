@@ -73,6 +73,11 @@ class Match3Engine {
   bool _started = false;
   bool _gameOver = false;
 
+  /// Cells cleared by the most recent swap (union across its cascade steps),
+  /// with the color each held at clear time — for the view's particle bursts.
+  final List<({GridPos pos, TileColor color})> _lastCleared =
+      <({GridPos pos, TileColor color})>[];
+
   final List<Match3Event> _events = <Match3Event>[];
 
   // ── Public state ──
@@ -85,6 +90,8 @@ class Match3Engine {
   bool get isGameOver => _gameOver;
   bool get hasActiveGame => _started && !_gameOver;
   int get colorCount => _spawner.colorCount;
+  List<({GridPos pos, TileColor color})> get lastCleared =>
+      List<({GridPos pos, TileColor color})>.unmodifiable(_lastCleared);
 
   /// Begins the run: fills a starting board with no pre-existing match and at
   /// least one legal move. Idempotent.
@@ -119,6 +126,14 @@ class Match3Engine {
     final CascadeOutcome outcome = _resolver.resolve(_grid);
     _grid = outcome.grid;
     _score += outcome.totalScore;
+    _lastCleared
+      ..clear()
+      ..addAll(<({GridPos pos, TileColor color})>[
+        for (final CascadeStep step in outcome.steps)
+          for (final MapEntry<GridPos, TileColor> e
+              in step.clearedColors.entries)
+            (pos: e.key, color: e.value),
+      ]);
     for (final CascadeStep step in outcome.steps) {
       _events.add(Match3Event(
         Match3EventType.match,

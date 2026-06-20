@@ -9,6 +9,7 @@ import 'tile_spawner.dart';
 class CascadeStep {
   const CascadeStep({
     required this.cleared,
+    required this.clearedColors,
     required this.cascadeLevel,
     required this.longestRun,
     required this.gained,
@@ -16,6 +17,10 @@ class CascadeStep {
 
   /// Cells removed in this step (pre-gravity positions).
   final Set<GridPos> cleared;
+
+  /// Color of each cleared cell, captured before removal (so the presentation
+  /// layer can spawn matching-colored particles after the board has settled).
+  final Map<GridPos, TileColor> clearedColors;
 
   /// 1 for the swap's own match, 2 for the first chained match, etc.
   final int cascadeLevel;
@@ -78,6 +83,10 @@ class CascadeResolver {
           longestRun = m.length;
         }
       }
+      final Map<GridPos, TileColor> clearedColors = <GridPos, TileColor>{
+        for (final GridPos p in cleared)
+          if (current.atPos(p) != null) p: current.atPos(p)!,
+      };
 
       final int gained = Match3Scoring.clearScore(
         clearedCount: cleared.length,
@@ -87,6 +96,7 @@ class CascadeResolver {
 
       steps.add(CascadeStep(
         cleared: cleared,
+        clearedColors: clearedColors,
         cascadeLevel: level,
         longestRun: longestRun,
         gained: gained,

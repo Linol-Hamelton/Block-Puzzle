@@ -2,6 +2,12 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-21 (Match-3 "Три в ряд" — Phase 2)
+- Shipped the third game on the shared meta-layer (per [architecture/04_MULTI_GAME_ENGINE_PLAN.md](architecture/04_MULTI_GAME_ENGINE_PLAN.md) / ADR-002), reachable from a new "Play Match 3" button on the home screen.
+- **Domain core** (`lib/domain/match3/`, pure Dart): `TileGrid`, `MatchDetector` (H/V runs of 3+ with de-duplicated union), `SwapValidator` (adjacency + revert-on-no-match), `TileSpawner` (seeded, no-pre-existing-match fill + refill), `CascadeResolver` (deterministic clear→gravity→refill→re-detect with per-step records), `Match3Scoring` (per-tile × cascade multiplier + 4/5-run bonuses), `Match3Engine` (move-limited run, no-moves reshuffle, events, snapshot/restore). Special tiles (line/bomb gems) intentionally deferred — the detonation matrix is the top clone-bug risk.
+- **Presentation:** `Match3Controller` (engine ↔ SFX/haptics/analytics, resume snapshot + best score via `Match3SessionStore`), `Match3FlameGame` (gem render + selection + clear/cascade juice: particles, flash, combo pulse, "+N" score pops), `Match3Screen` (tap-to-select / tap-adjacent and swipe input, lifecycle persistence, game-over card). DI-registered; analytics emit `game_id:'match3'` (schema gained `cascade` on `line_clear`, `moves_used` on `game_end`, `resumed` on `game_start`).
+- `flutter analyze` clean; **196 tests** (+33: 29 domain incl. a constructed 2-deep cascade, +4 controller wiring).
+
 ## 2026-06-21 (Review follow-ups — batch 1)
 - Closed the 4 priority follow-ups from the PR #42 review: (1) billing token binding is now atomic (check inside `runTransaction` in `verifyPurchase`); (2) `game_end` de-duplicated per round in both Tetris and Classic (`_gameEndEmitted` guard); (3) mid-clear snapshot no longer loses the lock/score (`TetrisEngine.flushPendingClear` invoked from `saveActiveGame`); (4) Tetris teardown hardened (controller `_disposed` guard + `onVisualEvent` cleared + Flame loop paused on dispose). `flutter analyze` clean; 163 tests. Details: [audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md](audit/03_GAMEFEEL_REVIEW_FOLLOWUPS_2026-06-21.md).
 
