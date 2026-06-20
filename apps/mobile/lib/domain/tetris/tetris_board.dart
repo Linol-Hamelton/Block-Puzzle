@@ -129,6 +129,19 @@ class TetrisBoard {
     );
   }
 
+  /// Clears the top [n] rows (sets them empty) — used by revive/continue to
+  /// make room near the spawn area.
+  TetrisBoard clearTopRows(int n) {
+    final List<TetrominoType?> next = List<TetrominoType?>.of(_cells);
+    final int limit = n < height ? n : height;
+    for (int y = 0; y < limit; y++) {
+      for (int x = 0; x < width; x++) {
+        next[_index(x, y)] = null;
+      }
+    }
+    return TetrisBoard(width: width, height: height, cells: next);
+  }
+
   /// The lowest number of rows [piece] can drop before colliding (for ghost /
   /// hard-drop). Returns 0 if the piece cannot move down.
   int dropDistance(FallingPiece piece) {

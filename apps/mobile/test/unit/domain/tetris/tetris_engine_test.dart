@@ -115,6 +115,45 @@ void main() {
       expect(engine.linesCleared, 1);
     });
 
+    test('perfect clear (all-clear) emits a bonus event', () {
+      // Empty 4-wide board; a horizontal I hard-drops to fill + clear the only
+      // occupied row, emptying the board → Perfect Clear.
+      final TetrisEngine engine = TetrisEngine(width: 4, height: 8)
+        ..restore(<String, Object?>{
+          'board': TetrisBoard(width: 4, height: 8).toJson(),
+          'active': const FallingPiece(
+            type: TetrominoType.i,
+            rotationIndex: 0,
+            originX: 0,
+            originY: 0,
+          ).toJson(),
+        });
+
+      engine.applyInput(TetrisInput.hardDrop);
+      engine.tick(const Duration(milliseconds: 200));
+
+      final List<TetrisEventType> events =
+          engine.drainEvents().map((TetrisEvent e) => e.type).toList();
+      expect(events, contains(TetrisEventType.perfectClear));
+      expect(engine.board.isEmpty, isTrue);
+    });
+
+    test('revive clears the top and resumes after game over', () {
+      // A completely full board blocks out the spawn → game over.
+      final List<TetrominoType?> cells =
+          List<TetrominoType?>.filled(4 * 8, TetrominoType.l);
+      final TetrisBoard board =
+          TetrisBoard(width: 4, height: 8, cells: cells);
+      final TetrisEngine engine = TetrisEngine(width: 4, height: 8)
+        ..restore(<String, Object?>{'board': board.toJson()});
+      expect(engine.isGameOver, isTrue);
+
+      final bool ok = engine.reviveClearTop(rows: 6);
+      expect(ok, isTrue);
+      expect(engine.isGameOver, isFalse);
+      expect(engine.active, isNotNull);
+    });
+
     test('snapshot round-trips engine state', () {
       final TetrisEngine engine = TetrisEngine(seed: 5)..start();
       engine.applyInput(TetrisInput.hardDrop); // lock one piece

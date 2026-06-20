@@ -372,6 +372,7 @@ class AnalyticsSchemaValidator {
         'method',
       },
       optionalParams: <String>{
+        'game_id',
         'score_total',
         'moves_played',
       },

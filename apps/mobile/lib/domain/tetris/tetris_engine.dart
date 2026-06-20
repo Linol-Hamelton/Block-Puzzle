@@ -135,6 +135,27 @@ class TetrisEngine {
     _spawnNext();
   }
 
+  /// Revive after game over: clear the top [rows] rows to make room, then
+  /// resume. Returns true if the run continues (false if it is still blocked).
+  bool reviveClearTop({int rows = 6}) {
+    if (!_gameOver) {
+      return false;
+    }
+    _board = _board.clearTopRows(rows);
+    _gameOver = false;
+    _started = true;
+    _active = null;
+    _clearingRows = <int>[];
+    _clearTimerMs = 0;
+    _gravityAccumMs = 0;
+    _lockAccumMs = 0;
+    _lockResets = 0;
+    _lastActionWasRotation = false;
+    _canHold = true;
+    _spawnNext();
+    return !_gameOver;
+  }
+
   /// Drains accumulated events since the last call.
   List<TetrisEvent> drainEvents() {
     final List<TetrisEvent> drained = List<TetrisEvent>.of(_events);
@@ -335,6 +356,12 @@ class TetrisEngine {
     _board = _board.clearFullRows().board;
     _clearingRows = <int>[];
     _clearTimerMs = 0;
+    if (_board.isEmpty) {
+      // Perfect Clear (All-Clear): board emptied by the clear.
+      final int bonus = 1000 * _level;
+      _score += bonus;
+      _events.add(TetrisEvent(TetrisEventType.perfectClear, 0, bonus));
+    }
     _canHold = true;
     _spawnNext();
   }

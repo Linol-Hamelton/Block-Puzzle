@@ -399,9 +399,12 @@ class GameLoopController {
     final lineResult = clearLinesUseCase.execute(
       boardState: placeResult.boardState,
     );
+    final bool isAllClear = lineResult.clearedTotal > 0 &&
+        lineResult.boardState.occupiedCells.isEmpty;
     final ScoreState nextScore = computeScoreUseCase.execute(
       previous: state.scoreState,
       clearedLines: lineResult.clearedTotal,
+      allClear: isAllClear,
     );
 
     List<Piece> nextRack = List<Piece>.from(state.rackPieces)
@@ -572,6 +575,7 @@ class GameLoopController {
       comboStreak: nextScore.comboStreak,
       totalScore: nextScore.totalScore,
       isGameOver: isGameOver,
+      isAllClear: isAllClear,
     );
   }
 

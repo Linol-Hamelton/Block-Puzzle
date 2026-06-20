@@ -140,6 +140,8 @@ class _TetrisScreenState extends State<TetrisScreen>
                       best: _controller.bestScore,
                       lines: _controller.lines,
                       level: _controller.level,
+                      canRevive: _controller.canRevive,
+                      onRevive: _controller.revive,
                       onRestart: _controller.restart,
                     ),
                   ),
@@ -548,6 +550,8 @@ class _GameOverCard extends StatelessWidget {
     required this.best,
     required this.lines,
     required this.level,
+    required this.canRevive,
+    required this.onRevive,
     required this.onRestart,
   });
 
@@ -555,6 +559,8 @@ class _GameOverCard extends StatelessWidget {
   final int best;
   final int lines;
   final int level;
+  final bool canRevive;
+  final VoidCallback onRevive;
   final VoidCallback onRestart;
 
   @override
@@ -593,6 +599,21 @@ class _GameOverCard extends StatelessWidget {
             style: const TextStyle(color: LuminaPalette.textSecondary),
           ),
           const SizedBox(height: 20),
+          if (canRevive) ...<Widget>[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E9E6B),
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: onRevive,
+                icon: const Icon(Icons.bolt_rounded),
+                label: const Text('Continue'),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(

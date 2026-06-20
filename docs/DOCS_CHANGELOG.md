@@ -2,6 +2,12 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-20 (Game-feel P2 — depth & tension)
+- **Perfect Clear (All-Clear):** Tetris emits a `perfectClear` bonus event (1000×level) with a "PERFECT CLEAR!" fanfare; Classic adds a +100 all-clear bonus (`ScoreInput.allClear` → `BasicScoreService`) and a board-flash + shake + "PERFECT!" fanfare via `MoveProcessingResult.isAllClear`.
+- **Tetris danger signal:** a pulsing red glow at the top of the board when the stack nears the ceiling; **lock-flash** briefly whitens just-locked cells.
+- **Tetris continue/revive:** once per run, a "Continue" button on the game-over card clears the top rows and resumes (`reviveClearTop`), with a `revive_applied` analytics event.
+- `flutter analyze` clean; 162 tests pass (+3: perfect clear, revive, all-clear bonus).
+
 ## 2026-06-20 (Game-feel P1 — clear action)
 - **Tetris clear action:** engine now runs a delayed clearing phase (highlight → dissolve → collapse, ~120 ms) exposed via `isClearing`/`clearingRows`/`clearProgress`; the Flame view spawns a colored particle burst on the cleared cells and brightens them as they dissolve.
 - **Tetris combo:** engine emits `combo` events; controller plays the combo SFX and shows a "COMBO xN" pulse.

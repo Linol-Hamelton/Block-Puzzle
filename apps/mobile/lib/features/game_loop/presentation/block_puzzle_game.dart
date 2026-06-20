@@ -338,6 +338,10 @@ class BlockPuzzleGame extends FlameGame {
       }
     }
 
+    if (result.isAllClear) {
+      _playPerfectClear();
+    }
+
     if (result.comboStreak > 1) {
       unawaited(sfxPlayer.playCombo(comboStreak: result.comboStreak));
       _playComboAnimation(comboStreak: result.comboStreak);
@@ -701,6 +705,33 @@ class BlockPuzzleGame extends FlameGame {
       ScorePopComponent(
         text: '+$delta',
         startPosition: Vector2(cx, cy),
+      ),
+    );
+  }
+
+  void _playPerfectClear() {
+    unawaited(sfxPlayer.playCombo(comboStreak: 4));
+    unawaited(haptics.heavyImpact());
+    add(
+      LineClearFlashComponent(
+        boardOrigin: _boardOrigin.clone(),
+        boardSize: Vector2.all(_boardCellSize * 8),
+        strength: 5,
+      ),
+    );
+    camera.viewfinder.add(
+      MoveEffect.by(
+        Vector2(6, 6),
+        EffectController(duration: 0.06, alternate: true, repeatCount: 5),
+      ),
+    );
+    add(
+      ComboPulseComponent(
+        text: 'PERFECT!',
+        startPosition: Vector2(
+          _boardOrigin.x + (_boardCellSize * 2.2),
+          _boardOrigin.y + (_boardCellSize * 3.5),
+        ),
       ),
     );
   }

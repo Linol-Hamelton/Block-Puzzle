@@ -37,7 +37,10 @@ class TetrisFlameGame extends FlameGame {
   int _pulsePriority = 0;
   String? _scorePopText;
   double _scorePopElapsed = 0;
+  double _clock = 0; // free-running clock for pulsing effects
   final List<_Particle> _particles = <_Particle>[];
+  final List<TCell> _lastActiveCells = <TCell>[];
+  final List<_LockFlash> _lockFlashes = <_LockFlash>[];
   final math.Random _rng = math.Random();
 
   // Last computed board layout (screen space), so event handlers can place
@@ -95,11 +98,15 @@ class TetrisFlameGame extends FlameGame {
       case TetrisEventType.gameOver:
         _shake = math.max(_shake, 0.8);
         break;
+      case TetrisEventType.lock:
+        for (final TCell c in _lastActiveCells) {
+          _lockFlashes.add(_LockFlash(c.x, c.y));
+        }
+        break;
       case TetrisEventType.spawn:
       case TetrisEventType.move:
       case TetrisEventType.rotate:
       case TetrisEventType.softDrop:
-      case TetrisEventType.lock:
       case TetrisEventType.hold:
         break;
     }
@@ -203,6 +210,13 @@ class TetrisFlameGame extends FlameGame {
       }
       _particles.removeWhere((_Particle p) => p.life <= 0);
     }
+    _clock += dt;
+    if (_lockFlashes.isNotEmpty) {
+      for (final _LockFlash f in _lockFlashes) {
+        f.life -= dt;
+      }
+      _lockFlashes.removeWhere((_LockFlash f) => f.life <= 0);
+    }
   }
 
   @override
@@ -263,13 +277,53 @@ class TetrisFlameGame extends FlameGame {
         }
       }
     }
+    _lastActiveCells.clear();
     if (active != null) {
       final Color color = tetrominoColors[active.type]!;
       for (final TCell c in active.absoluteCells()) {
         if (c.y >= 0) {
           _paintCell(canvas, ox, oy, c.x, c.y, cell, color);
+          _lastActiveCells.add(c);
         }
       }
+    }
+
+    if (_lockFlashes.isNotEmpty) {
+      for (final _LockFlash f in _lockFlashes) {
+        final double a = (f.life / _LockFlash.maxLife).clamp(0, 1).toDouble();
+        final Rect r = Rect.fromLTWH(
+          ox + (f.x * cell) + (cell * 0.06),
+          oy + (f.y * cell) + (cell * 0.06),
+          cell - (cell * 0.12),
+          cell - (cell * 0.12),
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(r, Radius.circular(cell * 0.18)),
+          Paint()..color = Colors.white.withValues(alpha: a * 0.75),
+        );
+      }
+    }
+
+    final int topRow = _topOccupiedRow(engine);
+    const int dangerRows = 4;
+    if (topRow < dangerRows) {
+      final double intensity = (dangerRows - topRow) / dangerRows;
+      final double pulse = 0.55 + (0.45 * math.sin(_clock * 6));
+      final double a = (intensity * 0.5 * pulse).clamp(0, 0.6).toDouble();
+      final Rect dRect =
+          Rect.fromLTWH(ox, oy, boardW, cell * dangerRows.toDouble());
+      canvas.drawRect(
+        dRect,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[
+              Color.fromRGBO(255, 80, 110, a),
+              const Color(0x00FF506E),
+            ],
+          ).createShader(dRect),
+      );
     }
 
     if (_flash > 0) {
@@ -384,6 +438,17 @@ class TetrisFlameGame extends FlameGame {
         oy + (boardH * 0.34) - (t * 22),
       ),
     );
+  }
+
+  int _topOccupiedRow(TetrisEngine engine) {
+    for (int y = 0; y < engine.board.height; y++) {
+      for (int x = 0; x < engine.board.width; x++) {
+        if (engine.board.cellAt(x, y) != null) {
+          return y;
+        }
+      }
+    }
+    return engine.board.height;
   }
 
   void _renderBackground(
@@ -533,4 +598,13 @@ class _Particle {
   final double maxLife;
   final Color color;
   final double size;
+}
+
+class _LockFlash {
+  _LockFlash(this.x, this.y) : life = maxLife;
+
+  static const double maxLife = 0.16;
+  final int x;
+  final int y;
+  double life;
 }

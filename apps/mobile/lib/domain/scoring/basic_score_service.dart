@@ -19,9 +19,10 @@ class BasicScoreService implements ScoreService {
     final int nextComboStreak = previous.comboStreak + 1;
     final int lineScore = input.clearedLines * 10;
     final int comboBonus = (nextComboStreak - 1) * 5;
+    final int allClearBonus = input.allClear ? 100 : 0;
 
     return ScoreState(
-      totalScore: previous.totalScore + lineScore + comboBonus,
+      totalScore: previous.totalScore + lineScore + comboBonus + allClearBonus,
       comboStreak: nextComboStreak,
     );
   }

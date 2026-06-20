@@ -42,6 +42,7 @@ class TetrisController extends ChangeNotifier {
 
   TetrisEngine _engine;
   bool _started = false;
+  bool _reviveUsed = false;
   int _bestScore = 0;
   String _roundId = 'tetris_0';
   DateTime? _startedAt;
@@ -56,6 +57,7 @@ class TetrisController extends ChangeNotifier {
   int get lines => _engine.linesCleared;
   int get bestScore => _bestScore > _engine.score ? _bestScore : _engine.score;
   bool get isGameOver => _engine.isGameOver;
+  bool get canRevive => _engine.isGameOver && !_reviveUsed;
   bool get canHold => _engine.canHold;
   TetrominoType? get hold => _engine.hold;
   List<TetrominoType> get nextQueue => _engine.nextQueue;
@@ -66,6 +68,7 @@ class TetrisController extends ChangeNotifier {
       return;
     }
     _started = true;
+    _reviveUsed = false;
     _bestScore = await (_store?.loadBestScore() ?? Future<int>.value(0));
     final Map<String, Object?>? snapshot = await _store?.loadSnapshot();
     if (snapshot != null) {
@@ -81,8 +84,29 @@ class TetrisController extends ChangeNotifier {
   void restart() {
     unawaited(_store?.clearSnapshot());
     _engine = TetrisEngine(seed: _seed);
+    _reviveUsed = false;
     _engine.start();
     _beginRound();
+    _consumeEvents();
+    notifyListeners();
+  }
+
+  /// Continue after game over by clearing the top of the stack (once per run).
+  void revive() {
+    if (!_engine.isGameOver || _reviveUsed) {
+      return;
+    }
+    if (!_engine.reviveClearTop()) {
+      return;
+    }
+    _reviveUsed = true;
+    unawaited(_haptics.mediumImpact());
+    _track('revive_applied', <String, Object?>{
+      'round_id': _roundId,
+      'method': 'clear_top',
+      'game_id': 'tetris',
+      'score_total': _engine.score,
+    });
     _consumeEvents();
     notifyListeners();
   }

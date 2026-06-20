@@ -8,6 +8,7 @@ class MoveProcessingResult {
     required this.comboStreak,
     required this.totalScore,
     required this.isGameOver,
+    this.isAllClear = false,
     this.failureReason,
   });
 
@@ -17,6 +18,9 @@ class MoveProcessingResult {
   final int comboStreak;
   final int totalScore;
   final bool isGameOver;
+
+  /// True when this move cleared lines and left the board empty (Perfect Clear).
+  final bool isAllClear;
   final String? failureReason;
 
   factory MoveProcessingResult.success({
@@ -25,6 +29,7 @@ class MoveProcessingResult {
     required int comboStreak,
     required int totalScore,
     required bool isGameOver,
+    bool isAllClear = false,
   }) {
     return MoveProcessingResult(
       isSuccess: true,
@@ -33,6 +38,7 @@ class MoveProcessingResult {
       comboStreak: comboStreak,
       totalScore: totalScore,
       isGameOver: isGameOver,
+      isAllClear: isAllClear,
     );
   }
 
