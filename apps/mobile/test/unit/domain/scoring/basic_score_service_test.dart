@@ -128,5 +128,19 @@ void main() {
       expect(state.totalScore, 100);
       expect(state.comboStreak, 5);
     });
+
+    test('all-clear adds a +100 bonus on top of the line/combo score', () {
+      final ScoreState normal = service.apply(
+        previous: ScoreState.initial,
+        input: const ScoreInput(clearedLines: 2),
+      );
+      final ScoreState allClear = service.apply(
+        previous: ScoreState.initial,
+        input: const ScoreInput(clearedLines: 2, allClear: true),
+      );
+
+      expect(allClear.totalScore, normal.totalScore + 100);
+      expect(allClear.comboStreak, normal.comboStreak);
+    });
   });
 }

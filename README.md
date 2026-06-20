@@ -26,9 +26,12 @@ Firebase-first for production data plane:
 The `services/config-api` and `services/analytics-pipeline` contracts are deferred; they remain in the repo for historical context and as potential future replacement paths if Firebase becomes insufficient for control or compliance reasons.
 
 ## What Is Implemented
+> Full reconciled status with code evidence: [docs/roadmap/05_IMPLEMENTATION_STATUS.md](docs/roadmap/05_IMPLEMENTATION_STATUS.md). Latest audit + release-readiness assessment: [docs/audit/01_FULL_PROJECT_AUDIT_2026-06-19.md](docs/audit/01_FULL_PROJECT_AUDIT_2026-06-19.md).
 - Classic gameplay loop: scoring, line clear, combo, game over, restart
+- Daily Challenge variant of Classic (deterministic seed + milestone rewards)
 - FTUE/onboarding flow with persisted completion state
-- Best score, streak, daily goals, rewarded credits, owned premium items persistence (on SharedPreferences, Phase 1 migrates this to Hive)
+- Best score, streak, daily goals, rewarded credits, owned premium items — persisted via **Hive** (`HivePlayerProgressRepository` + `HiveGameSessionRepository`) with `schemaVersion=2` migration and corrupt-cache self-heal
+- Firebase Crashlytics error/log reporting wired in production (dedicated ANR bridge still pending)
 - Remote config client contract with bundled defaults, cached snapshots, versioning, rollback slot (Phase 1 adds Firebase Remote Config implementation)
 - Local queued analytics with schema validation and release-safe transport hooks (Phase 1 adds Firebase Analytics bridge)
 - Premium store UI surface, offer targeting logic, entitlement-aware utility tools access (Phase 1 wires real Google Play Billing)
@@ -37,7 +40,7 @@ The `services/config-api` and `services/analytics-pipeline` contracts are deferr
 ## What Is Simulated Or Scaffolded
 - `services/config-api` contract exists, deferred — Firebase Remote Config replaces it
 - `services/analytics-pipeline` contract exists, deferred — Firebase Analytics + BigQuery replace it
-- Premium flow persists local entitlements, not store billing (Phase 1 replaces with `in_app_purchase` + Cloud Functions receipt validation)
+- **Billing implemented in code, not yet shippable** — `GooglePlayBillingService` (real `in_app_purchase`, Billing v7) + `verifyPurchase` Cloud Function exist and are wired for production. Still needs `flutter pub get`, Anonymous Auth at bootstrap, Play Console SKUs/service-account linkage, function deploy, and a Play sandbox test before it transacts real money.
 - Store screenshots and checklist assets are restored from current branded exports
 
 ## Debug-Only (restricted to `APP_ENV=dev` + `APP_FLAVOR=debug`)

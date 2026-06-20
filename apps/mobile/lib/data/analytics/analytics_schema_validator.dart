@@ -155,6 +155,7 @@ class AnalyticsSchemaValidator {
         'config_version',
       },
       optionalParams: <String>{
+        'game_id',
         'board_size',
         'rack_size',
         'ux_variant',
@@ -194,6 +195,7 @@ class AnalyticsSchemaValidator {
         'count',
       },
       optionalParams: <String>{
+        'game_id',
         'round_id',
         'score_total',
       },
@@ -206,6 +208,9 @@ class AnalyticsSchemaValidator {
         'duration_sec',
       },
       optionalParams: <String>{
+        'game_id',
+        'level',
+        'lines',
         'ux_variant',
         'difficulty_variant',
       },
@@ -367,6 +372,7 @@ class AnalyticsSchemaValidator {
         'method',
       },
       optionalParams: <String>{
+        'game_id',
         'score_total',
         'moves_played',
       },

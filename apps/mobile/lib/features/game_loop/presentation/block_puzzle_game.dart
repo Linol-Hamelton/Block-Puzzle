@@ -8,12 +8,12 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/text.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/device/haptics_controller.dart';
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
+import '../../../ui/effects/burst_field.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -35,6 +35,7 @@ class BlockPuzzleGame extends FlameGame {
   final bool isDailyChallenge;
 
   final BoardComponent _boardComponent = BoardComponent();
+  final BurstField _burst = BurstField();
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
   VoidCallback? _stateListener;
   String _rackSignature = '';
@@ -113,6 +114,7 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     add(_boardComponent);
+    add(_BurstLayer(_burst));
 
     _stateListener = _syncWithState;
     controller.stateListenable.addListener(_stateListener!);
@@ -304,6 +306,7 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     _dropInProgress = true;
+    final int prevScore = controller.state.scoreState.totalScore;
     final MoveProcessingResult result = await controller.processMove(
       Move(
         piece: pieceComponent.piece,
@@ -332,6 +335,14 @@ class BlockPuzzleGame extends FlameGame {
         strength: result.clearedLines,
         clearedCells: result.clearedCells,
       );
+      final int scoreDelta = controller.state.scoreState.totalScore - prevScore;
+      if (scoreDelta > 0) {
+        _playScorePop(scoreDelta, result.clearedCells);
+      }
+    }
+
+    if (result.isAllClear) {
+      _playPerfectClear();
     }
 
     if (result.comboStreak > 1) {
@@ -652,17 +663,15 @@ class BlockPuzzleGame extends FlameGame {
     );
 
     final double cellSize = _boardCellSize;
+    final Color burstColor = _currentPalette.occupiedColor;
     for (final BoardCell cell in clearedCells) {
-      final Vector2 cellCenter = Vector2(
-        _boardOrigin.x + (cell.x * cellSize) + (cellSize / 2),
-        _boardOrigin.y + (cell.y * cellSize) + (cellSize / 2),
-      );
-      add(
-        CellBurstComponent(
-          burstCenter: cellCenter,
-          cellSize: cellSize,
-          intensity: strength,
-        ),
+      _burst.spawnBurst(
+        x: _boardOrigin.x + (cell.x * cellSize) + (cellSize / 2),
+        y: _boardOrigin.y + (cell.y * cellSize) + (cellSize / 2),
+        color: burstColor,
+        count: 3,
+        sizeBase: cellSize * 0.12,
+        sizeJitter: cellSize * 0.1,
       );
     }
   }
@@ -675,6 +684,55 @@ class BlockPuzzleGame extends FlameGame {
         text: 'Combo x$comboStreak',
         startPosition: Vector2(
             _boardOrigin.x + (_boardCellSize * 2.4), _boardOrigin.y - 4),
+      ),
+    );
+  }
+
+  void _playScorePop(int delta, Set<BoardCell> cells) {
+    if (cells.isEmpty) {
+      return;
+    }
+    double sumX = 0;
+    double sumY = 0;
+    for (final BoardCell c in cells) {
+      sumX += c.x;
+      sumY += c.y;
+    }
+    final double cx =
+        _boardOrigin.x + (((sumX / cells.length) + 0.5) * _boardCellSize);
+    final double cy =
+        _boardOrigin.y + (((sumY / cells.length) + 0.5) * _boardCellSize);
+    add(
+      ScorePopComponent(
+        text: '+$delta',
+        startPosition: Vector2(cx, cy),
+      ),
+    );
+  }
+
+  void _playPerfectClear() {
+    unawaited(sfxPlayer.playCombo(comboStreak: 4));
+    unawaited(haptics.heavyImpact());
+    add(
+      LineClearFlashComponent(
+        boardOrigin: _boardOrigin.clone(),
+        boardSize: Vector2.all(_boardCellSize * 8),
+        strength: 5,
+      ),
+    );
+    camera.viewfinder.add(
+      MoveEffect.by(
+        Vector2(6, 6),
+        EffectController(duration: 0.06, alternate: true, repeatCount: 5),
+      ),
+    );
+    add(
+      ComboPulseComponent(
+        text: 'PERFECT!',
+        startPosition: Vector2(
+          _boardOrigin.x + (_boardCellSize * 2.2),
+          _boardOrigin.y + (_boardCellSize * 3.5),
+        ),
       ),
     );
   }
@@ -1615,19 +1673,17 @@ class ComboPulseComponent extends PositionComponent {
   }
 }
 
-class CellBurstComponent extends PositionComponent {
-  CellBurstComponent({
-    required this.burstCenter,
-    required this.cellSize,
-    required this.intensity,
+class ScorePopComponent extends PositionComponent {
+  ScorePopComponent({
+    required this.text,
+    required this.startPosition,
   }) {
-    priority = 205;
+    priority = 212;
   }
 
-  final Vector2 burstCenter;
-  final double cellSize;
-  final int intensity;
-  static const double _duration = 0.30;
+  final String text;
+  final Vector2 startPosition;
+  static const double _duration = 0.85;
   double _elapsed = 0;
 
   @override
@@ -1643,28 +1699,48 @@ class CellBurstComponent extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
     final double t = (_elapsed / _duration).clamp(0, 1);
-    final double alpha = (1 - t).clamp(0, 1);
-    final double maxRadius = (cellSize * 0.52) + (intensity * 1.5);
-    final double radius = maxRadius * (0.35 + (0.65 * t));
-
-    final Paint ringPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2 + (intensity * 0.3)
-      ..color = Color.fromRGBO(176, 236, 255, 0.9 * alpha);
-
-    final Paint corePaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Color.fromRGBO(112, 199, 255, 0.34 * alpha);
-
-    canvas.drawCircle(
-      Offset(burstCenter.x, burstCenter.y),
-      radius * 0.48,
-      corePaint,
+    final double opacity = (1 - t).clamp(0, 1);
+    final double yOffset = t * 40;
+    final TextPaint textPaint = TextPaint(
+      style: TextStyle(
+        fontSize: 22 - (t * 3),
+        fontWeight: FontWeight.w800,
+        color: Color.fromRGBO(214, 255, 224, opacity),
+        shadows: <Shadow>[
+          Shadow(
+            color: Color.fromRGBO(95, 224, 138, opacity * 0.9),
+            blurRadius: 12,
+          ),
+        ],
+      ),
     );
-    canvas.drawCircle(
-      Offset(burstCenter.x, burstCenter.y),
-      radius,
-      ringPaint,
+    textPaint.render(
+      canvas,
+      text,
+      Vector2(startPosition.x, startPosition.y - yOffset),
+      anchor: Anchor.center,
     );
+  }
+}
+
+/// Thin Flame layer that advances and draws the shared [BurstField] on top of
+/// the board.
+class _BurstLayer extends PositionComponent {
+  _BurstLayer(this._field) {
+    priority = 220;
+  }
+
+  final BurstField _field;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _field.update(dt);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    _field.render(canvas);
   }
 }

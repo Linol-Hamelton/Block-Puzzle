@@ -46,6 +46,21 @@ class DebugGameSfxPlayer implements GameSfxPlayer {
   }
 
   @override
+  Future<void> playRotate() async {
+    _logger.info('SFX hook: rotate');
+  }
+
+  @override
+  Future<void> playHold() async {
+    _logger.info('SFX hook: hold');
+  }
+
+  @override
+  Future<void> playHardDrop() async {
+    _logger.info('SFX hook: hard_drop');
+  }
+
+  @override
   Future<void> playGameOver() async {
     _logger.info('SFX hook: game_over');
   }

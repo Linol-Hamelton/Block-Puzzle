@@ -1,5 +1,7 @@
 # l10n
 
+> **STATUS: NOT IMPLEMENTED (verified 2026-06-19).** No `.arb` files, no `AppLocalizations`, and no `flutter_localizations`/`intl` in `pubspec.yaml`. User-facing strings are currently hardcoded in widgets and controllers (including a Russian/English mix in `store_controller.dart`). Everything below is a target spec.
+
 Phase 3 Workstream 3E.
 
 Scope:

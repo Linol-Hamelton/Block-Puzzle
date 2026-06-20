@@ -11,10 +11,11 @@ class ComputeScoreUseCase {
   ScoreState execute({
     required ScoreState previous,
     required int clearedLines,
+    bool allClear = false,
   }) {
     return scoreService.apply(
       previous: previous,
-      input: ScoreInput(clearedLines: clearedLines),
+      input: ScoreInput(clearedLines: clearedLines, allClear: allClear),
     );
   }
 }
