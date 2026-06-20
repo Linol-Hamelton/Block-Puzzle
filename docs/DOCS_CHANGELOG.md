@@ -2,6 +2,9 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-20 (Tetris — polish)
+- Visual juice in the Flame view: line-clear board flash (intensity by lines), screen shake on Tetris/T-spin/hard-drop, and text pulses ("TETRIS!", "T-SPIN SINGLE/DOUBLE/TRIPLE", "LEVEL n") via a new `controller.onVisualEvent` hook and a `TetrisEventType.tSpin` engine event. HUD now shows 5 next pieces and dims Hold while it is locked for the drop. Snappier DAS/ARR (130/45 ms). `flutter analyze` clean; 158 tests pass.
+
 ## 2026-06-20 (Tetris — completion)
 - Finished Tetris feature work: **T-spin** detection + scoring (`actionScore`, 3-corner rule), **resume persistence + best score** via `TetrisSessionStore` (engine `toSnapshot`/`restore`, saved on pause / restored on launch / cleared on game over, DI-registered), and **analytics** (`game_start`/`game_end`/`line_clear` with `game_id:'tetris'`; schema extended). HUD shows best score. `flutter analyze` clean; **158 tests pass** (+5). Remaining: on-device feel tuning, Mode Hub seam, daily seed, VFX/perf — see [architecture/05_TETRIS_IMPLEMENTATION_PLAN.md](architecture/05_TETRIS_IMPLEMENTATION_PLAN.md).
 

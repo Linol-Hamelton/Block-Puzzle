@@ -23,6 +23,7 @@ enum TetrisEventType {
   hardDrop,
   lock,
   lineClear,
+  tSpin,
   levelUp,
   hold,
   gameOver,
@@ -93,6 +94,7 @@ class TetrisEngine {
   bool get isGameOver => _gameOver;
   bool get isStarted => _started;
   bool get hasActiveGame => _started && !_gameOver && _active != null;
+  bool get canHold => _canHold;
 
   List<TetrominoType> get nextQueue => _bag.peek(_nextPreviewCount);
 
@@ -296,6 +298,10 @@ class TetrisEngine {
       backToBack:
           _backToBack && TetrisScoring.isDifficult(rows: rows, spin: spin),
     );
+
+    if (spin != TSpinType.none) {
+      _events.add(TetrisEvent(TetrisEventType.tSpin, rows));
+    }
 
     if (rows <= 0) {
       _combo = -1; // combo breaks on a non-clearing placement

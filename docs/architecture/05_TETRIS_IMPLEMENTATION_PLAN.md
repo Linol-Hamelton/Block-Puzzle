@@ -41,13 +41,19 @@ Tests (the safety net — run on a real toolchain):
 - **HUD**: best score shown live and on the game-over card.
 - Verified: `flutter analyze` clean, 158 tests pass (incl. T-spin scoring + snapshot round-trip).
 
+## Done (polish, 2026-06-20)
+
+- **Visual juice** (Flame view, via `controller.onVisualEvent` + `TetrisEventType.tSpin`): line-clear board flash (intensity by lines), screen shake on Tetris/T-spin/hard-drop, and text pulses ("TETRIS!", "T-SPIN SINGLE/DOUBLE/TRIPLE", "LEVEL n").
+- **HUD**: 5-deep next preview; Hold dims while locked for the current drop.
+- **Input**: snappier DAS/ARR (130 ms delay / 45 ms repeat) as a baseline.
+
 ## Remaining work (ordered)
 
-1. **On-device play-test**: input feel, gravity cadence, rendering, and the resume flow on a real device/emulator.
+1. **On-device feel tuning**: validate and tune DAS/ARR, gravity cadence, lock-delay reset, spawn buffer, and the resume flow on a real device.
 2. **Mode Hub seam**: fold the Tetris controller/engine into the `GameId`/`GameRegistry` abstraction (Multi-Game plan Phase 0/1); migrate the SharedPreferences snapshot into the unified per-game envelope.
-3. **Feel / parity tuning**: DAS/ARR repeat timing, lock-delay reset feel, spawn buffer; the wall-kick mini→full T-spin upgrade nuance.
+3. **Parity nuances**: the wall-kick mini→full T-spin upgrade case; optional lock-flash on the locked piece.
 4. **Daily-challenge**: wire the deterministic seed (engine + 7-bag already accept one) to the daily pattern; Tetris daily leaderboard later.
-5. **Polish**: line-clear / lock flash VFX, next-queue depth, perf validation (60fps at high gravity on low-end Android).
+5. **Perf**: 60fps at high gravity on low-end Android (profile the per-frame render).
 
 ## Notes / open decisions
 - Spawn currently places pieces at `originY = 0` (top of the visible field). If top-out feels too eager, add a 1–2 row hidden spawn buffer.

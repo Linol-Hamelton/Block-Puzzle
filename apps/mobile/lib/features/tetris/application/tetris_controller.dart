@@ -46,12 +46,17 @@ class TetrisController extends ChangeNotifier {
   String _roundId = 'tetris_0';
   DateTime? _startedAt;
 
+  /// Set by the Flame view to receive engine events for visual juice
+  /// (board flash, screen shake, text pulses). Invoked for every event.
+  void Function(TetrisEvent event)? onVisualEvent;
+
   TetrisEngine get engine => _engine;
   int get score => _engine.score;
   int get level => _engine.level;
   int get lines => _engine.linesCleared;
   int get bestScore => _bestScore > _engine.score ? _bestScore : _engine.score;
   bool get isGameOver => _engine.isGameOver;
+  bool get canHold => _engine.canHold;
   TetrominoType? get hold => _engine.hold;
   List<TetrominoType> get nextQueue => _engine.nextQueue;
 
@@ -160,6 +165,9 @@ class TetrisController extends ChangeNotifier {
           'score_total': _engine.score,
         });
         break;
+      case TetrisEventType.tSpin:
+        unawaited(_haptics.mediumImpact());
+        break;
       case TetrisEventType.levelUp:
         unawaited(_haptics.mediumImpact());
         break;
@@ -169,6 +177,7 @@ class TetrisController extends ChangeNotifier {
         _onGameEnd();
         break;
     }
+    onVisualEvent?.call(event);
   }
 
   void _onGameEnd() {

@@ -191,7 +191,11 @@ class _TetrisHud extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _PieceSlot(label: 'Hold', type: controller.hold),
+              _PieceSlot(
+                label: 'Hold',
+                type: controller.hold,
+                dim: !controller.canHold,
+              ),
               const Spacer(),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -208,10 +212,10 @@ class _TetrisHud extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      for (int i = 0; i < next.length && i < 3; i++)
+                      for (int i = 0; i < next.length && i < 5; i++)
                         Padding(
                           padding: const EdgeInsets.only(left: 6),
-                          child: _PiecePreview(type: next[i], size: 26),
+                          child: _PiecePreview(type: next[i], size: 24),
                         ),
                     ],
                   ),
@@ -261,10 +265,11 @@ class _Metric extends StatelessWidget {
 }
 
 class _PieceSlot extends StatelessWidget {
-  const _PieceSlot({required this.label, required this.type});
+  const _PieceSlot({required this.label, required this.type, this.dim = false});
 
   final String label;
   final TetrominoType? type;
+  final bool dim;
 
   @override
   Widget build(BuildContext context) {
@@ -280,29 +285,37 @@ class _PieceSlot extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        _PiecePreview(type: type, size: 30),
+        _PiecePreview(type: type, size: 30, dim: dim),
       ],
     );
   }
 }
 
 class _PiecePreview extends StatelessWidget {
-  const _PiecePreview({required this.type, required this.size});
+  const _PiecePreview({
+    required this.type,
+    required this.size,
+    this.dim = false,
+  });
 
   final TetrominoType? type;
   final double size;
+  final bool dim;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        color: const Color(0x22132A4A),
-        border: Border.all(color: const Color(0x3378B5DE)),
+    return Opacity(
+      opacity: dim ? 0.35 : 1,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          color: const Color(0x22132A4A),
+          border: Border.all(color: const Color(0x3378B5DE)),
+        ),
+        child: CustomPaint(painter: _MiniPiecePainter(type)),
       ),
-      child: CustomPaint(painter: _MiniPiecePainter(type)),
     );
   }
 }
@@ -466,9 +479,9 @@ class _PadButtonState extends State<_PadButton> {
     if (!widget.repeating) {
       return;
     }
-    _delay = Timer(const Duration(milliseconds: 160), () {
+    _delay = Timer(const Duration(milliseconds: 130), () {
       _repeat = Timer.periodic(
-        const Duration(milliseconds: 60),
+        const Duration(milliseconds: 45),
         (_) => widget.onPressed(),
       );
     });

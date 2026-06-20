@@ -28,13 +28,92 @@ class TetrisFlameGame extends FlameGame {
 
   final TetrisController controller;
 
+  // Visual-juice state (driven by controller.onVisualEvent, decayed in update).
+  double _flash = 0;
+  int _flashStrength = 0;
+  double _shake = 0;
+  String? _pulseText;
+  double _pulseElapsed = 0;
+
   @override
   Color backgroundColor() => const Color(0x00000000);
+
+  @override
+  Future<void> onLoad() async {
+    controller.onVisualEvent = _onVisualEvent;
+    await super.onLoad();
+  }
+
+  void _onVisualEvent(TetrisEvent event) {
+    switch (event.type) {
+      case TetrisEventType.lineClear:
+        _flash = 1;
+        _flashStrength = event.value;
+        if (event.value >= 4) {
+          _shake = 1;
+          _pulse('TETRIS!');
+        }
+        break;
+      case TetrisEventType.tSpin:
+        _shake = math.max(_shake, 0.7);
+        _pulse(
+          event.value > 0 ? 'T-SPIN ${_clearWord(event.value)}' : 'T-SPIN',
+        );
+        break;
+      case TetrisEventType.levelUp:
+        _pulse('LEVEL ${event.value}');
+        break;
+      case TetrisEventType.hardDrop:
+        _shake = math.max(_shake, 0.22);
+        break;
+      case TetrisEventType.gameOver:
+        _shake = math.max(_shake, 0.8);
+        break;
+      case TetrisEventType.spawn:
+      case TetrisEventType.move:
+      case TetrisEventType.rotate:
+      case TetrisEventType.softDrop:
+      case TetrisEventType.lock:
+      case TetrisEventType.hold:
+        break;
+    }
+  }
+
+  void _pulse(String text) {
+    _pulseText = text;
+    _pulseElapsed = 0;
+  }
+
+  static String _clearWord(int rows) {
+    switch (rows) {
+      case 1:
+        return 'SINGLE';
+      case 2:
+        return 'DOUBLE';
+      case 3:
+        return 'TRIPLE';
+      default:
+        return '';
+    }
+  }
 
   @override
   void update(double dt) {
     super.update(dt);
     controller.tick(Duration(microseconds: (dt * 1000000).round()));
+    if (_flash > 0) {
+      _flash = math.max(0, _flash - (dt * 3.0));
+    }
+    if (_shake > 0) {
+      _shake = math.max(0, _shake - (dt * 3.6));
+    }
+    if (_pulseText != null) {
+      _pulseElapsed += dt;
+      if (_pulseElapsed > 1.1) {
+        _pulseText = null;
+        _pulseElapsed = 0;
+      }
+    }
   }
 
   @override
@@ -52,6 +131,11 @@ class TetrisFlameGame extends FlameGame {
     final double boardH = cell * rows;
     final double ox = (size.x - boardW) / 2;
     final double oy = (size.y - boardH) / 2;
+
+    final double sx = _shake > 0 ? math.sin(_shake * 53) * _shake * 7 : 0;
+    final double sy = _shake > 0 ? math.cos(_shake * 61) * _shake * 7 : 0;
+    canvas.save();
+    canvas.translate(sx, sy);
 
     _renderBackground(canvas, ox, oy, boardW, boardH, cell, cols, rows);
 
@@ -82,6 +166,63 @@ class TetrisFlameGame extends FlameGame {
         }
       }
     }
+
+    if (_flash > 0) {
+      final double alpha =
+          (_flash * (0.1 + (_flashStrength * 0.05))).clamp(0, 0.55).toDouble();
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(ox, oy, boardW, boardH),
+          const Radius.circular(14),
+        ),
+        Paint()..color = Color.fromRGBO(150, 224, 255, alpha),
+      );
+    }
+
+    canvas.restore();
+
+    _renderPulse(canvas, ox, oy, boardW, boardH);
+  }
+
+  void _renderPulse(
+    Canvas canvas,
+    double ox,
+    double oy,
+    double boardW,
+    double boardH,
+  ) {
+    final String? text = _pulseText;
+    if (text == null) {
+      return;
+    }
+    final double t = (_pulseElapsed / 1.1).clamp(0, 1).toDouble();
+    final double opacity = (1 - t).clamp(0, 1).toDouble();
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Color.fromRGBO(196, 240, 255, opacity),
+          fontSize: 30,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.5,
+          shadows: <Shadow>[
+            Shadow(
+              color: Color.fromRGBO(86, 212, 255, opacity * 0.9),
+              blurRadius: 18,
+            ),
+          ],
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: boardW);
+    painter.paint(
+      canvas,
+      Offset(
+        ox + ((boardW - painter.width) / 2),
+        oy + (boardH * 0.34) - (t * 22),
+      ),
+    );
   }
 
   void _renderBackground(
