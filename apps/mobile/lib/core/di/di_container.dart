@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 
+import '../../core/audio/music_controller.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/config/remote_config_reader.dart';
 import '../../core/device/haptics_controller.dart';
@@ -87,6 +88,9 @@ Future<void> configureDependencies() async {
   );
   sl.registerSingleton<AppLogger>(logger);
   sl.registerSingleton<HapticsController>(HapticsController());
+  sl.registerLazySingleton<MusicController>(
+    () => MusicController(logger: sl()),
+  );
   sl.registerLazySingleton<CrashReporter>(
     () => useDebugAdapters ? const NoopCrashReporter() : const FirebaseCrashReporter(),
   );

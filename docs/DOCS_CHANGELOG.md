@@ -2,6 +2,12 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-20 (Game-feel P3 — music & shared juice)
+- **Background music:** `MusicController` (looping via `FlameAudio.bgm`) with a persisted enable flag; a placeholder seamless ambient loop (`assets/audio/music_loop.wav`, project-generated). Wired into Classic and Tetris screens with lifecycle pause/resume and an AppBar music on/off toggle. (Settings-screen integration is a follow-up; final music is a content debt.)
+- **Shared juice module:** extracted the Tetris particle system into a reusable `lib/ui/effects/burst_field.dart` (`BurstField`); Tetris now uses it. Classic adoption is a follow-up toward the unified engine.
+- Remaining content debt: final sound design (replace placeholder SFX/music) — needs real audio assets.
+- `flutter analyze` clean; 162 tests pass.
+
 ## 2026-06-20 (Game-feel P2 — depth & tension)
 - **Perfect Clear (All-Clear):** Tetris emits a `perfectClear` bonus event (1000×level) with a "PERFECT CLEAR!" fanfare; Classic adds a +100 all-clear bonus (`ScoreInput.allClear` → `BasicScoreService`) and a board-flash + shake + "PERFECT!" fanfare via `MoveProcessingResult.isAllClear`.
 - **Tetris danger signal:** a pulsing red glow at the top of the board when the stack nears the ceiling; **lock-flash** briefly whitens just-locked cells.

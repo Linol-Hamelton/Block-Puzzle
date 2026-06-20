@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/audio/music_controller.dart';
 import '../../../core/device/haptics_controller.dart';
 import '../../../core/di/di_container.dart';
 import '../../../data/analytics/analytics_tracker.dart';
@@ -26,9 +27,11 @@ class _TetrisScreenState extends State<TetrisScreen>
     with WidgetsBindingObserver {
   late final GameSfxPlayer _sfx;
   late final HapticsController _haptics;
+  late final MusicController _music;
   late final TetrisController _controller;
   late final TetrisFlameGame _game;
   bool _isDisposed = false;
+  bool _musicOn = true;
 
   @override
   void initState() {
@@ -36,6 +39,7 @@ class _TetrisScreenState extends State<TetrisScreen>
     WidgetsBinding.instance.addObserver(this);
     _sfx = sl<GameSfxPlayer>();
     _haptics = sl<HapticsController>();
+    _music = sl<MusicController>();
     _controller = TetrisController(
       sfx: _sfx,
       haptics: _haptics,
@@ -45,12 +49,30 @@ class _TetrisScreenState extends State<TetrisScreen>
     _game = TetrisFlameGame(controller: _controller);
     unawaited(_sfx.preload());
     unawaited(_controller.initialize());
+    unawaited(_initMusic());
+  }
+
+  Future<void> _initMusic() async {
+    await _music.loadPreference();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _musicOn = _music.isEnabled);
+    await _music.play();
+  }
+
+  Future<void> _toggleMusic() async {
+    await _music.setEnabled(!_music.isEnabled);
+    if (mounted) {
+      setState(() => _musicOn = _music.isEnabled);
+    }
   }
 
   @override
   void dispose() {
     _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_music.stop());
     _controller.dispose();
     super.dispose();
   }
@@ -64,6 +86,7 @@ class _TetrisScreenState extends State<TetrisScreen>
       case AppLifecycleState.resumed:
         _game.resumeEngine();
         unawaited(_sfx.onAppResumed());
+        unawaited(_music.resume());
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
@@ -71,6 +94,7 @@ class _TetrisScreenState extends State<TetrisScreen>
       case AppLifecycleState.detached:
         _controller.saveActiveGame();
         _game.pauseEngine();
+        unawaited(_music.pause());
         break;
     }
   }
@@ -92,6 +116,16 @@ class _TetrisScreenState extends State<TetrisScreen>
             ],
           ),
         ),
+        actions: <Widget>[
+          IconButton(
+            tooltip: _musicOn ? 'Music: on' : 'Music: off',
+            icon: Icon(
+              _musicOn ? Icons.music_note_rounded : Icons.music_off_rounded,
+              color: const Color(0xFFC5F2FF),
+            ),
+            onPressed: _toggleMusic,
+          ),
+        ],
       ),
       body: Stack(
         children: <Widget>[

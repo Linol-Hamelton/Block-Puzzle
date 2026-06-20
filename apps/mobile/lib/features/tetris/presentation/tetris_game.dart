@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/tetris/falling_piece.dart';
 import '../../../domain/tetris/tetris_engine.dart';
 import '../../../domain/tetris/tetromino.dart';
+import '../../../ui/effects/burst_field.dart';
 import '../application/tetris_controller.dart';
 
 /// Mino colors (neon palette consistent with the Lumina look).
@@ -38,10 +39,9 @@ class TetrisFlameGame extends FlameGame {
   String? _scorePopText;
   double _scorePopElapsed = 0;
   double _clock = 0; // free-running clock for pulsing effects
-  final List<_Particle> _particles = <_Particle>[];
+  final BurstField _burst = BurstField();
   final List<TCell> _lastActiveCells = <TCell>[];
   final List<_LockFlash> _lockFlashes = <_LockFlash>[];
-  final math.Random _rng = math.Random();
 
   // Last computed board layout (screen space), so event handlers can place
   // particles / popups without recomputing geometry.
@@ -139,28 +139,14 @@ class TetrisFlameGame extends FlameGame {
         if (type == null) {
           continue;
         }
-        final Color color = tetrominoColors[type]!;
-        final double cx = _lox + (x * _lcell) + (_lcell / 2);
-        final double cy = _loy + (row * _lcell) + (_lcell / 2);
-        for (int i = 0; i < 2; i++) {
-          final double angle = _rng.nextDouble() * math.pi * 2;
-          final double speed = 40 + (_rng.nextDouble() * 95);
-          _particles.add(
-            _Particle(
-              x: cx,
-              y: cy,
-              vx: math.cos(angle) * speed,
-              vy: (math.sin(angle) * speed) - 45,
-              color: color,
-              maxLife: 0.5 + (_rng.nextDouble() * 0.35),
-              size: (_lcell * 0.12) + (_rng.nextDouble() * _lcell * 0.1),
-            ),
-          );
-        }
+        _burst.spawnBurst(
+          x: _lox + (x * _lcell) + (_lcell / 2),
+          y: _loy + (row * _lcell) + (_lcell / 2),
+          color: tetrominoColors[type]!,
+          sizeBase: _lcell * 0.12,
+          sizeJitter: _lcell * 0.1,
+        );
       }
-    }
-    if (_particles.length > 320) {
-      _particles.removeRange(0, _particles.length - 320);
     }
   }
 
@@ -201,15 +187,7 @@ class TetrisFlameGame extends FlameGame {
         _scorePopElapsed = 0;
       }
     }
-    if (_particles.isNotEmpty) {
-      for (final _Particle p in _particles) {
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vy += 360 * dt;
-        p.life -= dt;
-      }
-      _particles.removeWhere((_Particle p) => p.life <= 0);
-    }
+    _burst.update(dt);
     _clock += dt;
     if (_lockFlashes.isNotEmpty) {
       for (final _LockFlash f in _lockFlashes) {
@@ -340,22 +318,9 @@ class TetrisFlameGame extends FlameGame {
 
     canvas.restore();
 
-    _renderParticles(canvas);
+    _burst.render(canvas);
     _renderScorePop(canvas, ox, oy, boardW, boardH);
     _renderPulse(canvas, ox, oy, boardW, boardH);
-  }
-
-  void _renderParticles(Canvas canvas) {
-    if (_particles.isEmpty) {
-      return;
-    }
-    for (final _Particle p in _particles) {
-      final double a = (p.life / p.maxLife).clamp(0, 1).toDouble();
-      final Paint paint = Paint()
-        ..color = p.color.withValues(alpha: a)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2);
-      canvas.drawCircle(Offset(p.x, p.y), p.size * (0.4 + (0.6 * a)), paint);
-    }
   }
 
   void _renderScorePop(
@@ -577,27 +542,6 @@ class TetrisFlameGame extends FlameGame {
       ..color = Color.lerp(color, const Color(0x00101A30), 0.55) ?? color;
     canvas.drawRRect(rr, outline);
   }
-}
-
-class _Particle {
-  _Particle({
-    required this.x,
-    required this.y,
-    required this.vx,
-    required this.vy,
-    required this.color,
-    required this.maxLife,
-    required this.size,
-  }) : life = maxLife;
-
-  double x;
-  double y;
-  double vx;
-  double vy;
-  double life;
-  final double maxLife;
-  final Color color;
-  final double size;
 }
 
 class _LockFlash {
