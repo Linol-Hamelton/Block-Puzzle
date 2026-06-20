@@ -352,6 +352,15 @@ class TetrisEngine {
     _clearTimerMs = _clearDelayMs;
   }
 
+  /// Immediately completes a pending line-clear (collapse + spawn), skipping the
+  /// remaining animation delay. Used before persisting so a snapshot taken
+  /// during the clear window reflects the committed post-clear state.
+  void flushPendingClear() {
+    if (_clearingRows.isNotEmpty) {
+      _finishClear();
+    }
+  }
+
   void _finishClear() {
     _board = _board.clearFullRows().board;
     _clearingRows = <int>[];

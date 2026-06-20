@@ -55,15 +55,10 @@ exports.verifyPurchase = onCall({ region: 'us-central1' }, async (request) => {
     throw new HttpsError('invalid-argument', 'Missing purchaseToken.');
   }
 
-  // Replay / cross-account protection: a purchase token may only ever belong
-  // to one account.
   const tokenRef = db.collection('purchaseTokens').doc(purchaseToken);
-  const tokenSnap = await tokenRef.get();
-  if (tokenSnap.exists && tokenSnap.get('uid') !== uid) {
-    throw new HttpsError('permission-denied', 'Token is bound to another account.');
-  }
 
-  // Verify the token against the Google Play Developer API.
+  // Verify the token against the Google Play Developer API. No Firestore I/O
+  // here, so it stays outside the transaction below.
   let purchase;
   try {
     const client = await playAuth.getClient();
@@ -92,28 +87,48 @@ exports.verifyPurchase = onCall({ region: 'us-central1' }, async (request) => {
     };
   }
 
+  // Grant + bind atomically. The replay / cross-account check (a purchase token
+  // may only ever belong to one account) is read INSIDE the transaction so two
+  // concurrent calls presenting the same token under different UIDs cannot both
+  // bind it (TOCTOU-safe).
   const entRef = db.collection('entitlements').doc(uid);
-  await db.runTransaction(async (tx) => {
-    tx.set(
-      entRef,
-      {
-        productIds: FieldValue.arrayUnion(productId),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-    tx.set(
-      tokenRef,
-      {
-        uid,
-        productId,
-        source,
-        orderId: purchase.orderId || null,
-        verifiedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-  });
+  try {
+    await db.runTransaction(async (tx) => {
+      const tokenSnap = await tx.get(tokenRef);
+      if (tokenSnap.exists && tokenSnap.get('uid') !== uid) {
+        const err = new Error('token_bound_other_account');
+        err.boundOtherAccount = true;
+        throw err;
+      }
+      tx.set(
+        entRef,
+        {
+          productIds: FieldValue.arrayUnion(productId),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      tx.set(
+        tokenRef,
+        {
+          uid,
+          productId,
+          source,
+          orderId: purchase.orderId || null,
+          verifiedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+  } catch (error) {
+    if (error && error.boundOtherAccount) {
+      throw new HttpsError(
+        'permission-denied',
+        'Token is bound to another account.',
+      );
+    }
+    throw error;
+  }
 
   const entSnap = await entRef.get();
   const entitlements =

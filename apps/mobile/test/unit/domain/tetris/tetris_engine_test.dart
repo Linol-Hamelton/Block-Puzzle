@@ -115,6 +115,35 @@ void main() {
       expect(engine.linesCleared, 1);
     });
 
+    test('flushPendingClear collapses a pending clear immediately', () {
+      // Same setup as the clearing test; flush instead of waiting the delay
+      // (this is what saveActiveGame does so a mid-clear snapshot is committed).
+      final List<TetrominoType?> cells =
+          List<TetrominoType?>.filled(4 * 8, null);
+      int idx(int x, int y) => (y * 4) + x;
+      cells[idx(1, 7)] = TetrominoType.l;
+      cells[idx(2, 7)] = TetrominoType.l;
+      cells[idx(3, 7)] = TetrominoType.l;
+      final TetrisEngine engine = TetrisEngine(width: 4, height: 8)
+        ..restore(<String, Object?>{
+          'board': TetrisBoard(width: 4, height: 8, cells: cells).toJson(),
+          'active': const FallingPiece(
+            type: TetrominoType.i,
+            rotationIndex: 1,
+            originX: -2,
+            originY: 0,
+          ).toJson(),
+        });
+
+      engine.applyInput(TetrisInput.hardDrop);
+      expect(engine.isClearing, isTrue);
+
+      engine.flushPendingClear();
+      expect(engine.isClearing, isFalse);
+      expect(engine.active, isNotNull);
+      expect(engine.linesCleared, 1);
+    });
+
     test('perfect clear (all-clear) emits a bonus event', () {
       // Empty 4-wide board; a horizontal I hard-drops to fill + clear the only
       // occupied row, emptying the board → Perfect Clear.

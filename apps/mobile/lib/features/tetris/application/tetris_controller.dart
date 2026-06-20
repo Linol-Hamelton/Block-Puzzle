@@ -43,6 +43,8 @@ class TetrisController extends ChangeNotifier {
   TetrisEngine _engine;
   bool _started = false;
   bool _reviveUsed = false;
+  bool _gameEndEmitted = false;
+  bool _disposed = false;
   int _bestScore = 0;
   String _roundId = 'tetris_0';
   DateTime? _startedAt;
@@ -93,7 +95,7 @@ class TetrisController extends ChangeNotifier {
 
   /// Continue after game over by clearing the top of the stack (once per run).
   void revive() {
-    if (!_engine.isGameOver || _reviveUsed) {
+    if (_disposed || !_engine.isGameOver || _reviveUsed) {
       return;
     }
     if (!_engine.reviveClearTop()) {
@@ -112,7 +114,7 @@ class TetrisController extends ChangeNotifier {
   }
 
   void input(TetrisInput intent) {
-    if (_engine.isGameOver) {
+    if (_disposed || _engine.isGameOver) {
       return;
     }
     _engine.applyInput(intent);
@@ -122,7 +124,7 @@ class TetrisController extends ChangeNotifier {
 
   /// Advances gravity/lock by [delta] (driven from the Flame frame loop).
   void tick(Duration delta) {
-    if (!_started || _engine.isGameOver) {
+    if (_disposed || !_started || _engine.isGameOver) {
       return;
     }
     _engine.tick(delta);
@@ -134,13 +136,23 @@ class TetrisController extends ChangeNotifier {
   /// Persists the in-progress game (call on app pause). No-op when idle.
   void saveActiveGame() {
     final TetrisSessionStore? store = _store;
-    if (store == null || !_engine.hasActiveGame) {
+    if (store == null) {
+      return;
+    }
+    // Finalize a pending line-clear so the snapshot reflects committed state;
+    // otherwise the lock + cleared lines + score in the ~120ms clear window
+    // would be lost on resume.
+    if (_engine.isClearing) {
+      _engine.flushPendingClear();
+    }
+    if (!_engine.hasActiveGame) {
       return;
     }
     unawaited(store.saveSnapshot(_engine.toSnapshot()));
   }
 
   void _beginRound() {
+    _gameEndEmitted = false;
     _startedAt = DateTime.now();
     _roundId = 'tetris_${_startedAt!.microsecondsSinceEpoch}';
     _track('game_start', <String, Object?>{
@@ -223,18 +235,23 @@ class TetrisController extends ChangeNotifier {
     }
     unawaited(_store?.saveBestScore(finalScore));
     unawaited(_store?.clearSnapshot());
-    final int duration = _startedAt == null
-        ? 0
-        : DateTime.now().difference(_startedAt!).inSeconds;
-    _track('game_end', <String, Object?>{
-      'round_id': _roundId,
-      'end_reason': 'top_out',
-      'score': finalScore,
-      'duration_sec': duration,
-      'level': _engine.level,
-      'lines': _engine.linesCleared,
-      'game_id': 'tetris',
-    });
+    // Emit game_end at most once per round_id: a revive resumes the same round,
+    // so a post-revive top-out must not duplicate the event.
+    if (!_gameEndEmitted) {
+      _gameEndEmitted = true;
+      final int duration = _startedAt == null
+          ? 0
+          : DateTime.now().difference(_startedAt!).inSeconds;
+      _track('game_end', <String, Object?>{
+        'round_id': _roundId,
+        'end_reason': 'top_out',
+        'score': finalScore,
+        'duration_sec': duration,
+        'level': _engine.level,
+        'lines': _engine.linesCleared,
+        'game_id': 'tetris',
+      });
+    }
     _onGameOver?.call();
   }
 
@@ -244,5 +261,12 @@ class TetrisController extends ChangeNotifier {
       return;
     }
     unawaited(analytics.track(name, params: params));
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    onVisualEvent = null;
+    super.dispose();
   }
 }

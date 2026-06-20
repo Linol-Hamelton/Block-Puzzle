@@ -63,6 +63,7 @@ class _TetrisScreenState extends State<TetrisScreen>
   void dispose() {
     _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
+    _game.pauseEngine();
     unawaited(_music.stop());
     _controller.dispose();
     super.dispose();
