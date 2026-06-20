@@ -18,5 +18,11 @@ abstract interface class GameSfxPlayer {
     required int comboStreak,
   });
 
+  Future<void> playRotate();
+
+  Future<void> playHold();
+
+  Future<void> playHardDrop();
+
   Future<void> playGameOver();
 }

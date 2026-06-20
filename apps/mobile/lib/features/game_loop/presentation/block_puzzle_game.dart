@@ -303,6 +303,7 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     _dropInProgress = true;
+    final int prevScore = controller.state.scoreState.totalScore;
     final MoveProcessingResult result = await controller.processMove(
       Move(
         piece: pieceComponent.piece,
@@ -331,6 +332,10 @@ class BlockPuzzleGame extends FlameGame {
         strength: result.clearedLines,
         clearedCells: result.clearedCells,
       );
+      final int scoreDelta = controller.state.scoreState.totalScore - prevScore;
+      if (scoreDelta > 0) {
+        _playScorePop(scoreDelta, result.clearedCells);
+      }
     }
 
     if (result.comboStreak > 1) {
@@ -674,6 +679,28 @@ class BlockPuzzleGame extends FlameGame {
         text: 'Combo x$comboStreak',
         startPosition: Vector2(
             _boardOrigin.x + (_boardCellSize * 2.4), _boardOrigin.y - 4),
+      ),
+    );
+  }
+
+  void _playScorePop(int delta, Set<BoardCell> cells) {
+    if (cells.isEmpty) {
+      return;
+    }
+    double sumX = 0;
+    double sumY = 0;
+    for (final BoardCell c in cells) {
+      sumX += c.x;
+      sumY += c.y;
+    }
+    final double cx =
+        _boardOrigin.x + (((sumX / cells.length) + 0.5) * _boardCellSize);
+    final double cy =
+        _boardOrigin.y + (((sumY / cells.length) + 0.5) * _boardCellSize);
+    add(
+      ScorePopComponent(
+        text: '+$delta',
+        startPosition: Vector2(cx, cy),
       ),
     );
   }
@@ -1610,6 +1637,56 @@ class ComboPulseComponent extends PositionComponent {
       canvas,
       text,
       Vector2(startPosition.x, startPosition.y - yOffset),
+    );
+  }
+}
+
+class ScorePopComponent extends PositionComponent {
+  ScorePopComponent({
+    required this.text,
+    required this.startPosition,
+  }) {
+    priority = 212;
+  }
+
+  final String text;
+  final Vector2 startPosition;
+  static const double _duration = 0.85;
+  double _elapsed = 0;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _elapsed += dt;
+    if (_elapsed >= _duration) {
+      removeFromParent();
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    final double t = (_elapsed / _duration).clamp(0, 1);
+    final double opacity = (1 - t).clamp(0, 1);
+    final double yOffset = t * 40;
+    final TextPaint textPaint = TextPaint(
+      style: TextStyle(
+        fontSize: 22 - (t * 3),
+        fontWeight: FontWeight.w800,
+        color: Color.fromRGBO(214, 255, 224, opacity),
+        shadows: <Shadow>[
+          Shadow(
+            color: Color.fromRGBO(95, 224, 138, opacity * 0.9),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+    );
+    textPaint.render(
+      canvas,
+      text,
+      Vector2(startPosition.x, startPosition.y - yOffset),
+      anchor: Anchor.center,
     );
   }
 }

@@ -145,10 +145,15 @@ class TetrisController extends ChangeNotifier {
       case TetrisEventType.softDrop:
         break;
       case TetrisEventType.rotate:
+        unawaited(_sfx.playRotate());
+        unawaited(_haptics.selectionClick());
+        break;
       case TetrisEventType.hold:
+        unawaited(_sfx.playHold());
         unawaited(_haptics.selectionClick());
         break;
       case TetrisEventType.hardDrop:
+        unawaited(_sfx.playHardDrop());
         unawaited(_haptics.mediumImpact());
         break;
       case TetrisEventType.lock:
@@ -165,8 +170,15 @@ class TetrisController extends ChangeNotifier {
           'score_total': _engine.score,
         });
         break;
+      case TetrisEventType.combo:
+        unawaited(_sfx.playCombo(comboStreak: event.value));
+        break;
       case TetrisEventType.tSpin:
         unawaited(_haptics.mediumImpact());
+        break;
+      case TetrisEventType.perfectClear:
+        unawaited(_sfx.playCombo(comboStreak: 4));
+        unawaited(_haptics.heavyImpact());
         break;
       case TetrisEventType.levelUp:
         unawaited(_haptics.mediumImpact());

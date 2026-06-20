@@ -34,6 +34,17 @@ class TetrisFlameGame extends FlameGame {
   double _shake = 0;
   String? _pulseText;
   double _pulseElapsed = 0;
+  int _pulsePriority = 0;
+  String? _scorePopText;
+  double _scorePopElapsed = 0;
+  final List<_Particle> _particles = <_Particle>[];
+  final math.Random _rng = math.Random();
+
+  // Last computed board layout (screen space), so event handlers can place
+  // particles / popups without recomputing geometry.
+  double _lox = 0;
+  double _loy = 0;
+  double _lcell = 0;
 
   @override
   Color backgroundColor() => const Color(0x00000000);
@@ -49,19 +60,34 @@ class TetrisFlameGame extends FlameGame {
       case TetrisEventType.lineClear:
         _flash = 1;
         _flashStrength = event.value;
-        if (event.value >= 4) {
-          _shake = 1;
-          _pulse('TETRIS!');
+        _spawnClearParticles();
+        if (event.detail > 0) {
+          _spawnScorePop('+${event.detail}');
         }
+        if (event.value >= 4) {
+          _shake = math.max(_shake, 1);
+          _pulse('TETRIS!', 3);
+        }
+        break;
+      case TetrisEventType.combo:
+        _pulse('COMBO x${event.value + 1}', 2);
         break;
       case TetrisEventType.tSpin:
         _shake = math.max(_shake, 0.7);
         _pulse(
           event.value > 0 ? 'T-SPIN ${_clearWord(event.value)}' : 'T-SPIN',
+          4,
         );
         break;
+      case TetrisEventType.perfectClear:
+        _shake = math.max(_shake, 1);
+        _pulse('PERFECT CLEAR!', 5);
+        if (event.detail > 0) {
+          _spawnScorePop('+${event.detail}');
+        }
+        break;
       case TetrisEventType.levelUp:
-        _pulse('LEVEL ${event.value}');
+        _pulse('LEVEL ${event.value}', 1);
         break;
       case TetrisEventType.hardDrop:
         _shake = math.max(_shake, 0.22);
@@ -79,9 +105,56 @@ class TetrisFlameGame extends FlameGame {
     }
   }
 
-  void _pulse(String text) {
+  void _pulse(String text, int priority) {
+    if (_pulseText != null &&
+        priority < _pulsePriority &&
+        _pulseElapsed < 0.5) {
+      return;
+    }
     _pulseText = text;
+    _pulsePriority = priority;
     _pulseElapsed = 0;
+  }
+
+  void _spawnScorePop(String text) {
+    _scorePopText = text;
+    _scorePopElapsed = 0;
+  }
+
+  void _spawnClearParticles() {
+    final TetrisEngine engine = controller.engine;
+    if (!engine.isClearing || _lcell <= 0) {
+      return;
+    }
+    for (final int row in engine.clearingRows) {
+      for (int x = 0; x < engine.board.width; x++) {
+        final TetrominoType? type = engine.board.cellAt(x, row);
+        if (type == null) {
+          continue;
+        }
+        final Color color = tetrominoColors[type]!;
+        final double cx = _lox + (x * _lcell) + (_lcell / 2);
+        final double cy = _loy + (row * _lcell) + (_lcell / 2);
+        for (int i = 0; i < 2; i++) {
+          final double angle = _rng.nextDouble() * math.pi * 2;
+          final double speed = 40 + (_rng.nextDouble() * 95);
+          _particles.add(
+            _Particle(
+              x: cx,
+              y: cy,
+              vx: math.cos(angle) * speed,
+              vy: (math.sin(angle) * speed) - 45,
+              color: color,
+              maxLife: 0.5 + (_rng.nextDouble() * 0.35),
+              size: (_lcell * 0.12) + (_rng.nextDouble() * _lcell * 0.1),
+            ),
+          );
+        }
+      }
+    }
+    if (_particles.length > 320) {
+      _particles.removeRange(0, _particles.length - 320);
+    }
   }
 
   static String _clearWord(int rows) {
@@ -114,6 +187,22 @@ class TetrisFlameGame extends FlameGame {
         _pulseElapsed = 0;
       }
     }
+    if (_scorePopText != null) {
+      _scorePopElapsed += dt;
+      if (_scorePopElapsed > 0.9) {
+        _scorePopText = null;
+        _scorePopElapsed = 0;
+      }
+    }
+    if (_particles.isNotEmpty) {
+      for (final _Particle p in _particles) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 360 * dt;
+        p.life -= dt;
+      }
+      _particles.removeWhere((_Particle p) => p.life <= 0);
+    }
   }
 
   @override
@@ -131,6 +220,13 @@ class TetrisFlameGame extends FlameGame {
     final double boardH = cell * rows;
     final double ox = (size.x - boardW) / 2;
     final double oy = (size.y - boardH) / 2;
+    _lox = ox;
+    _loy = oy;
+    _lcell = cell;
+
+    final Set<int> clearing =
+        engine.isClearing ? engine.clearingRows.toSet() : const <int>{};
+    final double clearHi = engine.clearProgress;
 
     final double sx = _shake > 0 ? math.sin(_shake * 53) * _shake * 7 : 0;
     final double sy = _shake > 0 ? math.cos(_shake * 61) * _shake * 7 : 0;
@@ -143,7 +239,16 @@ class TetrisFlameGame extends FlameGame {
       for (int x = 0; x < cols; x++) {
         final TetrominoType? type = engine.board.cellAt(x, y);
         if (type != null) {
-          _paintCell(canvas, ox, oy, x, y, cell, tetrominoColors[type]!);
+          _paintCell(
+            canvas,
+            ox,
+            oy,
+            x,
+            y,
+            cell,
+            tetrominoColors[type]!,
+            highlight: clearing.contains(y) ? clearHi : 0,
+          );
         }
       }
     }
@@ -181,7 +286,63 @@ class TetrisFlameGame extends FlameGame {
 
     canvas.restore();
 
+    _renderParticles(canvas);
+    _renderScorePop(canvas, ox, oy, boardW, boardH);
     _renderPulse(canvas, ox, oy, boardW, boardH);
+  }
+
+  void _renderParticles(Canvas canvas) {
+    if (_particles.isEmpty) {
+      return;
+    }
+    for (final _Particle p in _particles) {
+      final double a = (p.life / p.maxLife).clamp(0, 1).toDouble();
+      final Paint paint = Paint()
+        ..color = p.color.withValues(alpha: a)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2);
+      canvas.drawCircle(Offset(p.x, p.y), p.size * (0.4 + (0.6 * a)), paint);
+    }
+  }
+
+  void _renderScorePop(
+    Canvas canvas,
+    double ox,
+    double oy,
+    double boardW,
+    double boardH,
+  ) {
+    final String? text = _scorePopText;
+    if (text == null) {
+      return;
+    }
+    final double t = (_scorePopElapsed / 0.9).clamp(0, 1).toDouble();
+    final double opacity = (1 - t).clamp(0, 1).toDouble();
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Color.fromRGBO(214, 255, 224, opacity),
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+          shadows: <Shadow>[
+            Shadow(
+              color: Color.fromRGBO(95, 224, 138, opacity * 0.9),
+              blurRadius: 14,
+            ),
+          ],
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: boardW);
+    painter.paint(
+      canvas,
+      Offset(
+        ox + ((boardW - painter.width) / 2),
+        oy + (boardH * 0.5) - (t * 46),
+      ),
+    );
   }
 
   void _renderPulse(
@@ -273,8 +434,9 @@ class TetrisFlameGame extends FlameGame {
     int x,
     int y,
     double cell,
-    Color color,
-  ) {
+    Color color, {
+    double highlight = 0,
+  }) {
     final double inset = cell * 0.06;
     final Rect rect = Rect.fromLTWH(
       ox + (x * cell) + inset,
@@ -313,6 +475,15 @@ class TetrisFlameGame extends FlameGame {
       ..strokeWidth = 1
       ..color = Color.lerp(color, Colors.white, 0.5) ?? color;
     canvas.drawRRect(rr, edge);
+
+    if (highlight > 0) {
+      canvas.drawRRect(
+        rr,
+        Paint()
+          ..color = Colors.white
+              .withValues(alpha: (highlight * 0.85).clamp(0, 1).toDouble()),
+      );
+    }
   }
 
   void _paintGhost(
@@ -341,4 +512,25 @@ class TetrisFlameGame extends FlameGame {
       ..color = Color.lerp(color, const Color(0x00101A30), 0.55) ?? color;
     canvas.drawRRect(rr, outline);
   }
+}
+
+class _Particle {
+  _Particle({
+    required this.x,
+    required this.y,
+    required this.vx,
+    required this.vy,
+    required this.color,
+    required this.maxLife,
+    required this.size,
+  }) : life = maxLife;
+
+  double x;
+  double y;
+  double vx;
+  double vy;
+  double life;
+  final double maxLife;
+  final Color color;
+  final double size;
 }

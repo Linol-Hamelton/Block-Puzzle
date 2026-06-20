@@ -1,5 +1,7 @@
+import 'package:block_puzzle_mobile/domain/tetris/falling_piece.dart';
 import 'package:block_puzzle_mobile/domain/tetris/tetris_board.dart';
 import 'package:block_puzzle_mobile/domain/tetris/tetris_engine.dart';
+import 'package:block_puzzle_mobile/domain/tetris/tetromino.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 int filledCells(TetrisBoard board) {
@@ -71,6 +73,46 @@ void main() {
       final TetrisEngine engine = TetrisEngine(seed: 1)..start();
       engine.tick(const Duration(milliseconds: 16));
       expect(engine.isGameOver, isFalse);
+    });
+
+    test('line clear runs a delayed clearing phase (highlight -> collapse)', () {
+      // 4-wide board, bottom row filled except column 0; a vertical I at
+      // column 0 hard-drops to complete and clear the row.
+      final List<TetrominoType?> cells =
+          List<TetrominoType?>.filled(4 * 8, null);
+      int idx(int x, int y) => (y * 4) + x;
+      cells[idx(1, 7)] = TetrominoType.l;
+      cells[idx(2, 7)] = TetrominoType.l;
+      cells[idx(3, 7)] = TetrominoType.l;
+      final TetrisBoard board =
+          TetrisBoard(width: 4, height: 8, cells: cells);
+
+      final TetrisEngine engine = TetrisEngine(width: 4, height: 8)
+        ..restore(<String, Object?>{
+          'board': board.toJson(),
+          'active': const FallingPiece(
+            type: TetrominoType.i,
+            rotationIndex: 1,
+            originX: -2,
+            originY: 0,
+          ).toJson(),
+        });
+      engine.drainEvents();
+
+      engine.applyInput(TetrisInput.hardDrop);
+      // Row is detected + scored, but held visible (not collapsed yet).
+      expect(engine.isClearing, isTrue);
+      expect(engine.clearingRows, contains(7));
+      expect(engine.score, greaterThanOrEqualTo(100));
+      final List<TetrisEventType> events =
+          engine.drainEvents().map((TetrisEvent e) => e.type).toList();
+      expect(events, contains(TetrisEventType.lineClear));
+
+      // After the clear delay it collapses and a new piece spawns.
+      engine.tick(const Duration(milliseconds: 200));
+      expect(engine.isClearing, isFalse);
+      expect(engine.active, isNotNull);
+      expect(engine.linesCleared, 1);
     });
 
     test('snapshot round-trips engine state', () {

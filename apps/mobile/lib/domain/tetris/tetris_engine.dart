@@ -24,6 +24,8 @@ enum TetrisEventType {
   lock,
   lineClear,
   tSpin,
+  combo,
+  perfectClear,
   levelUp,
   hold,
   gameOver,
@@ -31,13 +33,16 @@ enum TetrisEventType {
 
 /// A discrete model event for the presentation/feedback layer to react to
 /// (SFX, haptics, animation, analytics). [value] carries event-specific data:
-/// cleared rows for [TetrisEventType.lineClear], new level for
-/// [TetrisEventType.levelUp], dropped cells for [TetrisEventType.hardDrop].
+/// cleared rows for [TetrisEventType.lineClear], combo length for
+/// [TetrisEventType.combo], new level for [TetrisEventType.levelUp], dropped
+/// cells for [TetrisEventType.hardDrop]. [detail] is a secondary payload —
+/// points gained for [TetrisEventType.lineClear]/[TetrisEventType.perfectClear].
 class TetrisEvent {
-  const TetrisEvent(this.type, [this.value = 0]);
+  const TetrisEvent(this.type, [this.value = 0, this.detail = 0]);
 
   final TetrisEventType type;
   final int value;
+  final int detail;
 }
 
 /// Pure-domain Tetris rules engine. Holds the mutable run state and advances it
@@ -52,18 +57,27 @@ class TetrisEngine {
     int height = 20,
     int nextPreviewCount = 5,
     Duration lockDelay = const Duration(milliseconds: 500),
+    Duration lineClearDelay = const Duration(milliseconds: 120),
     int lockResetCap = 15,
   })  : _board = TetrisBoard(width: width, height: height),
         _bag = SevenBagRandomizer(seed: seed),
         _nextPreviewCount = nextPreviewCount,
         _lockDelayMs = lockDelay.inMilliseconds,
+        _clearDelayMs = lineClearDelay.inMilliseconds,
         _lockResetCap = lockResetCap;
 
   TetrisBoard _board;
   final SevenBagRandomizer _bag;
   final int _nextPreviewCount;
   final int _lockDelayMs;
+  final int _clearDelayMs;
   final int _lockResetCap;
+
+  // Line-clear animation phase: rows are detected + scored at lock, held
+  // visible for [_clearDelayMs], then collapsed (highlight -> dissolve ->
+  // collapse). Active piece is null during this window.
+  List<int> _clearingRows = <int>[];
+  int _clearTimerMs = 0;
 
   FallingPiece? _active;
   TetrominoType? _hold;
@@ -95,6 +109,11 @@ class TetrisEngine {
   bool get isStarted => _started;
   bool get hasActiveGame => _started && !_gameOver && _active != null;
   bool get canHold => _canHold;
+  bool get isClearing => _clearingRows.isNotEmpty;
+  List<int> get clearingRows => List<int>.unmodifiable(_clearingRows);
+  double get clearProgress => _clearDelayMs <= 0
+      ? 1
+      : (1 - (_clearTimerMs / _clearDelayMs)).clamp(0, 1).toDouble();
 
   List<TetrominoType> get nextQueue => _bag.peek(_nextPreviewCount);
 
@@ -158,11 +177,23 @@ class TetrisEngine {
 
   /// Advances gravity and lock-delay timers by [delta].
   void tick(Duration delta) {
-    if (_gameOver || !_started || _active == null) {
+    if (_gameOver || !_started) {
       return;
     }
     final int ms = delta.inMilliseconds;
     if (ms <= 0) {
+      return;
+    }
+
+    if (_clearingRows.isNotEmpty) {
+      _clearTimerMs -= ms;
+      if (_clearTimerMs <= 0) {
+        _finishClear();
+      }
+      return;
+    }
+
+    if (_active == null) {
       return;
     }
 
@@ -282,22 +313,41 @@ class TetrisEngine {
       return;
     }
 
-    final LineClearOutcome outcome = _board.clearFullRows();
-    _board = outcome.board;
-    _applyScoring(outcome.clearedRows, spin);
+    final List<int> full = _board.fullRows();
+    _applyScoring(full.length, spin);
 
+    if (full.isEmpty || _clearDelayMs <= 0) {
+      if (full.isNotEmpty) {
+        _board = _board.clearFullRows().board;
+      }
+      _canHold = true;
+      _spawnNext();
+      return;
+    }
+
+    // Hold the full rows visible for the clear animation; collapse on the timer
+    // (highlight -> dissolve -> collapse).
+    _clearingRows = full;
+    _clearTimerMs = _clearDelayMs;
+  }
+
+  void _finishClear() {
+    _board = _board.clearFullRows().board;
+    _clearingRows = <int>[];
+    _clearTimerMs = 0;
     _canHold = true;
     _spawnNext();
   }
 
   void _applyScoring(int rows, TSpinType spin) {
-    _score += TetrisScoring.actionScore(
+    final int actionPoints = TetrisScoring.actionScore(
       rows: rows,
       level: _level,
       spin: spin,
       backToBack:
           _backToBack && TetrisScoring.isDifficult(rows: rows, spin: spin),
     );
+    _score += actionPoints;
 
     if (spin != TSpinType.none) {
       _events.add(TetrisEvent(TetrisEventType.tSpin, rows));
@@ -309,15 +359,20 @@ class TetrisEngine {
     }
 
     _combo += 1;
+    int comboPoints = 0;
     if (_combo > 0) {
-      _score += TetrisScoring.comboScore(combo: _combo, level: _level);
+      comboPoints = TetrisScoring.comboScore(combo: _combo, level: _level);
+      _score += comboPoints;
+      _events.add(TetrisEvent(TetrisEventType.combo, _combo, comboPoints));
     }
     _backToBack = TetrisScoring.isDifficult(rows: rows, spin: spin);
 
     final int previousLevel = _level;
     _linesCleared += rows;
     _level = TetrisScoring.levelForLines(_linesCleared);
-    _events.add(TetrisEvent(TetrisEventType.lineClear, rows));
+    _events.add(
+      TetrisEvent(TetrisEventType.lineClear, rows, actionPoints + comboPoints),
+    );
     if (_level != previousLevel) {
       _events.add(TetrisEvent(TetrisEventType.levelUp, _level));
     }

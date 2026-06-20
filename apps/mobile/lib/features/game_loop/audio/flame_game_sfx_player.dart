@@ -17,6 +17,9 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   static const String _lineClear = 'line_clear.wav';
   static const String _combo = 'combo.wav';
   static const String _gameOver = 'game_over.wav';
+  static const String _rotate = 'rotate.wav';
+  static const String _hold = 'hold.wav';
+  static const String _hardDrop = 'hard_drop.wav';
   static const String _audioPrefix = 'assets/audio/';
 
   bool _initialized = false;
@@ -63,7 +66,7 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
     try {
       FlameAudio.updatePrefix(_audioPrefix);
       await FlameAudio.audioCache.loadAll(
-        <String>[_piecePlaced, _invalidMove, _lineClear, _combo, _gameOver],
+        <String>[_piecePlaced, _invalidMove, _lineClear, _combo, _gameOver, _rotate, _hold, _hardDrop],
       );
 
       await _rebuildPools();
@@ -86,7 +89,7 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
       }
       FlameAudio.updatePrefix(_audioPrefix);
       await FlameAudio.audioCache.loadAll(
-          <String>[_piecePlaced, _invalidMove, _lineClear, _combo, _gameOver]);
+          <String>[_piecePlaced, _invalidMove, _lineClear, _combo, _gameOver, _rotate, _hold, _hardDrop]);
       _consecutivePlaybackFailures = 0;
       _logger.info('SFX audio session refreshed');
     } catch (error) {
@@ -117,6 +120,15 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
     final double volume = comboStreak >= 4 ? 1.0 : 0.82;
     await _play(_combo, volume: volume);
   }
+
+  @override
+  Future<void> playRotate() async => _play(_rotate, volume: 0.45);
+
+  @override
+  Future<void> playHold() async => _play(_hold, volume: 0.5);
+
+  @override
+  Future<void> playHardDrop() async => _play(_hardDrop, volume: 0.7);
 
   @override
   Future<void> playGameOver() async => _play(_gameOver, volume: 0.85);
@@ -230,6 +242,21 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
       _gameOver,
       minPlayers: 1,
       maxPlayers: 2,
+    );
+    _pools[_rotate] = await FlameAudio.createPool(
+      _rotate,
+      minPlayers: 2,
+      maxPlayers: 8,
+    );
+    _pools[_hold] = await FlameAudio.createPool(
+      _hold,
+      minPlayers: 1,
+      maxPlayers: 3,
+    );
+    _pools[_hardDrop] = await FlameAudio.createPool(
+      _hardDrop,
+      minPlayers: 2,
+      maxPlayers: 6,
     );
   }
 

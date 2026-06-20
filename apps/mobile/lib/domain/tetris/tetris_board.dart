@@ -73,6 +73,28 @@ class TetrisBoard {
     return true;
   }
 
+  /// Indices of every fully-occupied row (top to bottom). Used to animate the
+  /// clear before [clearFullRows] collapses the board.
+  List<int> fullRows() {
+    final List<int> rows = <int>[];
+    for (int y = 0; y < height; y++) {
+      if (isRowFull(y)) {
+        rows.add(y);
+      }
+    }
+    return rows;
+  }
+
+  /// True when no cell is occupied — for Perfect Clear (All-Clear) detection.
+  bool get isEmpty {
+    for (final TetrominoType? cell in _cells) {
+      if (cell != null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// Removes full rows and collapses everything above them downward.
   LineClearOutcome clearFullRows() {
     final List<List<TetrominoType?>> survivingRows = <List<TetrominoType?>>[];

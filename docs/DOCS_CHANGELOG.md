@@ -2,6 +2,13 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-06-20 (Game-feel P1 — clear action)
+- **Tetris clear action:** engine now runs a delayed clearing phase (highlight → dissolve → collapse, ~120 ms) exposed via `isClearing`/`clearingRows`/`clearProgress`; the Flame view spawns a colored particle burst on the cleared cells and brightens them as they dissolve.
+- **Tetris combo:** engine emits `combo` events; controller plays the combo SFX and shows a "COMBO xN" pulse.
+- **Input SFX:** added generated `rotate.wav` / `hold.wav` / `hard_drop.wav` and `playRotate`/`playHold`/`playHardDrop` on `GameSfxPlayer`; Tetris rotate/hold/hard-drop are now audible.
+- **Floating "+N" score popups** on clears in both games (Tetris via `lineClear.detail`; Classic via a `ScorePopComponent` at the cleared-cell centroid).
+- `flutter analyze` clean; 159 tests pass (+1 clearing-phase test). Engine also gained `combo`/`perfectClear` events + `board.fullRows()`/`isEmpty` for P2.
+
 ## 2026-06-20 (Tetris — polish)
 - Visual juice in the Flame view: line-clear board flash (intensity by lines), screen shake on Tetris/T-spin/hard-drop, and text pulses ("TETRIS!", "T-SPIN SINGLE/DOUBLE/TRIPLE", "LEVEL n") via a new `controller.onVisualEvent` hook and a `TetrisEventType.tSpin` engine event. HUD now shows 5 next pieces and dims Hold while it is locked for the drop. Snappier DAS/ARR (130/45 ms). `flutter analyze` clean; 158 tests pass.
 
