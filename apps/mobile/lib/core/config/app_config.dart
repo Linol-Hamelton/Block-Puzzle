@@ -67,6 +67,19 @@ class AppConfig {
   bool get hasAnalyticsApi =>
       analyticsApiBaseUrl != null && analyticsApiBaseUrl!.trim().isNotEmpty;
 
+  /// Whether the composition root should wire the debug-only adapters
+  /// (`DebugIapStoreService`, `DebugAnalyticsTracker`,
+  /// `InMemoryRemoteConfigRepository`, `NoopCrashReporter`).
+  ///
+  /// This lives here, rather than inline in the container, so that the choice
+  /// is testable without building a DI graph. It is the single most dangerous
+  /// piece of configuration in the app: [AppEnvironment.dev] and
+  /// [BuildFlavor.debug] are the defaults, so a build that forgets to pass
+  /// `--dart-define` resolves the debug adapters and will simulate purchases
+  /// and send no telemetry while looking like a release. See DEC-0007.
+  bool get useDebugAdapters =>
+      environment.isDevelopment && buildFlavor.isDebug;
+
   static String? _readOptionalEnvironmentValue(String key) {
     final String value = String.fromEnvironment(key, defaultValue: '').trim();
     return value.isEmpty ? null : value;

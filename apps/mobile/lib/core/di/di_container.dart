@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../core/audio/music_controller.dart';
@@ -65,8 +66,21 @@ Future<void> configureDependencies() async {
 
   final AppConfig appConfig = AppConfig.fromEnvironment();
   final AppLogger logger = AppLogger();
-  final bool useDebugAdapters =
-      appConfig.environment.isDevelopment && appConfig.buildFlavor.isDebug;
+  final bool useDebugAdapters = appConfig.useDebugAdapters;
+
+  // A release binary must never resolve the debug adapters. Without
+  // `--dart-define` the environment falls back to dev/debug, which would give a
+  // shipped build DebugIapStoreService (simulated purchases) and
+  // NoopCrashReporter (no telemetry) while everything still looks normal.
+  // Fail loudly here instead of discovering it from store reviews. See DEC-0007.
+  if (kReleaseMode && useDebugAdapters) {
+    throw StateError(
+      'Release build resolved the debug adapters: APP_ENV='
+      '${appConfig.environment.wireName}, APP_FLAVOR='
+      '${appConfig.buildFlavor.wireName}. Pass --dart-define=APP_ENV=prod '
+      '--dart-define=APP_FLAVOR=release when building for distribution.',
+    );
+  }
 
   final RemoteConfigRepository bootstrapRemoteConfigRepository = useDebugAdapters
       ? InMemoryRemoteConfigRepository(appConfig: appConfig)

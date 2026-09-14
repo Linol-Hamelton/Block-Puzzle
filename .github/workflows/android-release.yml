@@ -62,20 +62,32 @@ jobs:
           EOF
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --fatal-infos --fatal-warnings
 
       - name: Test
         run: flutter test --reporter expanded
 
+      # --dart-define is not optional here. AppConfig defaults to APP_ENV=dev
+      # and APP_FLAVOR=debug, which makes the composition root resolve the debug
+      # adapters: simulated purchases and no telemetry in a shipped binary.
+      # configureDependencies() now throws in release mode if these are missing,
+      # so a misconfigured build fails at startup rather than in the store.
+      # See DEC-0007.
       - name: Build signed Android App Bundle
         run: >
           flutter build appbundle --release
+          --dart-define=APP_ENV=prod
+          --dart-define=APP_FLAVOR=release
+          --dart-define=APP_VERSION="${{ inputs.build_name }}+${{ inputs.build_number }}"
           --build-name="${{ inputs.build_name }}"
           --build-number="${{ inputs.build_number }}"
 
       - name: Build signed Android APK
         run: >
           flutter build apk --release
+          --dart-define=APP_ENV=prod
+          --dart-define=APP_FLAVOR=release
+          --dart-define=APP_VERSION="${{ inputs.build_name }}+${{ inputs.build_number }}"
           --build-name="${{ inputs.build_name }}"
           --build-number="${{ inputs.build_number }}"
 
