@@ -12,15 +12,28 @@ import '../data/analytics/analytics_tracker.dart';
 import '../infra/monitoring/crash_reporter.dart';
 import 'block_puzzle_app.dart';
 
+/// Whether `Firebase.initializeApp()` actually succeeded.
+///
+/// Everything downstream of Firebase - Crashlytics, Analytics, Remote Config,
+/// Auth - is useless when this is false, and the failure used to be swallowed
+/// whole, so a build with no `google-services.json` looked healthy while
+/// reporting nothing. Callers can read this to tell "no events" apart from
+/// "no connection".
+bool get firebaseReady => _firebaseReady;
+bool _firebaseReady = false;
+
+/// Startup logger used before the DI container exists.
+///
+/// Deliberately independent of Firebase: the one error we most need to see is
+/// Firebase failing to start, and reporting that through Crashlytics or
+/// Analytics would route it into the thing that just failed.
+final AppLogger _startupLogger = AppLogger();
+
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    // Ignore if not configured yet via flutterfire
-  }
-  
+
+  await _initializeFirebase();
+
   await Hive.initFlutter();
   await SystemChrome.setPreferredOrientations(
     const <DeviceOrientation>[
@@ -29,7 +42,59 @@ Future<void> bootstrap() async {
   );
   await configureDependencies();
   _configureGlobalErrorHandlers();
+
+  if (!_firebaseReady) {
+    // Now that DI exists the analytics queue can carry it too, but the log
+    // above is what survives when nothing else does.
+    unawaited(
+      sl<AnalyticsTracker>().track(
+        'ops_error',
+        params: <String, Object?>{
+          'source': 'firebase_init',
+          'error_type': 'FirebaseInitializationFailed',
+          'message': 'Firebase is not initialized; remote services are inert',
+        },
+      ),
+    );
+  }
+
   runApp(const BlockPuzzleApp());
+}
+
+Future<void> _initializeFirebase() async {
+  try {
+    await Firebase.initializeApp();
+    _firebaseReady = true;
+  } catch (error, stackTrace) {
+    _firebaseReady = false;
+    _startupLogger.error(
+      'Firebase.initializeApp failed: $error. Crashlytics, Analytics, Remote '
+      'Config and Auth will be inert. Missing google-services.json or '
+      'firebase_options.dart is the usual cause.',
+    );
+    // In debug this must be impossible to miss; shipping a build that silently
+    // lost its whole data plane is the failure mode being guarded against.
+    assert(() {
+      debugPrint('$stackTrace');
+      throw StateError('Firebase failed to initialize in a debug build: $error');
+    }());
+  }
+}
+
+/// Top-level handler for anything that escapes [bootstrap].
+///
+/// Installed by `main()` via `runZonedGuarded`, so it also catches failures
+/// that happen before the DI container and the Flutter error handlers exist.
+void reportBootstrapError(Object error, StackTrace stackTrace) {
+  _startupLogger.error('Unhandled startup error: $error');
+  debugPrint('$stackTrace');
+
+  if (!sl.isRegistered<CrashReporter>()) {
+    return;
+  }
+  unawaited(
+    sl<CrashReporter>().recordError(error, stackTrace, reason: 'bootstrap'),
+  );
 }
 
 void _configureGlobalErrorHandlers() {
