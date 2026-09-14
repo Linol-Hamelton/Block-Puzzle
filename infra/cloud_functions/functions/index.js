@@ -28,7 +28,7 @@ const db = getFirestore();
 
 // The Android applicationId. Override via environment for stage/prod projects.
 const ANDROID_PACKAGE_NAME =
-  process.env.ANDROID_PACKAGE_NAME || 'com.luminablocks.app';
+  process.env.ANDROID_PACKAGE_NAME || 'ru.luminablocks.game';
 
 const androidPublisher = google.androidpublisher('v3');
 const playAuth = new google.auth.GoogleAuth({
