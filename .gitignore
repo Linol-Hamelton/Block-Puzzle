@@ -21,3 +21,16 @@ apps/mobile/windows/flutter/ephemeral/
 # Android / Gradle local
 apps/mobile/android/local.properties
 apps/mobile/android/.gradle/
+
+# AI collaboration protocol
+.claude/settings.local.json
+Desktop.ini
+*.swp
+*~
+.ai/scratch/
+.ai/runtime/
+.ai/backups/
+.env
+.env.*
+*.key
+*.pem

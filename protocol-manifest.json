@@ -1,0 +1,33 @@
+{
+    "comment":  "Installed copy. The protocol source repository holds the installer, the test suite and the templates; this project holds only the runtime it needs.",
+    "protocolVersion":  "1.6.1",
+    "role":  "installed",
+    "managed":  [
+                    "protocol-manifest.json",
+                    "AGENTS.md",
+                    "CLAUDE.md",
+                    ".ai/docs/PROTOCOL.md",
+                    ".ai/docs/CODEX.md",
+                    "validate-protocol.ps1",
+                    ".ai/bin/protocol-hooks.cjs",
+                    ".ai/bin/protocol-lock.cjs",
+                    ".ai/bin/protocol-handoff.cjs",
+                    ".claude/hooks/protocol-hooks.cjs",
+                    ".claude/hooks/session-start.sh",
+                    ".claude/hooks/stop-worklog-check.sh",
+                    ".codex/hooks/protocol.cjs"
+                ],
+    "integration":  [
+                        ".claude/settings.json",
+                        ".codex/hooks.json",
+                        ".gitattributes",
+                        ".gitignore"
+                    ],
+    "state":  [
+                  "TASK.md",
+                  "PLAN.md",
+                  "DECISIONS.md",
+                  "ARCHIVE.md",
+                  "worklog/README.md"
+              ]
+}
