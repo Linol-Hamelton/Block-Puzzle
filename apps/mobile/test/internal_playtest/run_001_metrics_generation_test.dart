@@ -149,13 +149,23 @@ void main() {
       ],
     };
 
-    final Directory outputDir = Directory('../../data/dashboards');
+    // Write to a temporary directory, never to the tracked dashboard file.
+    // This simulation produces different numbers on every run, so writing into
+    // data/dashboards left the working tree permanently dirty and invited
+    // simulated figures to be committed as if they were measured ones.
+    // Set PLAYTEST_METRICS_OUT to capture the output somewhere durable.
+    final String? explicitOut =
+        Platform.environment['PLAYTEST_METRICS_OUT'];
+    final Directory outputDir = explicitOut != null && explicitOut.isNotEmpty
+        ? Directory(explicitOut)
+        : Directory.systemTemp.createTempSync('playtest_run_001_');
     if (!outputDir.existsSync()) {
       outputDir.createSync(recursive: true);
     }
 
-    final File outputFile =
-        File('../../data/dashboards/internal_playtest_run_001_metrics.json');
+    final File outputFile = File(
+      '${outputDir.path}/internal_playtest_run_001_metrics.json',
+    );
     outputFile.writeAsStringSync(
       const JsonEncoder.withIndent('  ').convert(metrics),
     );
