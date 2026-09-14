@@ -1,6 +1,6 @@
 # Current Task
 
-Status: In progress - stage 0 underway; DEC-0001..DEC-0021 binding
+Status: In progress - stage A0-A3 done; A4 needs the owner in the console
 
 Owner: RuslanFomenko
 Last update: 2026-09-14
@@ -26,9 +26,9 @@ asks. Reviewers write in their own journal, never another session's.
 
 - [x] Plans 12 and 13 merged into one live plan; both marked superseded.
 - [x] Review items R1, R5-R11 applied to docs 17/18/19 and the checklist.
-- [ ] Batch 2 (db8d05e) converged with the Match-3 line and merged to main.
-- [ ] Release build proves DI resolves production adapters (DEC-0007).
-- [ ] Remote Config keys map and merge with defaults instead of replacing them.
+- [x] Batch 2 (db8d05e) converged with the Match-3 line and merged to main.
+- [x] Release build proves DI resolves production adapters (DEC-0007).
+- [x] Remote Config keys map and merge with defaults instead of replacing them.
 
 ## Current state
 

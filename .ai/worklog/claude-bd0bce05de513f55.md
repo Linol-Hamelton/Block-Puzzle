@@ -6,6 +6,93 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-14 - Stage A0-A3: release wiring, package identity, bootstrap, config
+
+Agent: Claude / claude-bd0bce05de513f55.
+
+Action: Implemented four plan items as four separate commits so each can be
+reviewed against its plan line. A0: moved the adapter choice into
+AppConfig.useDebugAdapters, added a kReleaseMode guard in configureDependencies
+that throws when a release build would resolve the debug adapters, passed
+APP_ENV/APP_FLAVOR/APP_VERSION in android-release.yml, and raised both workflows
+to analyze --fatal-infos --fatal-warnings. A1 and A8: one package identity
+ru.luminablocks.game across build.gradle applicationId and namespace, the Kotlin
+package and its directory, and ANDROID_PACKAGE_NAME in the Cloud Function; pinned
+minSdk to 24; declared appCategory="game". A2: main() now awaits bootstrap inside
+runZonedGuarded in the same zone as the binding and runApp, and the empty catch
+around Firebase.initializeApp was replaced with a firebaseReady flag, an
+independent startup logger and a debug-mode assert. A3: added RemoteConfigKeyMap
+and made the Firebase repository merge over the bundled defaults instead of
+replacing them, with type checking against each default.
+
+Result: flutter analyze --fatal-infos --fatal-warnings exit 0; flutter test
+exit 0, **214 tests**, up from 200 - 6 new for the adapter rule and 8 for the
+key map. Commits 5cba115, e3a4e9b, 2a21683, 608dfb7 on main.
+A3 turned out to be two defects, not one: besides the dotted keys Firebase
+cannot accept, the repository replaced the defaults wholesale on any non-empty
+response, so the first successful fetch would have dropped all 54 settings at
+once. Both are fixed and covered. Generated Windows plugin files changed line
+endings during the runs and were restored rather than committed.
+
+Next step: A4 - create the Firebase project and wire firebase_options.dart plus
+the CI secret, which needs the owner in the console. Then A5, the function
+runtime service account, and A6, Firestore rules including users/{uid}.
+
+Open: main is now nine commits ahead of origin and nothing has been pushed; the
+owner has approved merges and commits but not a push. The release-adapter guard
+and the config merge are verified by unit tests only - neither has run against a
+real Firebase project, a real device or a store. Play Console access and a Blaze
+billing account still block stage C.
+
+Evidence:
+- anchor: 608dfb7928e00c739372e21ba27bcbc06e20fe9e, uncommitted changes present
+- digest: sha256:94acf622e923d28895417cdf5c0b3de261ebbf1e7fbf619476657e12de787f35 over 439 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-14T19:49:35.874Z by claude-bd0bce05de513f55
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-14 - Stage 0.3: branches converged and merged to main
+
+Agent: Claude / claude-bd0bce05de513f55.
+
+Action: With the owner's explicit approval to merge and commit, committed the
+documentation and protocol work, merged fix/review-followups-p2 (db8d05e) into
+the Match-3 line, resolved the single conflict, fast-forwarded main, and fixed
+the simulation test that was overwriting a tracked dashboard file.
+
+Result: Three commits on main, which moved from a577485 to d46baf1 and is now
+five ahead of origin/main. 37be419 carries the protocol install, DEC-0001 to
+DEC-0021 and the unified plan 14; b37b730 is the batch-2 merge; d46baf1 fixes
+the test. The merge conflicted only in docs/DOCS_CHANGELOG.md, where both lines
+had prepended an entry; both were kept. All three lines are now ancestors of
+main: db8d05e, 357300c and 50e008a all verify with merge-base --is-ancestor.
+Verified on the merged tree: flutter analyze --fatal-infos --fatal-warnings
+exit 0; flutter test exit 0, **200 tests** - the 196 of the Match-3 line plus
+the 4 that batch 2 added. Spot-checked that the batch-2 fixes survived rather
+than being silently dropped: lastLockedCells, _awardPerfectClearIfEmpty,
+isGravity, revive_used and the resumed flag are all present.
+run_001_metrics_generation_test now writes to a temp directory; a full test run
+leaves the working tree clean, which it did not before. Two generated Windows
+plugin files changed line endings during the runs and were restored rather than
+committed. Nothing was pushed.
+
+Next step: stage A0 - pass --dart-define for APP_ENV/APP_FLAVOR/APP_VERSION in
+both workflows and prove in a test that DI resolves production adapters
+(DEC-0007). Then A3 - Remote Config key mapping and the defaults merge.
+
+Open: main is five commits ahead of origin and not pushed; the owner has not
+asked for a push. Play Console access and a Blaze account still block stage C.
+Nothing verified on device, in a store or in a cloud.
+
+Evidence:
+- anchor: d46baf1f93c7fbdd7cee300ee4efbe5f72c52090, uncommitted changes present
+- digest: sha256:daddb47145b0438205852f8097c9b872984217077dfd4e97c7b02156bc7e274e over 436 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-14T19:40:50.698Z by claude-bd0bce05de513f55
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-14 - Codex review processed; stage 0 consolidation
 
 Agent: Claude / claude-bd0bce05de513f55.
@@ -48,105 +135,6 @@ Evidence:
 - digest: sha256:ca2206076f07b32c1130ea692436bd1d68d9ba7bba0309d333ca7e624a590203 over 436 tracked and untracked files
 - digest format: 4
 - recorded: 2026-09-14T19:33:01.224Z by claude-bd0bce05de513f55
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-14 - Emulator choice, applicationId gate, models for this hardware
-
-Agent: Claude / claude-bd0bce05de513f55.
-
-Action: Read the host machine hardware directly rather than assuming it, then
-researched three owner requests. Wrote docs/operations/19_EMULATOR_AND_DEVICE_MATRIX.md
-and section 5 of docs/operations/18_AI_ASSET_TOOLING_SURVEY.md. Added a blocking
-section 0 to docs/release/03_PUBLISH_EXECUTION_CHECKLIST.md for the irreversible
-applicationId, preserving that file pre-existing BOM rather than reformatting it.
-Rotated the oldest entry of this journal into .ai/ARCHIVE.md to stay under the
-150-line limit; the text was moved unchanged.
-
-Result: Hardware measured - i9-13900HX 24C/32T, 31.7 GB RAM, RTX 4060 Laptop
-with 8188 MiB VRAM (WMI reports 4 GB because AdapterRAM is a 32-bit field; the
-real figure came from nvidia-smi), 86 GB free on C and 447 GB on D. A hypervisor
-is already running, so the emulator choice is Android Studio AVD on WHPX:
-Genymotion asks for Hyper-V to be off, which would break VBS and WSL2. No
-Android SDK is installed. Default python is 3.14 and its PyTorch is broken on
-shm.dll; 3.11 is present and usable. ffmpeg is missing. Recorded the honest
-limit: this machine is far faster than a Redmi 9/10, so no emulator setting can
-measure the cold-start or frame-rate gate - that stays DEC-0014 single physical
-device. Model picks verified against licences rather than popularity: SDXL,
-FLUX.1 schnell (Apache 2.0) and SD 3.5 Medium for images; Stable Audio Open
-Small, ACE-Step (Apache 2.0) and Stable Audio Open 1.x for sound. No product
-code changed.
-
-Follow-up the same day: checked whether Stable Audio 3.0 Medium fits this GPU.
-It does. The official repository table gives peak VRAM 5.07 GB at 5s rising to
-6.52 GB at the 380s maximum, and chunked decoding cuts the 120s case from 6.49
-to about 5.14 GB; the docs name the RTX 4060 as a supported card. Medium covers
-music and SFX in one model, so section 5.2 of the survey now leads with it
-instead of the Small models. The real obstacle is that Medium requires Flash
-Attention 2, which installs badly on Windows - WSL2 is already enabled here
-(version 2, docker-desktop distro present), so that is the recommended route.
-Licence terms still have to be read at stability.ai/license before shipping.
-
-Next step: owner confirms the exact applicationId string, then stage S0 and the
-stage A work under DEC-0013 may begin. Installing the Android SDK also closes
-the missing Android toolchain noted earlier.
-
-Open: FLUX.1 dev is the variant most people download and its model licence is
-non-commercial - the checklist warns about it, but nothing enforces it. No asset
-tool is adopted yet and that choice still needs its own DEC. minSdk is not
-pinned in build.gradle; it inherits flutter.minSdkVersion, so the min-API
-emulator profile cannot be fixed until it is. Seamless music looping is not
-something any of these models produce on their own and remains manual work.
-
-Evidence:
-- anchor: 357300ccddff7f7c62bda8639dc966419442453a, uncommitted changes present
-- digest: sha256:d5626e6b9e24e2aade39463272e574327642069c1c43ebcfe964ec888de1911d over 434 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-14T15:36:08.378Z by claude-bd0bce05de513f55
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-14 - Remaining answers recorded; Firebase and asset docs
-
-Agent: Claude / claude-bd0bce05de513f55.
-
-Action: Put every still-open question to the owner and recorded the answers.
-Under the shared lock, appended DEC-0009 to DEC-0015 covering package identity,
-closed-test composition, the Match-3 metric, first store, the execution model,
-the device matrix and the seventeen-item work block. Updated .ai/TASK.md to
-Planned. Wrote docs/operations/17_FIREBASE_PROJECT_SETUP.md, the console and CI
-procedure for a Firebase project that does not exist yet, and
-docs/operations/18_AI_ASSET_TOOLING_SURVEY.md, a web-researched survey of AI
-image and audio tooling to replace an artist.
-
-Result: validator passes, 15 decision blocks inspected, 0 warnings. TASK.md 69
-lines, DECISIONS.md 543, all authored files LF and BOM-free. Owner answers as
-recorded: all 17 self-contained items approved; identity moves to the
-luminablocks.ru domain; no Firebase project exists; closed test ships three
-modes; early game-over is not applied to Match-3; Google Play first; the
-two-agent split accepted with Claude primary and Codex auxiliary; a Play
-developer account exists; the device matrix is one personal Redmi plus
-emulators; art and audio to be produced by AI tooling. No product code changed.
-
-Next step: merge plans 12 and 13 into one document, then start S0 branch
-convergence and DEC-0007. Codex takes stage A per DEC-0013; the owner performs
-the console steps in sections 1, 2, 6 and 8 of the Firebase document.
-
-Open: The exact applicationId string needs confirming before any distribution
-build - DEC-0009 derives ru.luminablocks.game from the domain the owner named,
-and reverse-DNS is the Android convention, but the literal string the owner
-wrote was luminablocks.ru. After the first upload it can never change. Also
-open: no AI asset tool is adopted, and the survey found conflicting reports on
-Leonardo AI commercial rights, so terms must be read before anything ships. A
-Blaze billing account is still required before Cloud Functions can deploy. Every
-MCP server in this session failed to connect, so MCP-based tooling is unproven
-here.
-
-Evidence:
-- anchor: 357300ccddff7f7c62bda8639dc966419442453a, uncommitted changes present
-- digest: sha256:516eba541ed254aabfc080090079570631f7c679e2f400cab80465fff1a211c2 over 433 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-14T14:58:57.591Z by claude-bd0bce05de513f55
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
