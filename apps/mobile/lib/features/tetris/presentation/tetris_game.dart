@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -40,7 +41,6 @@ class TetrisFlameGame extends FlameGame {
   double _scorePopElapsed = 0;
   double _clock = 0; // free-running clock for pulsing effects
   final BurstField _burst = BurstField();
-  final List<TCell> _lastActiveCells = <TCell>[];
   final List<_LockFlash> _lockFlashes = <_LockFlash>[];
 
   // Last computed board layout (screen space), so event handlers can place
@@ -49,6 +49,14 @@ class TetrisFlameGame extends FlameGame {
   double _loy = 0;
   double _lcell = 0;
 
+  // Cached static board background (gradient + grid + border), recorded at a
+  // local origin and re-recorded only when the board geometry changes. Avoids
+  // rebuilding gradient shaders and drawing every grid line each frame.
+  ui.Picture? _bgPicture;
+  double _bgW = -1;
+  double _bgH = -1;
+  double _bgCell = -1;
+
   @override
   Color backgroundColor() => const Color(0x00000000);
 
@@ -56,6 +64,13 @@ class TetrisFlameGame extends FlameGame {
   Future<void> onLoad() async {
     controller.onVisualEvent = _onVisualEvent;
     await super.onLoad();
+  }
+
+  @override
+  void onRemove() {
+    _bgPicture?.dispose();
+    _bgPicture = null;
+    super.onRemove();
   }
 
   void _onVisualEvent(TetrisEvent event) {
@@ -99,7 +114,11 @@ class TetrisFlameGame extends FlameGame {
         _shake = math.max(_shake, 0.8);
         break;
       case TetrisEventType.lock:
-        for (final TCell c in _lastActiveCells) {
+        // Flash exactly where the piece locked. Read the engine's captured
+        // locked cells (not the last rendered active cells) so a hard drop —
+        // which locks before any render at the landed position — flashes the
+        // landing spot, not the stale mid-air position.
+        for (final TCell c in controller.engine.lastLockedCells) {
           _lockFlashes.add(_LockFlash(c.x, c.y));
         }
         break;
@@ -255,13 +274,11 @@ class TetrisFlameGame extends FlameGame {
         }
       }
     }
-    _lastActiveCells.clear();
     if (active != null) {
       final Color color = tetrominoColors[active.type]!;
       for (final TCell c in active.absoluteCells()) {
         if (c.y >= 0) {
           _paintCell(canvas, ox, oy, c.x, c.y, cell, color);
-          _lastActiveCells.add(c);
         }
       }
     }
@@ -426,7 +443,35 @@ class TetrisFlameGame extends FlameGame {
     int cols,
     int rows,
   ) {
-    final Rect rect = Rect.fromLTWH(ox, oy, boardW, boardH);
+    if (_bgPicture == null ||
+        _bgW != boardW ||
+        _bgH != boardH ||
+        _bgCell != cell) {
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      _paintBackground(Canvas(recorder), boardW, boardH, cell, cols, rows);
+      _bgPicture?.dispose();
+      _bgPicture = recorder.endRecording();
+      _bgW = boardW;
+      _bgH = boardH;
+      _bgCell = cell;
+    }
+    canvas.save();
+    canvas.translate(ox, oy);
+    canvas.drawPicture(_bgPicture!);
+    canvas.restore();
+  }
+
+  /// Paints the static board chrome at a local (0,0) origin (the caller
+  /// translates). Kept separate so it can be recorded into a cached [ui.Picture].
+  void _paintBackground(
+    Canvas canvas,
+    double boardW,
+    double boardH,
+    double cell,
+    int cols,
+    int rows,
+  ) {
+    final Rect rect = Rect.fromLTWH(0, 0, boardW, boardH);
     final RRect rr = RRect.fromRectAndRadius(rect, const Radius.circular(14));
 
     final Paint bg = Paint()
@@ -442,12 +487,12 @@ class TetrisFlameGame extends FlameGame {
       ..strokeWidth = 1
       ..color = const Color(0x2278B5DE);
     for (int x = 1; x < cols; x++) {
-      final double gx = ox + (x * cell);
-      canvas.drawLine(Offset(gx, oy), Offset(gx, oy + boardH), grid);
+      final double gx = x * cell;
+      canvas.drawLine(Offset(gx, 0), Offset(gx, boardH), grid);
     }
     for (int y = 1; y < rows; y++) {
-      final double gy = oy + (y * cell);
-      canvas.drawLine(Offset(ox, gy), Offset(ox + boardW, gy), grid);
+      final double gy = y * cell;
+      canvas.drawLine(Offset(0, gy), Offset(boardW, gy), grid);
     }
 
     final Paint border = Paint()

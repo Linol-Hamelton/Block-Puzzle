@@ -11,7 +11,22 @@ Done on branch `fix/review-followups-p1` (analyze clean, 163 tests):
 - ✅ **#3 Snapshot lost during the clear window** — `saveActiveGame()` now calls `engine.flushPendingClear()` (collapse + commit) before snapshotting; added `TetrisEngine.flushPendingClear` + test.
 - ✅ **#5 Tetris teardown** — `TetrisController` is now disposed-guarded (`_disposed` short-circuits tick/input/revive) and clears `onVisualEvent` on dispose; `TetrisScreen.dispose()` pauses the Flame loop before disposing.
 
-Remaining items (#4, #6–#13, perf/polish, test gaps) are still open below.
+## Resolved — batch 2 (2026-06-21)
+Done on branch `fix/review-followups-p2` (analyze clean, 167 tests):
+- ✅ **#4 Revive flag persisted** — `revive_used` is now written into the resume snapshot (`saveActiveGame`) and read back in `initialize()`, so backgrounding after a revive can't grant a second one.
+- ✅ **#6 Perfect clear on the zero-delay path** — extracted `_awardPerfectClearIfEmpty()`, called from both `_finishClear` and the `lineClearDelay <= 0` fast path in `_lockActivePiece`. (+test)
+- ✅ **#7 Lock-flash position on hard drop** — the engine captures the visible locked cells at lock time (`lastLockedCells`); the view flashes those instead of the last *rendered* active cells (which are stale after a hard drop).
+- ✅ **#8 Gravity no longer consumes the lock-reset cap** — `_tryMove(..., isGravity: true)` skips `_onPieceShifted()`; only player moves/rotations burn a reset. (Clearing `_lastActionWasRotation` on a *successful* gravity step is kept intentionally — guideline "last action = rotation"; a grounded gravity tick fails the collision check before touching the flag, so valid T-spins still register. +T-spin test.)
+- ✅ **#9 `restore()` validates the active piece** — if the restored piece collides with the board, it is dropped and re-spawned (block-out surfaces normally). (+test)
+- ✅ **#12 `move_rejected` null reason** — Classic now passes `placeResult.failureReason ?? 'invalid_move'` so the event is never quarantined for a null `reason`.
+- ✅ **#13 Resumed `game_start`** — a `resumed` flag is emitted with `game_start` (true when restored from a snapshot) and added to the analytics schema, so resumes can be distinguished from fresh sessions.
+- ✅ **Perf** — Tetris board chrome (gradient + grid + border) is recorded once into a cached `ui.Picture` and re-recorded only when geometry changes, instead of rebuilding shaders + drawing every grid line each frame.
+- ✅ **`reviveClearTop` resets `_combo`/`_backToBack`** — a revive breaks the run chain so no stale b2b/combo multiplier carries across the gap.
+- Tests: +combo accounting, +perfect-clear zero-delay, +T-spin detection, +restore-collision re-spawn.
+
+**Deferred (need a Play sandbox + the function deployed):** #10 (`restorePurchases` fixed-window) and #11 (receipt retry/backoff). These touch live billing flows that can't be exercised until `verifyPurchase` is deployed and a Play sandbox account is wired; tracked for the billing-enablement pass.
+
+Remaining items (perf/polish nits, the music-on-pop-back cosmetic, broader test/widget gaps) are still open below.
 
 ## Confirmed — prioritize first
 1. **Billing token binding is not atomic (TOCTOU).** `verifyPurchase` reads the token doc with a plain `get()` outside the transaction and never re-reads it inside `runTransaction`, so two concurrent calls with the same `purchaseToken` under different UIDs can both grant. Move the existence/uid check inside `runTransaction` (`tx.get` before `tx.set`). `infra/cloud_functions/functions/index.js:60-116`. (Function not yet deployed — fix before deploy.)

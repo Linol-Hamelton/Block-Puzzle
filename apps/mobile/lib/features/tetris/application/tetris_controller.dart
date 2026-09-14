@@ -73,12 +73,16 @@ class TetrisController extends ChangeNotifier {
     _reviveUsed = false;
     _bestScore = await (_store?.loadBestScore() ?? Future<int>.value(0));
     final Map<String, Object?>? snapshot = await _store?.loadSnapshot();
+    final bool resumed = snapshot != null;
     if (snapshot != null) {
       _engine.restore(snapshot);
+      // The once-per-run revive flag is persisted with the snapshot so
+      // backgrounding after a revive can't grant a second one.
+      _reviveUsed = snapshot['revive_used'] as bool? ?? false;
     } else {
       _engine.start();
     }
-    _beginRound();
+    _beginRound(resumed: resumed);
     _consumeEvents();
     notifyListeners();
   }
@@ -148,10 +152,13 @@ class TetrisController extends ChangeNotifier {
     if (!_engine.hasActiveGame) {
       return;
     }
-    unawaited(store.saveSnapshot(_engine.toSnapshot()));
+    unawaited(store.saveSnapshot(<String, Object?>{
+      ..._engine.toSnapshot(),
+      'revive_used': _reviveUsed,
+    }));
   }
 
-  void _beginRound() {
+  void _beginRound({bool resumed = false}) {
     _gameEndEmitted = false;
     _startedAt = DateTime.now();
     _roundId = 'tetris_${_startedAt!.microsecondsSinceEpoch}';
@@ -160,6 +167,7 @@ class TetrisController extends ChangeNotifier {
       'mode': 'tetris',
       'config_version': 'tetris_v1',
       'game_id': 'tetris',
+      'resumed': resumed,
     });
   }
 

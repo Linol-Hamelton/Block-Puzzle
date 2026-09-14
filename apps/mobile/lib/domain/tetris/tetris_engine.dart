@@ -96,6 +96,11 @@ class TetrisEngine {
   int _lockResets = 0;
   bool _lastActionWasRotation = false;
 
+  /// Visible cells of the most recently locked piece, captured at lock time so
+  /// the view can flash exactly where it landed (even on a hard drop, before a
+  /// render at the landed position).
+  List<TCell> _lastLockedCells = <TCell>[];
+
   final List<TetrisEvent> _events = <TetrisEvent>[];
 
   // ── Public state ──
@@ -111,6 +116,7 @@ class TetrisEngine {
   bool get canHold => _canHold;
   bool get isClearing => _clearingRows.isNotEmpty;
   List<int> get clearingRows => List<int>.unmodifiable(_clearingRows);
+  List<TCell> get lastLockedCells => List<TCell>.unmodifiable(_lastLockedCells);
   double get clearProgress => _clearDelayMs <= 0
       ? 1
       : (1 - (_clearTimerMs / _clearDelayMs)).clamp(0, 1).toDouble();
@@ -151,6 +157,10 @@ class TetrisEngine {
     _lockAccumMs = 0;
     _lockResets = 0;
     _lastActionWasRotation = false;
+    // Reset run-chain bonuses: the revive breaks any combo / back-to-back so a
+    // stale multiplier can't carry across the gap.
+    _combo = -1;
+    _backToBack = false;
     _canHold = true;
     _spawnNext();
     return !_gameOver;
@@ -222,7 +232,7 @@ class TetrisEngine {
     _gravityAccumMs += ms;
     while (_gravityAccumMs >= intervalMs) {
       _gravityAccumMs -= intervalMs;
-      if (!_tryMove(0, 1)) {
+      if (!_tryMove(0, 1, isGravity: true)) {
         break;
       }
     }
@@ -247,7 +257,7 @@ class TetrisEngine {
     return _board.collides(piece.movedBy(0, 1));
   }
 
-  bool _tryMove(int dx, int dy) {
+  bool _tryMove(int dx, int dy, {bool isGravity = false}) {
     final FallingPiece? piece = _active;
     if (piece == null) {
       return false;
@@ -261,7 +271,11 @@ class TetrisEngine {
     if (dx != 0) {
       _events.add(const TetrisEvent(TetrisEventType.move));
     }
-    _onPieceShifted();
+    // Gravity-driven descent must not consume a lock-delay reset; only
+    // player-initiated moves/rotations do (guideline "infinity with cap").
+    if (!isGravity) {
+      _onPieceShifted();
+    }
     return true;
   }
 
@@ -322,9 +336,14 @@ class TetrisEngine {
             ? _detectTSpin(piece)
             : TSpinType.none;
 
-    // Top-out: a piece that locks entirely above the visible field ends the run.
-    final bool anyVisible =
-        piece.absoluteCells().any((TCell c) => c.y >= 0);
+    // Capture the locked cells (visible part) so the view can flash exactly
+    // where the piece landed, even on a hard drop.
+    final List<TCell> lockedCells = piece.absoluteCells();
+    final bool anyVisible = lockedCells.any((TCell c) => c.y >= 0);
+    _lastLockedCells = <TCell>[
+      for (final TCell c in lockedCells)
+        if (c.y >= 0) c,
+    ];
     _board = _board.lock(piece);
     _events.add(const TetrisEvent(TetrisEventType.lock));
     _active = null;
@@ -340,6 +359,7 @@ class TetrisEngine {
     if (full.isEmpty || _clearDelayMs <= 0) {
       if (full.isNotEmpty) {
         _board = _board.clearFullRows().board;
+        _awardPerfectClearIfEmpty();
       }
       _canHold = true;
       _spawnNext();
@@ -365,14 +385,19 @@ class TetrisEngine {
     _board = _board.clearFullRows().board;
     _clearingRows = <int>[];
     _clearTimerMs = 0;
+    _awardPerfectClearIfEmpty();
+    _canHold = true;
+    _spawnNext();
+  }
+
+  /// Perfect Clear (All-Clear): the clear emptied the board. Awards a bonus and
+  /// emits the event. Called from both the delayed and the zero-delay paths.
+  void _awardPerfectClearIfEmpty() {
     if (_board.isEmpty) {
-      // Perfect Clear (All-Clear): board emptied by the clear.
       final int bonus = 1000 * _level;
       _score += bonus;
       _events.add(TetrisEvent(TetrisEventType.perfectClear, 0, bonus));
     }
-    _canHold = true;
-    _spawnNext();
   }
 
   void _applyScoring(int rows, TSpinType spin) {
@@ -540,6 +565,12 @@ class TetrisEngine {
     _lockResets = 0;
     _lastActionWasRotation = false;
     if (_active == null) {
+      _spawnNext();
+    } else if (_board.collides(_active!)) {
+      // Corrupt/incompatible snapshot: the restored piece overlaps the board.
+      // Drop it and re-spawn cleanly rather than resuming into a collision; if
+      // there is no room to spawn either, that surfaces as a normal block-out.
+      _active = null;
       _spawnNext();
     }
   }
