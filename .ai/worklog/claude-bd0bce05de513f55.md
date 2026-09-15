@@ -6,6 +6,60 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-15 - Codex audit F1-F7 closed; DEC-0022 authorises gameplay work
+
+Agent: Claude / claude-bd0bce05de513f55.
+
+Action: Read the Codex audit and verified each finding against code before
+acting. Recorded the owner's approval of the gameplay round as DEC-0022,
+superseding DEC-0005 and DEC-0006. Reordered the home screen and rebuilt the
+Tetris control layout into thumb zones. Then fixed F1 through F7.
+
+Result: **F1 was mine and it was serious.** The Firestore rules I wrote and
+recorded as "closed by evidence" denied every cloud save the app has ever made:
+the client sends {progress, lastSyncUtc} with a snake_case model inside, and I
+wrote rules for a flat camelCase document that no part of this app produces. My
+sixteen tests passed because I wrote the fixture from imagination rather than
+from the model - the exact failure I had been calling out in other people's
+work. It was invisible because _saveToCloud swallowed permission-denied as a
+network blip. The fixture is now generated from PlayerProgressState by a Dart
+test, entitlements are stripped before upload and rejected by the rules, and a
+denied write is logged as a broken contract. 21 rules tests pass against the
+emulator; rules deployed.
+F7: dart-defines were lost in AOT because the key was a parameter, so
+String.fromEnvironment could not be const-evaluated. F4: Remote Config reverted
+to bundled defaults on every cold start; the persisted activated values are now
+read on the startup path. F3: the three mode kill switches had no consumer at
+all - GameModeAvailability and ModeGate close the menu and the routes, with
+Daily Challenge following Classic. F2: neither workflow created
+google-services.json, so a clean runner could not build Android; both now decode
+it from a secret and the rules matrix runs as its own CI job. F5: the web target
+is removed rather than patched - it compiled and could not start. F6: snapshots
+carried the board but not the generator, so a resumed run dealt different
+pieces; DeterministicRandom makes the state serialisable and both engines
+version their snapshots.
+flutter analyze --fatal-infos --fatal-warnings exit 0; flutter test exit 0,
+**236 tests**, up from 214. Commits 514b673, 4138b05, 3bec96c, 68434c3.
+
+Next step: DEC-0022 item three - Match-3 depth: bonus tiles from four, five, T
+and L shapes, a move limit, scoring and round progression. Table-driven tests
+for the detonation matrix before any animation work.
+
+Open: main is far ahead of origin and nothing is pushed. Release DI, native
+fatal and ANR, and any purchase remain unproven; the diagnostics crash button is
+correctly labelled non-fatal and does not cover that path. Blaze still blocks
+A5. The audit's remaining items - session_start tied to the Classic controller,
+Classic events missing game_id, utility_tools_pass active against DEC-0008 - are
+not addressed here.
+
+Evidence:
+- anchor: 68434c31c48f7a811ad93238a3a8c313aaa61e4b, uncommitted changes present
+- digest: sha256:71771cab60f8785aa80d1d579783ea43c06f46d46cd183062bf5a85fa51d0ddd over 459 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-15T16:29:43.504Z by claude-bd0bce05de513f55
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 1s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-15 - Stage A4-A6: Firebase connected, rules deployed and proven
 
 Agent: Claude / claude-bd0bce05de513f55.
@@ -50,91 +104,4 @@ Evidence:
 - recorded: 2026-09-15T13:44:03.495Z by claude-bd0bce05de513f55
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 1s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-14 - Stage A0-A3: release wiring, package identity, bootstrap, config
-
-Agent: Claude / claude-bd0bce05de513f55.
-
-Action: Implemented four plan items as four separate commits so each can be
-reviewed against its plan line. A0: moved the adapter choice into
-AppConfig.useDebugAdapters, added a kReleaseMode guard in configureDependencies
-that throws when a release build would resolve the debug adapters, passed
-APP_ENV/APP_FLAVOR/APP_VERSION in android-release.yml, and raised both workflows
-to analyze --fatal-infos --fatal-warnings. A1 and A8: one package identity
-ru.luminablocks.game across build.gradle applicationId and namespace, the Kotlin
-package and its directory, and ANDROID_PACKAGE_NAME in the Cloud Function; pinned
-minSdk to 24; declared appCategory="game". A2: main() now awaits bootstrap inside
-runZonedGuarded in the same zone as the binding and runApp, and the empty catch
-around Firebase.initializeApp was replaced with a firebaseReady flag, an
-independent startup logger and a debug-mode assert. A3: added RemoteConfigKeyMap
-and made the Firebase repository merge over the bundled defaults instead of
-replacing them, with type checking against each default.
-
-Result: flutter analyze --fatal-infos --fatal-warnings exit 0; flutter test
-exit 0, **214 tests**, up from 200 - 6 new for the adapter rule and 8 for the
-key map. Commits 5cba115, e3a4e9b, 2a21683, 608dfb7 on main.
-A3 turned out to be two defects, not one: besides the dotted keys Firebase
-cannot accept, the repository replaced the defaults wholesale on any non-empty
-response, so the first successful fetch would have dropped all 54 settings at
-once. Both are fixed and covered. Generated Windows plugin files changed line
-endings during the runs and were restored rather than committed.
-
-Next step: A4 - create the Firebase project and wire firebase_options.dart plus
-the CI secret, which needs the owner in the console. Then A5, the function
-runtime service account, and A6, Firestore rules including users/{uid}.
-
-Open: main is now nine commits ahead of origin and nothing has been pushed; the
-owner has approved merges and commits but not a push. The release-adapter guard
-and the config merge are verified by unit tests only - neither has run against a
-real Firebase project, a real device or a store. Play Console access and a Blaze
-billing account still block stage C.
-
-Evidence:
-- anchor: 608dfb7928e00c739372e21ba27bcbc06e20fe9e, uncommitted changes present
-- digest: sha256:94acf622e923d28895417cdf5c0b3de261ebbf1e7fbf619476657e12de787f35 over 439 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-14T19:49:35.874Z by claude-bd0bce05de513f55
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-14 - Stage 0.3: branches converged and merged to main
-
-Agent: Claude / claude-bd0bce05de513f55.
-
-Action: With the owner's explicit approval to merge and commit, committed the
-documentation and protocol work, merged fix/review-followups-p2 (db8d05e) into
-the Match-3 line, resolved the single conflict, fast-forwarded main, and fixed
-the simulation test that was overwriting a tracked dashboard file.
-
-Result: Three commits on main, which moved from a577485 to d46baf1 and is now
-five ahead of origin/main. 37be419 carries the protocol install, DEC-0001 to
-DEC-0021 and the unified plan 14; b37b730 is the batch-2 merge; d46baf1 fixes
-the test. The merge conflicted only in docs/DOCS_CHANGELOG.md, where both lines
-had prepended an entry; both were kept. All three lines are now ancestors of
-main: db8d05e, 357300c and 50e008a all verify with merge-base --is-ancestor.
-Verified on the merged tree: flutter analyze --fatal-infos --fatal-warnings
-exit 0; flutter test exit 0, **200 tests** - the 196 of the Match-3 line plus
-the 4 that batch 2 added. Spot-checked that the batch-2 fixes survived rather
-than being silently dropped: lastLockedCells, _awardPerfectClearIfEmpty,
-isGravity, revive_used and the resumed flag are all present.
-run_001_metrics_generation_test now writes to a temp directory; a full test run
-leaves the working tree clean, which it did not before. Two generated Windows
-plugin files changed line endings during the runs and were restored rather than
-committed. Nothing was pushed.
-
-Next step: stage A0 - pass --dart-define for APP_ENV/APP_FLAVOR/APP_VERSION in
-both workflows and prove in a test that DI resolves production adapters
-(DEC-0007). Then A3 - Remote Config key mapping and the defaults merge.
-
-Open: main is five commits ahead of origin and not pushed; the owner has not
-asked for a push. Play Console access and a Blaze account still block stage C.
-Nothing verified on device, in a store or in a cloud.
-
-Evidence:
-- anchor: d46baf1f93c7fbdd7cee300ee4efbe5f72c52090, uncommitted changes present
-- digest: sha256:daddb47145b0438205852f8097c9b872984217077dfd4e97c7b02156bc7e274e over 436 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-14T19:40:50.698Z by claude-bd0bce05de513f55
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify

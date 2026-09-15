@@ -748,6 +748,58 @@ visible change to build.gradle. firebase_auth requires 21 and is satisfied.
 
 Approved by: RuslanFomenko
 
+### DEC-0022
+
+Status: Accepted
+Date: 2026-09-15
+Supersedes: DEC-0005 and DEC-0006
+
+Context:
+DEC-0005 deferred the choice between Match-3 depth and Tetris depth until cohort
+data existed after stage C, and DEC-0006 restored the rule that foundation work
+precedes content. The owner has since decided to improve the three shipped modes
+before the release build: reordering the home screen, reworking the Tetris
+control layout, giving Match-3 the mechanics players expect from the genre, and
+producing media for the games.
+
+Decision:
+A bounded round of gameplay and presentation work is authorized now, before the
+release build and before stage C. Its scope is fixed:
+
+- Home screen ordering, with the games grouped and Daily Challenge at the bottom.
+- Tetris control ergonomics.
+- Match-3 depth: bonus tiles from four-in-a-row, five-in-a-row, T shapes and L
+  shapes; a move limit; scoring; round progression that grants further moves on
+  completing a round.
+- Media for the games and the app.
+
+Everything DEC-0006 deferred that is not on this list stays deferred: new modes,
+Puzzle Pack, Season Pass, the wheel and currency packs. The DEC-0019 acceptance
+set and its timebox still bound the media work; this decision widens what the
+media is for, not how much tooling may be built.
+
+Reasoning:
+The owner judges that the three modes are not yet good enough to put in front of
+players, and that shipping them as they are would waste the cohort window that
+stage C exists to produce. Data from a mode nobody enjoys answers a different
+question than the one DEC-0005 wanted answered.
+
+Alternatives rejected:
+Holding to DEC-0005 and deciding from cohort data - defensible, and it was the
+right call when nobody had played the modes, but it assumed the modes were
+already worth measuring. Doing this after the release - would mean releasing the
+version the owner has already judged insufficient.
+
+Consequences:
+Stage C moves later by the length of this work. The Match-3 special-tile
+detonation matrix is the risk the multi-game plan named as the top source of
+clone bugs, so it needs table-driven tests before any animation work. DEC-0005's
+question - which mode deserves further depth - is not answered by this decision
+and returns after stage C. The foundation gates of stage A remain binding: this
+authorizes content work in parallel, not instead.
+
+Approved by: RuslanFomenko
+
 ---
 
 ## Template for new decisions
