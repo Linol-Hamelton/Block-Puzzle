@@ -3,6 +3,10 @@ plugins {
     id "kotlin-android"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
+    // Firebase native config. The Firebase SDK dependencies themselves come from
+    // the FlutterFire plugins in pubspec.yaml - do not add the BoM here as well,
+    // or the two sources will fight over versions.
+    id "com.google.gms.google-services"
 }
 
 def keystoreProperties = new Properties()

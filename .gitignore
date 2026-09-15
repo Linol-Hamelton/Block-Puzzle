@@ -34,3 +34,9 @@ Desktop.ini
 .env.*
 *.key
 *.pem
+
+# Firebase native config: delivered to CI as a secret, never committed (DEC-0015)
+google-services.json
+GoogleService-Info.plist
+firebase-debug.log
+.firebase/
