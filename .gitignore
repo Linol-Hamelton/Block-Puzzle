@@ -39,6 +39,8 @@ Desktop.ini
 google-services.json
 GoogleService-Info.plist
 firebase-debug.log
+firestore-debug.log
+ui-debug.log
 .firebase/
 
 # Node dependencies
