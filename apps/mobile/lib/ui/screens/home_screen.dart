@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../features/game_loop/presentation/game_loop_screen.dart';
+import '../../core/di/di_container.dart';
 import '../../features/diagnostics/diagnostics_screen.dart';
+import '../../features/game_modes/game_mode_availability.dart';
+import '../../features/game_modes/mode_gate.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/match3/presentation/match3_screen.dart';
 import '../../features/store/presentation/store_screen.dart';
@@ -13,6 +16,11 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // DEC-0002: a mode turned off in Remote Config must not be reachable. The
+    // flags were published and then read by nothing, so the switches existed
+    // and did nothing; this is where they take effect.
+    final GameModeAvailability modes = sl<GameModeAvailability>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lumina Blocks'),
@@ -127,58 +135,82 @@ class HomeScreen extends StatelessWidget {
                     // store and the daily variant sit below a divider so the
                     // primary choice - which game to play - is not competing
                     // with commerce for the same visual weight.
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const GameLoopScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Start Classic'),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E88E5),
-                          foregroundColor: Colors.white,
+                    if (modes.isEnabled(GameMode.classic)) ...<Widget>[
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const ModeGate(
+                                  mode: GameMode.classic,
+                                  child: GameLoopScreen(),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: const Text('Start Classic'),
                         ),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const TetrisScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.grid_view_rounded),
-                        label: const Text('Play Tetris'),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E9E6B),
-                          foregroundColor: Colors.white,
+                      const SizedBox(height: 10),
+                    ],
+                    if (modes.isEnabled(GameMode.tetris)) ...<Widget>[
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E88E5),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const ModeGate(
+                                  mode: GameMode.tetris,
+                                  child: TetrisScreen(),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.grid_view_rounded),
+                          label: const Text('Play Tetris'),
                         ),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const Match3Screen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.diamond_rounded),
-                        label: const Text('Play Match 3'),
                       ),
-                    ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (modes.isEnabled(GameMode.match3))
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E9E6B),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const ModeGate(
+                                  mode: GameMode.match3,
+                                  child: Match3Screen(),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.diamond_rounded),
+                          label: const Text('Play Match 3'),
+                        ),
+                      ),
+                    if (modes.allDisabled)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'All game modes are currently unavailable. '
+                          'Please try again later.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: LuminaPalette.textSecondary),
+                        ),
+                      ),
 
                     const SizedBox(height: 18),
                     const Divider(
@@ -202,26 +234,34 @@ class HomeScreen extends StatelessWidget {
                         label: const Text('Open Premium Store'),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: LuminaPalette.violet,
-                          foregroundColor: Colors.white,
+                    // Daily Challenge is the Classic loop with a fixed seed, so
+                    // disabling Classic has to disable it too - otherwise the
+                    // kill switch leaves a second door into the same code.
+                    if (modes.isEnabled(GameMode.classic)) ...<Widget>[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: LuminaPalette.violet,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const ModeGate(
+                                  mode: GameMode.classic,
+                                  child:
+                                      GameLoopScreen(isDailyChallenge: true),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.star_rounded),
+                          label: const Text('Daily Challenge'),
                         ),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  const GameLoopScreen(isDailyChallenge: true),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.star_rounded),
-                        label: const Text('Daily Challenge'),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

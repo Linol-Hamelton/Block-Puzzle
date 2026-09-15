@@ -20,7 +20,20 @@ class AppConfig {
       ),
     );
 
-    final String explicitFlavor = _readOptionalEnvironmentValue('APP_FLAVOR') ?? '';
+    // Each key is read as a compile-time constant with a literal name.
+    //
+    // `String.fromEnvironment(someVariable)` cannot be const-evaluated, and in
+    // AOT it silently yields the default instead of the value that was passed
+    // with --dart-define. It used to be read through a helper taking the key as
+    // a parameter, so JIT and AOT disagreed: a build carrying
+    // APP_ENV=prod --dart-define=APP_FLAVOR=stage ran as `stage` in debug and
+    // as `release` once compiled. Ordinary prod/release builds were unaffected,
+    // because there the fallback happens to equal the intended value - which is
+    // why nothing looked wrong.
+    const String explicitFlavor = String.fromEnvironment('APP_FLAVOR');
+    const String configApiUrl = String.fromEnvironment('CONFIG_API_BASE_URL');
+    const String analyticsApiUrl =
+        String.fromEnvironment('ANALYTICS_API_BASE_URL');
     return AppConfig(
       appName: const String.fromEnvironment(
         'APP_NAME',
@@ -28,8 +41,8 @@ class AppConfig {
       ),
       environment: environment,
       buildFlavor: BuildFlavor.fromWire(
-        explicitFlavor.isNotEmpty
-            ? explicitFlavor
+        explicitFlavor.trim().isNotEmpty
+            ? explicitFlavor.trim()
             : _defaultFlavorForEnvironment(environment),
       ),
       appVersion: const String.fromEnvironment(
@@ -46,9 +59,8 @@ class AppConfig {
           defaultValue: 30,
         ),
       ),
-      configApiBaseUrl: _readOptionalEnvironmentValue('CONFIG_API_BASE_URL'),
-      analyticsApiBaseUrl:
-          _readOptionalEnvironmentValue('ANALYTICS_API_BASE_URL'),
+      configApiBaseUrl: _nullIfBlank(configApiUrl),
+      analyticsApiBaseUrl: _nullIfBlank(analyticsApiUrl),
     );
   }
 
@@ -80,9 +92,14 @@ class AppConfig {
   bool get useDebugAdapters =>
       environment.isDevelopment && buildFlavor.isDebug;
 
-  static String? _readOptionalEnvironmentValue(String key) {
-    final String value = String.fromEnvironment(key, defaultValue: '').trim();
-    return value.isEmpty ? null : value;
+  /// Normalises an already-read compile-time value.
+  ///
+  /// Takes the value, never the key: a helper that reads
+  /// `String.fromEnvironment(key)` from a parameter cannot be const-evaluated
+  /// and loses the define in AOT. See the comment in [AppConfig.fromEnvironment].
+  static String? _nullIfBlank(String value) {
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   static String _defaultFlavorForEnvironment(AppEnvironment environment) {

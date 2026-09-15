@@ -32,6 +32,7 @@ import '../../domain/progression/player_progress_repository.dart';
 import '../../domain/scoring/basic_score_service.dart';
 import '../../domain/scoring/score_service.dart';
 import '../../domain/session/game_session_repository.dart';
+import '../../features/game_modes/game_mode_availability.dart';
 import '../../features/game_loop/audio/flame_game_sfx_player.dart';
 import '../../features/game_loop/audio/game_sfx_player.dart';
 import '../../features/game_loop/application/game_loop_controller.dart';
@@ -155,6 +156,13 @@ Future<void> configureDependencies() async {
       );
     },
   );
+  // The DEC-0002 kill switches finally get a consumer. Resolved from the same
+  // bootstrap config the rest of the container uses, so a mode disabled
+  // remotely is closed from the first frame rather than after a later fetch.
+  sl.registerSingleton<GameModeAvailability>(
+    GameModeAvailability(bootstrapConfigReader),
+  );
+
   sl.registerLazySingleton<AdGuardrailPolicy>(
     BasicAdGuardrailPolicy.new,
   );
