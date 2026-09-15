@@ -88,19 +88,25 @@ Future<void> _initializeFirebase() async {
   }
 }
 
-/// Top-level handler for anything that escapes [bootstrap].
+/// Top-level handler for every error that escapes the guarded zone.
 ///
-/// Installed by `main()` via `runZonedGuarded`, so it also catches failures
-/// that happen before the DI container and the Flutter error handlers exist.
-void reportBootstrapError(Object error, StackTrace stackTrace) {
-  _startupLogger.error('Unhandled startup error: $error');
+/// Installed by `main()` via `runZonedGuarded`. It covers the whole life of the
+/// app, not only startup: `runApp` runs inside the same zone, so an uncaught
+/// asynchronous error raised hours into a session arrives here too. It was
+/// named for bootstrap originally, and the log line said "startup error", which
+/// was misleading the first time a mid-session error landed in it.
+///
+/// Its other job is the window before the DI container and the Flutter error
+/// handlers exist, when nothing else would observe a failure.
+void reportUncaughtError(Object error, StackTrace stackTrace) {
+  _startupLogger.error('Uncaught error in the guarded zone: $error');
   debugPrint('$stackTrace');
 
   if (!sl.isRegistered<CrashReporter>()) {
     return;
   }
   unawaited(
-    sl<CrashReporter>().recordError(error, stackTrace, reason: 'bootstrap'),
+    sl<CrashReporter>().recordError(error, stackTrace, reason: 'uncaught_zone_error'),
   );
 }
 

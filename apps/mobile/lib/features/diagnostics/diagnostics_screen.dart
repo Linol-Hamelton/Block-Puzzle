@@ -64,14 +64,21 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   }
 
   /// Throws on purpose, outside any try/catch, so the error travels the same
-  /// path a real defect would: PlatformDispatcher.onError -> CrashReporter.
-  /// A synthetic call straight into Crashlytics would prove less, because it
-  /// would skip the wiring that actually has to work.
-  void _forceCrash() {
-    _report('Crashing in 1 second. Reopen the app to let the report upload.');
+  /// path a real defect would. A synthetic call straight into Crashlytics would
+  /// prove less, because it would skip the wiring that has to work.
+  ///
+  /// This does **not** kill the process, and the button is named accordingly.
+  /// `main()` runs the app inside `runZonedGuarded`, so the zone catches this
+  /// and hands it to [reportUncaughtError]; it reaches Crashlytics as a
+  /// non-fatal. That is the correct behaviour - an app that survives a stray
+  /// async error is better than one that dies - but it means this button does
+  /// not exercise the fatal path. A genuine fatal needs something the zone
+  /// cannot intercept, such as a crash on the platform side.
+  void _throwUncaught() {
+    _report('Throwing now. Arrives in Crashlytics as a non-fatal.');
     Future<void>.delayed(const Duration(seconds: 1), () {
       throw StateError(
-        'Diagnostics forced crash: this is intentional, not a defect',
+        'Diagnostics uncaught error: this is intentional, not a defect',
       );
     });
   }
@@ -117,8 +124,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            onPressed: _forceCrash,
-            child: const Text('Force a crash'),
+            onPressed: _throwUncaught,
+            child: const Text('Throw an uncaught error'),
           ),
           if (_lastAction != null) ...<Widget>[
             const SizedBox(height: 24),
@@ -126,8 +133,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
           ],
           const SizedBox(height: 24),
           Text(
-            'A crash report uploads on the next launch, not at the moment of '
-            'the crash. Reopen the app after forcing one.',
+            'Reports upload on the next launch, not at the moment of the error, '
+            'so reopen the app afterwards. The uncaught error is caught by the '
+            'guarded zone and arrives as a non-fatal, not as a crash.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

@@ -14,6 +14,6 @@ void main() {
   // simply showed nothing.
   runZonedGuarded<Future<void>>(
     bootstrap,
-    reportBootstrapError,
+    reportUncaughtError,
   );
 }
