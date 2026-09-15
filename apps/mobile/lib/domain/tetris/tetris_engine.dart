@@ -67,7 +67,7 @@ class TetrisEngine {
         _lockResetCap = lockResetCap;
 
   TetrisBoard _board;
-  final SevenBagRandomizer _bag;
+  SevenBagRandomizer _bag;
   final int _nextPreviewCount;
   final int _lockDelayMs;
   final int _clearDelayMs;
@@ -525,10 +525,23 @@ class TetrisEngine {
     _events.add(const TetrisEvent(TetrisEventType.gameOver));
   }
 
-  /// Serializes the live run for resume-after-kill. The 7-bag is intentionally
-  /// not serialized; on [restore] the upcoming pieces are re-rolled.
+  /// Version of the snapshot format.
+  ///
+  /// 1: board and counters only, with the 7-bag re-rolled on restore.
+  /// 2: carries the bag, so a resumed run continues the same piece sequence.
+  static const int snapshotVersion = 2;
+
+  /// Serializes the live run for resume-after-kill.
+  ///
+  /// The 7-bag is part of it. It used to be left out deliberately - "the
+  /// upcoming pieces are re-rolled" - which meant resuming silently handed the
+  /// player a different game: the queue shown before backgrounding was not the
+  /// queue they came back to. It also made the daily challenge unusable as a
+  /// comparison, because two players with the same seed diverged the moment one
+  /// of them resumed.
   Map<String, Object?> toSnapshot() {
     return <String, Object?>{
+      'version': snapshotVersion,
       'board': _board.toJson(),
       'active': _active?.toJson(),
       'hold': _hold?.name,
@@ -538,6 +551,7 @@ class TetrisEngine {
       'level': _level,
       'combo': _combo,
       'back_to_back': _backToBack,
+      'bag': _bag.toJson(),
     };
   }
 
@@ -553,6 +567,14 @@ class TetrisEngine {
     _active = rawActive is Map
         ? FallingPiece.fromJson(rawActive.cast<String, Object?>())
         : null;
+    // Restore the bag before anything can draw from it. A version 1 snapshot
+    // has no 'bag', and fromJson falls back to a fresh randomizer: that run
+    // resumes with a re-rolled queue, exactly as it did before, rather than
+    // failing to load.
+    final Object? rawBag = json['bag'];
+    _bag = SevenBagRandomizer.fromJson(
+      rawBag is Map ? rawBag.cast<String, Object?>() : null,
+    );
     _hold = _typeFromName(json['hold']);
     _canHold = json['can_hold'] as bool? ?? true;
     _score = json['score'] as int? ?? 0;

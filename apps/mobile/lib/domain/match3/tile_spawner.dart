@@ -1,5 +1,4 @@
-import 'dart:math';
-
+import '../shared/deterministic_random.dart';
 import 'tile.dart';
 import 'tile_grid.dart';
 
@@ -7,15 +6,60 @@ import 'tile_grid.dart';
 /// Seeded for deterministic boards (daily challenge / replay) and unit tests.
 class TileSpawner {
   TileSpawner({int? seed, int colorCount = 6})
+      : this._withSeed(seed ?? _freshSeed(), colorCount);
+
+  TileSpawner._withSeed(int seed, int colorCount)
       : assert(colorCount >= 3 && colorCount <= TileColor.values.length,
             'colorCount must be in 3..${TileColor.values.length}'),
-        _random = Random(seed),
+        _seed = seed,
+        _random = DeterministicRandom(seed),
         _colors = TileColor.values.sublist(0, colorCount);
 
-  final Random _random;
+  TileSpawner._restored(int seed, int state, int colorCount)
+      : _seed = seed,
+        _random = DeterministicRandom.fromState(state),
+        _colors = TileColor.values.sublist(0, colorCount);
+
+  /// A seed is always recorded, even when the caller did not supply one, so a
+  /// run started without one can still be resumed exactly.
+  static int _freshSeed() => DateTime.now().microsecondsSinceEpoch & 0x7FFFFFFF;
+
+  final int _seed;
+  final DeterministicRandom _random;
   final List<TileColor> _colors;
 
+  int get seed => _seed;
+
   int get colorCount => _colors.length;
+
+  /// Everything needed to keep producing the same tiles after a restart.
+  ///
+  /// Without this the snapshot carried the board but not the generator, so the
+  /// same legal swap resolved into a different board before and after a resume.
+  Map<String, Object?> toJson() => <String, Object?>{
+        'seed': _seed,
+        'state': _random.state,
+        'color_count': _colors.length,
+      };
+
+  /// Rebuilds a spawner mid-sequence. Falls back to a fresh one on a missing or
+  /// malformed payload, which is better than refusing to resume the run.
+  static TileSpawner fromJson(Map<String, Object?>? json, {int colorCount = 6}) {
+    if (json == null) {
+      return TileSpawner(colorCount: colorCount);
+    }
+    final Object? seed = json['seed'];
+    final Object? state = json['state'];
+    final Object? colors = json['color_count'];
+    if (seed is! int || state is! int) {
+      return TileSpawner(colorCount: colorCount);
+    }
+    final int restoredColors =
+        colors is int && colors >= 3 && colors <= TileColor.values.length
+            ? colors
+            : colorCount;
+    return TileSpawner._restored(seed, state, restoredColors);
+  }
 
   /// A uniformly-random color from the active palette.
   TileColor next() => _colors[_random.nextInt(_colors.length)];

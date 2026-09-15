@@ -62,10 +62,10 @@ class Match3Engine {
   /// own, dead ends still reshuffle).
   final int? moveLimit;
 
-  final TileSpawner _spawner;
+  TileSpawner _spawner;
   final SwapValidator _validator = const SwapValidator();
   final MatchDetector _detector = const MatchDetector();
-  late final CascadeResolver _resolver;
+  late CascadeResolver _resolver;
 
   TileGrid _grid;
   int _score = 0;
@@ -205,11 +205,24 @@ class Match3Engine {
     return null;
   }
 
+  /// Version of the snapshot format.
+  ///
+  /// 1: grid and counters only, with the spawner restarted on restore.
+  /// 2: carries the spawner, so refills continue the same sequence.
+  static const int snapshotVersion = 2;
+
+  /// Serializes the live run for resume-after-kill.
+  ///
+  /// The spawner state is part of it. Without it the board was restored but the
+  /// generator was not, so the same legal swap resolved into a different board
+  /// before and after a resume - the cascade refilled from a fresh sequence.
   Map<String, Object?> toSnapshot() => <String, Object?>{
+        'version': snapshotVersion,
         'grid': _grid.toJson(),
         'score': _score,
         'moves_used': _movesUsed,
         'move_limit': moveLimit,
+        'spawner': _spawner.toJson(),
       };
 
   /// Restores a run from [toSnapshot]. Marks the engine started; ensures the
@@ -222,6 +235,15 @@ class Match3Engine {
     );
     _score = json['score'] as int? ?? 0;
     _movesUsed = json['moves_used'] as int? ?? 0;
+    // Restore the spawner before anything can refill. A version 1 snapshot has
+    // no 'spawner' and fromJson returns a fresh one, so such a run resumes with
+    // a restarted sequence exactly as it did before rather than failing to load.
+    final Object? rawSpawner = json['spawner'];
+    _spawner = TileSpawner.fromJson(
+      rawSpawner is Map ? rawSpawner.cast<String, Object?>() : null,
+      colorCount: _spawner.colorCount,
+    );
+    _resolver = CascadeResolver(detector: _detector, spawner: _spawner);
     // A corrupt/partial snapshot grid (holes, or no legal move) is made playable
     // rather than resuming into an unplayable state.
     if (!_grid.isFull) {
