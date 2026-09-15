@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// Lumina Blocks Firestore rules.
+//
+// Three areas, not one. An earlier draft of the setup doc described only
+// entitlements, which would have left the client free to write anything it
+// liked into its own progress document. See review item R8 and DEC-0003.
+//
+// The server writes through the Admin SDK, which bypasses these rules entirely;
+// everything below therefore describes what a *client* may do.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Entitlements are granted only by verifyPurchase after it has checked the
+    // receipt against Play. A client that could write here could grant itself
+    // every cosmetic in the catalogue.
+    match /entitlements/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    // Purchase tokens carry the token -> uid binding that stops one purchase
+    // from being replayed onto several accounts (DEC-0003). No client reads or
+    // writes them: reading would leak another account's token, writing would
+    // defeat the check.
+    match /purchaseTokens/{token} {
+      allow read, write: if false;
+    }
+
+    // Player progress is written from the device, so this is the one collection
+    // a client may write - but only its own document, and only the fields the
+    // client is supposed to own. Score and currency live here, so an
+    // unrestricted write is a leaderboard and an economy handed to anyone with
+    // the app installed.
+    match /users/{uid} {
+      function ownedFields() {
+        return [
+          'schemaVersion',
+          'bestScore',
+          'lastScore',
+          'totalRuns',
+          'streakDays',
+          'lastPlayedAtUtc',
+          'dailyGoals',
+          'onboardingCompleted',
+          'settings',
+          'updatedAtUtc'
+        ];
+      }
+
+      // Server-owned fields must never arrive from a device. Entitlements in
+      // particular: they are mirrored here for reads, and a client that could
+      // set them would not need to buy anything.
+      function noServerFields() {
+        return !request.resource.data.keys().hasAny([
+          'entitlements',
+          'ownedSkus',
+          'premiumPass',
+          'serverGrantedAtUtc'
+        ]);
+      }
+
+      function onlyOwnedFields() {
+        return request.resource.data.keys().hasOnly(ownedFields());
+      }
+
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+                            && onlyOwnedFields()
+                            && noServerFields();
+      allow delete: if false;
+    }
+
+    // Anything not named above is closed. New collections have to be added
+    // here deliberately rather than inheriting a permissive default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

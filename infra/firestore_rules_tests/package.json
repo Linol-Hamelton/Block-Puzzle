@@ -1,0 +1,13 @@
+{
+  "name": "lumina-blocks-firestore-rules-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deny/allow matrix for firestore.rules, run against the Firestore emulator.",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project lumina-blocks-f5cf1 \"node --test rules.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0"
+  }
+}
