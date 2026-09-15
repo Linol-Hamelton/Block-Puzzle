@@ -6,6 +6,51 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-15 - Stage A4-A6: Firebase connected, rules deployed and proven
+
+Agent: Claude / claude-bd0bce05de513f55.
+
+Action: Built the Android toolchain from nothing - JDK 17 and Android SDK 36 on
+D:, with ANDROID_AVD_HOME set separately so AVDs do not land on C:. Built the
+debug APK, which created the debug keystore; extracted SHA-1 and SHA-256 for the
+owner to register. Added the Crashlytics Gradle plugin, ran flutterfire
+configure, and wired DefaultFirebaseOptions into bootstrap. Generated
+remoteconfig.template.json from the bundled defaults and deployed it. Deployed
+firestore.rules. Refetched google-services.json through the CLI once the owner
+had added the fingerprints. Installed JDK 21 beside 17 for the emulator and ran
+the rules suite. Moved the Gradle cache to D:.
+
+Result: **All 16 Firestore rules tests pass against the real emulator**, so A6
+is closed by evidence rather than by reading the file. Remote Config holds 57
+parameters live, verified by reading them back with remoteconfig:get - 54
+translated from the dotted app keys plus the 3 DEC-0002 kill switches. The debug
+APK builds (153 MB, 861 s), which is the first proof that the google-services
+plugin, the ru.luminablocks.game rename and all seven FlutterFire plugins work
+together. google-services.json now carries two oauth_client entries, so Google
+Sign-In is configured on the Firebase side. flutter analyze clean, 214 tests.
+Commits 25583bb, 04b74a2, 6072987 and the ignore fix.
+Two things cost time and are worth remembering: sdkmanager ignores licence
+answers piped from PowerShell and needs cmd redirection from a file, and
+firebase-tools refuses any JDK older than 21 while the Android build runs on 17
+- both JDKs are installed and the rules README explains why the global JAVA_HOME
+must stay on 17.
+
+Next step: A5 - set the runtime service account on verifyPurchase and deploy it.
+Blocked on the owner enabling Blaze. Then stage B.
+
+Open: main is 19 commits ahead of origin and nothing is pushed. The old Gradle
+cache at C:/Users/Dmitry/.gradle is 5.65 GB and can be deleted by the owner now
+that D:/Gradle is in use. Crashlytics is not enabled in the console yet, and no
+crash has ever reached it. Nothing has run on a physical device.
+
+Evidence:
+- anchor: f60114a1a40b2006cdfba46c4676346c2a726d1a, uncommitted changes present
+- digest: sha256:027907b2bf35ec58c748887ad2f5147ea75b9ff277082511375fa8f32cf30927 over 450 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-15T13:44:03.495Z by claude-bd0bce05de513f55
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 1s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-14 - Stage A0-A3: release wiring, package identity, bootstrap, config
 
 Agent: Claude / claude-bd0bce05de513f55.
@@ -90,51 +135,6 @@ Evidence:
 - digest: sha256:daddb47145b0438205852f8097c9b872984217077dfd4e97c7b02156bc7e274e over 436 tracked and untracked files
 - digest format: 4
 - recorded: 2026-09-14T19:40:50.698Z by claude-bd0bce05de513f55
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-14 - Codex review processed; stage 0 consolidation
-
-Agent: Claude / claude-bd0bce05de513f55.
-
-Action: Read the Codex review (R1-R12) and verified its sharpest claims against
-code rather than accepting them. Recorded the owner rulings as DEC-0016 through
-DEC-0021, including a superseding block that corrects two factual errors in
-DEC-0009 and DEC-0013 while restating both decisions. Merged plans 12 and 13
-into docs/roadmap/14_EXECUTION_PLAN_2026-09-14.md per item 17 of DEC-0015 and
-marked both originals superseded. Applied R1, R5-R11 to docs 17, 18, 19 and the
-publish checklist. Wrote D:/AI/stable-audio-3/run_local.py. Rewrote .ai/PLAN.md
-and .ai/TASK.md to match the decisions.
-
-Result: R2 confirmed and found to be worse than reported - Firebase Remote
-Config forbids dots in parameter names while the bundled defaults use them
-throughout, and separately firebase_remote_config_repository.dart line 58
-replaces the defaults wholesale instead of merging, so the first successful
-fetch would drop every key the remote does not carry. Added as a stage A item.
-R5 confirmed: run_gradio.py hardcodes share=True and never passes the parsed
---username/--password to launch(), so the upstream launcher opens an
-unauthenticated public tunnel; I had recommended that command, and the
-replacement launcher binds to loopback with share=False. R4 is closed by
-measurement taken earlier this session. Owner answered minSdk as "99.0", which
-is not a valid API level; I did not record it, found minSdkVersionInt = 24 in
-the installed Flutter SDK, and recorded 24 only after the owner confirmed.
-Validator: 21 decision blocks, 0 warnings; TASK 68/80, PLAN 96/200 lines.
-No product code changed in this batch.
-
-Next step: stage 0.3 - converge db8d05e with the Match-3 line and merge to main,
-then stage A0 (dart-defines with a DI proof) and A3 (Remote Config key mapping
-and defaults merge).
-
-Open: Play Console access and a Blaze billing account block stage C. Progress
-merge rules for account linking, KPI formulas and denominators, and weight
-provenance for the media acceptance set are unresolved. Nothing on device, in a
-store or in a cloud has been verified.
-
-Evidence:
-- anchor: 357300ccddff7f7c62bda8639dc966419442453a, uncommitted changes present
-- digest: sha256:ca2206076f07b32c1130ea692436bd1d68d9ba7bba0309d333ca7e624a590203 over 436 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-14T19:33:01.224Z by claude-bd0bce05de513f55
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify

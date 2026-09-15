@@ -254,3 +254,53 @@ Evidence:
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-15 from .ai/worklog/claude-bd0bce05de513f55.md (5)
+
+Moved to keep that journal under its 150-line limit. Text unchanged.
+
+## 2026-09-14 - Codex review processed; stage 0 consolidation
+
+Agent: Claude / claude-bd0bce05de513f55.
+
+Action: Read the Codex review (R1-R12) and verified its sharpest claims against
+code rather than accepting them. Recorded the owner rulings as DEC-0016 through
+DEC-0021, including a superseding block that corrects two factual errors in
+DEC-0009 and DEC-0013 while restating both decisions. Merged plans 12 and 13
+into docs/roadmap/14_EXECUTION_PLAN_2026-09-14.md per item 17 of DEC-0015 and
+marked both originals superseded. Applied R1, R5-R11 to docs 17, 18, 19 and the
+publish checklist. Wrote D:/AI/stable-audio-3/run_local.py. Rewrote .ai/PLAN.md
+and .ai/TASK.md to match the decisions.
+
+Result: R2 confirmed and found to be worse than reported - Firebase Remote
+Config forbids dots in parameter names while the bundled defaults use them
+throughout, and separately firebase_remote_config_repository.dart line 58
+replaces the defaults wholesale instead of merging, so the first successful
+fetch would drop every key the remote does not carry. Added as a stage A item.
+R5 confirmed: run_gradio.py hardcodes share=True and never passes the parsed
+--username/--password to launch(), so the upstream launcher opens an
+unauthenticated public tunnel; I had recommended that command, and the
+replacement launcher binds to loopback with share=False. R4 is closed by
+measurement taken earlier this session. Owner answered minSdk as "99.0", which
+is not a valid API level; I did not record it, found minSdkVersionInt = 24 in
+the installed Flutter SDK, and recorded 24 only after the owner confirmed.
+Validator: 21 decision blocks, 0 warnings; TASK 68/80, PLAN 96/200 lines.
+No product code changed in this batch.
+
+Next step: stage 0.3 - converge db8d05e with the Match-3 line and merge to main,
+then stage A0 (dart-defines with a DI proof) and A3 (Remote Config key mapping
+and defaults merge).
+
+Open: Play Console access and a Blaze billing account block stage C. Progress
+merge rules for account linking, KPI formulas and denominators, and weight
+provenance for the media acceptance set are unresolved. Nothing on device, in a
+store or in a cloud has been verified.
+
+Evidence:
+- anchor: 357300ccddff7f7c62bda8639dc966419442453a, uncommitted changes present
+- digest: sha256:ca2206076f07b32c1130ea692436bd1d68d9ba7bba0309d333ca7e624a590203 over 436 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-14T19:33:01.224Z by claude-bd0bce05de513f55
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
