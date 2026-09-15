@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/game_loop/presentation/game_loop_screen.dart';
+import '../../features/diagnostics/diagnostics_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/match3/presentation/match3_screen.dart';
 import '../../features/store/presentation/store_screen.dart';
@@ -16,6 +17,21 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Lumina Blocks'),
         actions: <Widget>[
+          // Compiled in only with --dart-define=ENABLE_DIAGNOSTICS=true, so it
+          // cannot reach a store build. See DiagnosticsScreen for why this is a
+          // compile-time flag rather than a debug-mode check.
+          if (kDiagnosticsEnabled)
+            IconButton(
+              tooltip: 'Diagnostics',
+              icon: const Icon(Icons.bug_report_outlined),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const DiagnosticsScreen(),
+                  ),
+                );
+              },
+            ),
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_rounded),

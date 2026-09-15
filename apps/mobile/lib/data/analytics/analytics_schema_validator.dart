@@ -432,5 +432,16 @@ class AnalyticsSchemaValidator {
         'message',
       },
     ),
+    // Emitted only by the diagnostics panel, which is compiled in behind
+    // --dart-define=ENABLE_DIAGNOSTICS. Registered here so the very check that
+    // proves the analytics path works does not itself log a validation warning.
+    'ops_diagnostics_ping': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'source',
+      },
+      optionalParams: <String>{
+        'firebase_ready',
+      },
+    ),
   };
 }
