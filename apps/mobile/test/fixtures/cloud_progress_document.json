@@ -1,0 +1,38 @@
+{
+  "progress": {
+    "schema_version": 2,
+    "day_key_utc": "2026-09-15T00:00:00.000Z",
+    "streak_current_days": 1,
+    "streak_best_days": 1,
+    "daily_moves": 0,
+    "daily_lines_cleared": 0,
+    "daily_score_earned": 0,
+    "best_score": 0,
+    "onboarding_status": {
+      "completed": false,
+      "last_step_id": null,
+      "last_status": null
+    },
+    "settings": {
+      "sound_enabled": true,
+      "haptics_enabled": true,
+      "selected_blocks_preset": "soft"
+    },
+    "last_seen_utc": "2026-09-15T00:00:00.000Z",
+    "economy_state": {
+      "rewarded_tools_credits": 0,
+      "owned_product_ids": []
+    },
+    "cosmetics_state": {
+      "selected_skin_id": null,
+      "unlocked_skin_ids": []
+    },
+    "daily_challenge_high_score_day": 0,
+    "daily_challenge_high_score_month": 0,
+    "daily_challenge_high_score_year": 0,
+    "daily_challenge_high_score_all_time": 0,
+    "daily_challenge_month_key": "2026-09",
+    "daily_challenge_year_key": "2026"
+  },
+  "lastSyncUtc": "2026-09-15T12:00:00.000Z"
+}

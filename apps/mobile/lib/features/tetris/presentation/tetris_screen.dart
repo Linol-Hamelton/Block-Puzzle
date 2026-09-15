@@ -398,69 +398,104 @@ class _TetrisControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    // Two thumb zones rather than two full-width rows.
+    //
+    // A phone is held with both thumbs near the bottom corners, so the centre
+    // of the screen is the hardest place to reach - which is exactly where
+    // movement used to sit. Movement is now under the left thumb and rotation
+    // under the right, both used constantly. Hold takes the awkward middle
+    // slot on purpose: it is pressed about once a round.
+    //
+    // Hard drop is deliberately moved away from the movement keys. It is the
+    // only irreversible input in the game, and it used to be the immediate
+    // neighbour of "move right", so a mis-tap locked the piece instantly. It
+    // now lives in the right-hand cluster behind a wider gap, with its own
+    // accent colour.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _PadButton(
-                icon: Icons.rotate_left_rounded,
-                onPressed: () => onInput(TetrisInput.rotateCcw),
+        Expanded(
+          flex: 5,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _PadButton(
+                      icon: Icons.chevron_left_rounded,
+                      height: 62,
+                      repeating: true,
+                      onPressed: () => onInput(TetrisInput.moveLeft),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _PadButton(
+                      icon: Icons.chevron_right_rounded,
+                      height: 62,
+                      repeating: true,
+                      onPressed: () => onInput(TetrisInput.moveRight),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _PadButton(
-                icon: Icons.layers_rounded,
-                label: 'Hold',
-                onPressed: () => onInput(TetrisInput.hold),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _PadButton(
-                icon: Icons.rotate_right_rounded,
-                onPressed: () => onInput(TetrisInput.rotateCw),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _PadButton(
-                icon: Icons.chevron_left_rounded,
-                repeating: true,
-                onPressed: () => onInput(TetrisInput.moveLeft),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _PadButton(
+              const SizedBox(height: 8),
+              _PadButton(
                 icon: Icons.keyboard_arrow_down_rounded,
+                height: 52,
                 repeating: true,
                 onPressed: () => onInput(TetrisInput.softDrop),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _PadButton(
-                icon: Icons.chevron_right_rounded,
-                repeating: true,
-                onPressed: () => onInput(TetrisInput.moveRight),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: _PadButton(
+            icon: Icons.layers_rounded,
+            label: 'Hold',
+            height: 52,
+            onPressed: () => onInput(TetrisInput.hold),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 5,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _PadButton(
+                      icon: Icons.rotate_left_rounded,
+                      height: 62,
+                      onPressed: () => onInput(TetrisInput.rotateCcw),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _PadButton(
+                      icon: Icons.rotate_right_rounded,
+                      height: 62,
+                      onPressed: () => onInput(TetrisInput.rotateCw),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _PadButton(
+              // Wider than the 8 used elsewhere: this gap is what keeps a
+              // rotation press from sliding into the hard drop.
+              const SizedBox(height: 14),
+              _PadButton(
                 icon: Icons.vertical_align_bottom_rounded,
+                height: 52,
                 accent: true,
                 onPressed: () => onInput(TetrisInput.hardDrop),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -474,6 +509,7 @@ class _PadButton extends StatefulWidget {
     this.label,
     this.repeating = false,
     this.accent = false,
+    this.height = 56,
   });
 
   final IconData icon;
@@ -481,6 +517,9 @@ class _PadButton extends StatefulWidget {
   final String? label;
   final bool repeating;
   final bool accent;
+
+  /// Frequently used inputs get taller targets than rare ones.
+  final double height;
 
   @override
   State<_PadButton> createState() => _PadButtonState();
@@ -534,7 +573,7 @@ class _PadButtonState extends State<_PadButton> {
       onTapUp: (_) => _stop(),
       onTapCancel: _stop,
       child: Container(
-        height: 56,
+        height: widget.height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: _pressed ? const Color(0x3D628FC0) : base,

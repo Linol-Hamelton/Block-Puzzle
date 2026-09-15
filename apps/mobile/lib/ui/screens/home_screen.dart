@@ -122,6 +122,11 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 28),
+
+                    // The three games come first and are grouped together; the
+                    // store and the daily variant sit below a divider so the
+                    // primary choice - which game to play - is not competing
+                    // with commerce for the same visual weight.
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
@@ -134,25 +139,6 @@ class HomeScreen extends StatelessWidget {
                         },
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: const Text('Start Classic'),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: LuminaPalette.violet,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const GameLoopScreen(isDailyChallenge: true),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.star_rounded),
-                        label: const Text('Daily Challenge'),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -193,7 +179,15 @@ class HomeScreen extends StatelessWidget {
                         label: const Text('Play Match 3'),
                       ),
                     ),
-                    const SizedBox(height: 10),
+
+                    const SizedBox(height: 18),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: LuminaPalette.panelBorder,
+                    ),
+                    const SizedBox(height: 18),
+
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -206,6 +200,26 @@ class HomeScreen extends StatelessWidget {
                         },
                         icon: const Icon(Icons.shopping_bag_outlined),
                         label: const Text('Open Premium Store'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: LuminaPalette.violet,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  const GameLoopScreen(isDailyChallenge: true),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.star_rounded),
+                        label: const Text('Daily Challenge'),
                       ),
                     ),
                   ],

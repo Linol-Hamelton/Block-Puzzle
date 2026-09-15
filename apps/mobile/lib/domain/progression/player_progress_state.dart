@@ -158,6 +158,47 @@ class PlayerProgressState {
     };
   }
 
+  /// The subset of [toJson] that a client is allowed to write to the cloud.
+  ///
+  /// Progress and entitlements are deliberately separated. `owned_product_ids`
+  /// and `unlocked_skin_ids` record what the player has paid for; they are
+  /// granted by `verifyPurchase` through the Admin SDK and live in
+  /// `entitlements/{uid}`, which no client may write. Sending them up inside
+  /// the progress document would hand every player a way to grant themselves
+  /// the catalogue with an ordinary score update, which is exactly what
+  /// DEC-0003 and DEC-0008 exist to prevent.
+  ///
+  /// They are emptied rather than omitted so the document keeps one stable
+  /// shape: the rules check for empty lists, and a reader does not have to
+  /// treat "absent" and "none" as different cases.
+  Map<String, Object?> toCloudJson() {
+    final Map<String, Object?> json = toJson();
+    json['economy_state'] = economyState
+        .copyWith(ownedProductIds: const <String>{})
+        .toJson();
+    json['cosmetics_state'] = cosmeticsState
+        .copyWith(unlockedSkinIds: const <String>{})
+        .toJson();
+    return json;
+  }
+
+  /// Returns this state with the entitlement fields taken from [source].
+  ///
+  /// Used when cloud progress wins the merge: the cloud copy carries empty
+  /// entitlement lists by construction, so adopting it wholesale would erase
+  /// what the player owns. The local copy is the better source until
+  /// `entitlements/{uid}` is read back.
+  PlayerProgressState withEntitlementsFrom(PlayerProgressState source) {
+    return copyWith(
+      economyState: economyState.copyWith(
+        ownedProductIds: source.economyState.ownedProductIds,
+      ),
+      cosmeticsState: cosmeticsState.copyWith(
+        unlockedSkinIds: source.cosmeticsState.unlockedSkinIds,
+      ),
+    );
+  }
+
   String toJsonString() => jsonEncode(toJson());
 
   factory PlayerProgressState.fromJson(Map<String, Object?> json) {

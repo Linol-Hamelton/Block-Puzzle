@@ -40,42 +40,63 @@ service cloud.firestore {
     // client is supposed to own. Score and currency live here, so an
     // unrestricted write is a leaderboard and an economy handed to anyone with
     // the app installed.
+    // Player progress, written from the device by
+    // CloudPlayerProgressRepository. The document it actually sends is
+    //
+    //   { progress: <PlayerProgressState.toCloudJson()>, lastSyncUtc: <string> }
+    //
+    // and the model inside `progress` is snake_case. An earlier version of
+    // these rules allowed a flat camelCase shape that no part of the app has
+    // ever produced, so every real save was denied while the rules tests - which
+    // used the same invented shape - passed. The fixture in
+    // apps/mobile/test/fixtures is generated from the model so the two cannot
+    // drift apart again.
     match /users/{uid} {
-      function ownedFields() {
-        return [
-          'schemaVersion',
-          'bestScore',
-          'lastScore',
-          'totalRuns',
-          'streakDays',
-          'lastPlayedAtUtc',
-          'dailyGoals',
-          'onboardingCompleted',
-          'settings',
-          'updatedAtUtc'
-        ];
+      function envelopeIsWellFormed() {
+        return request.resource.data.keys().hasOnly(['progress', 'lastSyncUtc'])
+               && request.resource.data.progress is map
+               && request.resource.data.lastSyncUtc is string;
       }
 
-      // Server-owned fields must never arrive from a device. Entitlements in
-      // particular: they are mirrored here for reads, and a client that could
-      // set them would not need to buy anything.
-      function noServerFields() {
-        return !request.resource.data.keys().hasAny([
-          'entitlements',
-          'ownedSkus',
-          'premiumPass',
-          'serverGrantedAtUtc'
-        ]);
+      function progress() {
+        return request.resource.data.progress;
       }
 
-      function onlyOwnedFields() {
-        return request.resource.data.keys().hasOnly(ownedFields());
+      // Entitlements record what the player paid for. They are granted by
+      // verifyPurchase through the Admin SDK and live in entitlements/{uid},
+      // which no client may write. They must arrive empty here, or a player
+      // could grant themselves the catalogue with an ordinary score update.
+      // See DEC-0003 and DEC-0008.
+      function entitlementsAreEmpty() {
+        return (!('economy_state' in progress())
+                || !('owned_product_ids' in progress().economy_state)
+                || progress().economy_state.owned_product_ids.size() == 0)
+               && (!('cosmetics_state' in progress())
+                || !('unlocked_skin_ids' in progress().cosmetics_state)
+                || progress().cosmetics_state.unlocked_skin_ids.size() == 0);
+      }
+
+      // Cheap sanity checks on the values the app depends on. Not a schema
+      // validator - rules are a poor place for one - but enough that a
+      // corrupted or hostile client cannot store a negative best score or a
+      // string where a number belongs.
+      function scalarsAreSane() {
+        return (!('schema_version' in progress())
+                || (progress().schema_version is int
+                    && progress().schema_version > 0))
+               && (!('best_score' in progress())
+                || (progress().best_score is int
+                    && progress().best_score >= 0))
+               && (!('streak_current_days' in progress())
+                || (progress().streak_current_days is int
+                    && progress().streak_current_days >= 0));
       }
 
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid)
-                            && onlyOwnedFields()
-                            && noServerFields();
+                            && envelopeIsWellFormed()
+                            && entitlementsAreEmpty()
+                            && scalarsAreSane();
       allow delete: if false;
     }
 
