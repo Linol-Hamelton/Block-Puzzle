@@ -189,6 +189,18 @@ Analytics и Crashlytics. Экспорт начинается с момента 
 | Секрет | Содержимое |
 |---|---|
 | `GOOGLE_SERVICES_JSON` | `google-services.json`, закодированный в base64 |
+
+Получить значение:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes('apps\mobilendroidpp\google-services.json'))
+```
+
+**Без этого секрета Android-сборка в CI не соберётся вообще.** Плагин
+`com.google.gms.google-services` применяется безусловно, а сам файл исключён из
+Git, поэтому на чистом runner его нет. Оба workflow теперь падают с внятным
+сообщением, если секрет не задан, — раньше это выглядело бы как непонятная
+ошибка Gradle. Замечание F2.
 | `ANDROID_KEYSTORE_BASE64`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `ANDROID_KEY_ALIAS` | уже используются в `android-release.yml` |
 
 В workflow файл раскодируется в `apps/mobile/android/app/google-services.json`
