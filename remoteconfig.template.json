@@ -1,0 +1,404 @@
+{
+  "parameters": {
+    "ab_bucket": {
+      "defaultValue": {
+        "value": "control"
+      },
+      "valueType": "STRING",
+      "description": "app key: ab.bucket"
+    },
+    "ab_difficulty_variant": {
+      "defaultValue": {
+        "value": "balanced_v1"
+      },
+      "valueType": "STRING",
+      "description": "app key: ab.difficulty_variant"
+    },
+    "ab_offer_strategy_variant": {
+      "defaultValue": {
+        "value": "cosmetics_first_v1"
+      },
+      "valueType": "STRING",
+      "description": "app key: ab.offer_strategy_variant"
+    },
+    "ab_tutorial_variant": {
+      "defaultValue": {
+        "value": "guided_v1"
+      },
+      "valueType": "STRING",
+      "description": "app key: ab.tutorial_variant"
+    },
+    "ab_ux_variant": {
+      "defaultValue": {
+        "value": "hud_standard_v1"
+      },
+      "valueType": "STRING",
+      "description": "app key: ab.ux_variant"
+    },
+    "ads_ad_free_mode": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: ads.ad_free_mode"
+    },
+    "ads_banner_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: ads.banner_enabled"
+    },
+    "ads_interstitial_cooldown_rounds": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ads.interstitial_cooldown_rounds"
+    },
+    "ads_interstitial_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: ads.interstitial_enabled"
+    },
+    "ads_interstitial_max_impressions_in_window": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ads.interstitial_max_impressions_in_window"
+    },
+    "ads_interstitial_skip_first_rounds": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ads.interstitial_skip_first_rounds"
+    },
+    "ads_interstitial_window_minutes": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ads.interstitial_window_minutes"
+    },
+    "ads_rewarded_revive_clear_cells": {
+      "defaultValue": {
+        "value": "6"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ads.rewarded_revive_clear_cells"
+    },
+    "ads_rewarded_revive_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: ads.rewarded_revive_enabled"
+    },
+    "balance_observed_avg_moves_per_run": {
+      "defaultValue": {
+        "value": "12.5"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: balance.observed_avg_moves_per_run"
+    },
+    "balance_observed_early_gameover_rate": {
+      "defaultValue": {
+        "value": "0.22"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: balance.observed_early_gameover_rate"
+    },
+    "balance_target_moves_per_run": {
+      "defaultValue": {
+        "value": "14"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: balance.target_moves_per_run"
+    },
+    "difficulty_hard_piece_weight": {
+      "defaultValue": {
+        "value": "0.2"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: difficulty.hard_piece_weight"
+    },
+    "difficulty_max_hard_pieces_per_triplet": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: difficulty.max_hard_pieces_per_triplet"
+    },
+    "feature_classic_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "DEC-0002 kill switch: disables the classic mode remotely"
+    },
+    "feature_match3_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "DEC-0002 kill switch: disables the match3 mode remotely"
+    },
+    "feature_tetris_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "DEC-0002 kill switch: disables the tetris mode remotely"
+    },
+    "iap_bundle_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: iap.bundle_enabled"
+    },
+    "iap_rewarded_tools_unlimited_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: iap.rewarded_tools_unlimited_enabled"
+    },
+    "iap_rewarded_tools_unlimited_sku": {
+      "defaultValue": {
+        "value": "utility_tools_pass"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.rewarded_tools_unlimited_sku"
+    },
+    "iap_rollout_strategy": {
+      "defaultValue": {
+        "value": "cosmetics_first"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.rollout_strategy"
+    },
+    "iap_segment_collector_owned_threshold": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: iap.segment_collector_owned_threshold"
+    },
+    "iap_segment_engaged_daily_moves_threshold": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: iap.segment_engaged_daily_moves_threshold"
+    },
+    "iap_segment_engaged_daily_score_threshold": {
+      "defaultValue": {
+        "value": "400"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: iap.segment_engaged_daily_score_threshold"
+    },
+    "iap_segment_engaged_streak_threshold": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: iap.segment_engaged_streak_threshold"
+    },
+    "iap_targeting_bundle_sku": {
+      "defaultValue": {
+        "value": "premium_starter_bundle"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.targeting_bundle_sku"
+    },
+    "iap_targeting_collector_primary_sku": {
+      "defaultValue": {
+        "value": "premium_starter_bundle"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.targeting.collector_primary_sku"
+    },
+    "iap_targeting_cosmetic_primary_sku": {
+      "defaultValue": {
+        "value": "skin_pack_neon"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.targeting_cosmetic_primary_sku"
+    },
+    "iap_targeting_cosmetic_secondary_sku": {
+      "defaultValue": {
+        "value": "skin_pack_mono"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.targeting_cosmetic_secondary_sku"
+    },
+    "iap_targeting_engaged_primary_sku": {
+      "defaultValue": {
+        "value": "utility_tools_pass"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.targeting.engaged_primary_sku"
+    },
+    "iap_targeting_new_user_primary_sku": {
+      "defaultValue": {
+        "value": "skin_pack_neon"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.targeting.new_user_primary_sku"
+    },
+    "iap_targeting_utility_owner_primary_sku": {
+      "defaultValue": {
+        "value": "skin_pack_mono"
+      },
+      "valueType": "STRING",
+      "description": "app key: iap.targeting.utility_owner_primary_sku"
+    },
+    "onboarding_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: onboarding.enabled"
+    },
+    "onboarding_max_guided_moves": {
+      "defaultValue": {
+        "value": "8"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: onboarding.max_guided_moves"
+    },
+    "ops_alerting_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: ops.alerting.enabled"
+    },
+    "ops_alerting_max_early_gameover_rate": {
+      "defaultValue": {
+        "value": "0.30"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ops.alerting.max_early_gameover_rate"
+    },
+    "ops_alerting_max_move_rejection_rate": {
+      "defaultValue": {
+        "value": "0.18"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ops.alerting.max_move_rejection_rate"
+    },
+    "ops_alerting_max_runtime_error_count": {
+      "defaultValue": {
+        "value": "0"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ops.alerting.max_runtime_error_count"
+    },
+    "ops_alerting_min_avg_round_duration_sec": {
+      "defaultValue": {
+        "value": "20.0"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: ops.alerting.min_avg_round_duration_sec"
+    },
+    "progression_daily_goal_lines_target": {
+      "defaultValue": {
+        "value": "6"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.daily_goal_lines_target"
+    },
+    "progression_daily_goal_moves_target": {
+      "defaultValue": {
+        "value": "18"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.daily_goal_moves_target"
+    },
+    "progression_daily_goal_reward_credits": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.daily_goal_reward_credits"
+    },
+    "progression_daily_goal_score_target": {
+      "defaultValue": {
+        "value": "350"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.daily_goal_score_target"
+    },
+    "progression_level_score_step": {
+      "defaultValue": {
+        "value": "140"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.level_score_step"
+    },
+    "progression_rewarded_tools_hint_cost": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.rewarded_tools_hint_cost"
+    },
+    "progression_rewarded_tools_initial_credits": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.rewarded_tools_initial_credits"
+    },
+    "progression_rewarded_tools_undo_cost": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.rewarded_tools_undo_cost"
+    },
+    "progression_streak_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: progression.streak_enabled"
+    },
+    "progression_undo_history_limit": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "valueType": "NUMBER",
+      "description": "app key: progression.undo_history_limit"
+    },
+    "social_share_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "valueType": "BOOLEAN",
+      "description": "app key: social.share_enabled"
+    },
+    "social_share_score_hashtag": {
+      "defaultValue": {
+        "value": "#BlockPuzzle"
+      },
+      "valueType": "STRING",
+      "description": "app key: social.share_score_hashtag"
+    },
+    "visual_blocks_preset": {
+      "defaultValue": {
+        "value": "soft"
+      },
+      "valueType": "STRING",
+      "description": "app key: visual.blocks_preset"
+    }
+  },
+  "version": {}
+}

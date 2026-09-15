@@ -24,6 +24,10 @@ plugins {
     // Declared here rather than in the root build.gradle because the Flutter
     // template keeps the declarative plugins block in settings.gradle.
     id "com.google.gms.google-services" version "4.5.0" apply false
+    // Uploads the obfuscation mapping file so release stack traces are
+    // readable. Without it Crashlytics still collects crashes, but the
+    // traces arrive obfuscated and are of little use.
+    id "com.google.firebase.crashlytics" version "3.0.2" apply false
 }
 
 include ":app"

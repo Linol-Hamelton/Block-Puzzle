@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../firebase_options.dart';
 import '../core/di/di_container.dart';
 import '../core/logging/app_logger.dart';
 import '../data/analytics/analytics_tracker.dart';
@@ -63,7 +64,13 @@ Future<void> bootstrap() async {
 
 Future<void> _initializeFirebase() async {
   try {
-    await Firebase.initializeApp();
+    // Explicit options rather than the implicit lookup: on Android the implicit
+    // form reads google-services.json through the Gradle plugin, which works,
+    // but it fails silently on any platform where that file is absent. The
+    // generated options are checked in and therefore always present.
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     _firebaseReady = true;
   } catch (error, stackTrace) {
     _firebaseReady = false;
