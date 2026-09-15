@@ -11,10 +11,10 @@ const TileColor e = TileColor.emerald;
 TileGrid g(List<List<TileColor>> rows) {
   final int h = rows.length;
   final int w = rows.first.length;
-  return TileGrid(
-    width: w,
+  return TileGrid.ofColors(
+      width: w,
     height: h,
-    cells: <TileColor?>[for (final List<TileColor> row in rows) ...row],
+    colors: <TileColor?>[for (final List<TileColor> row in rows) ...row],
   );
 }
 

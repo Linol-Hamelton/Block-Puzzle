@@ -119,3 +119,131 @@ class MatchDetector {
     return false;
   }
 }
+
+/// A set of runs that touch each other, treated as one shape.
+///
+/// A plain match is a single run. An L or a T is two runs - one horizontal, one
+/// vertical - sharing a cell, and it has to be recognised as one shape or the
+/// player sees two ordinary matches where the genre has taught them to expect a
+/// bonus.
+class MatchGroup {
+  MatchGroup({
+    required this.runs,
+    required this.cells,
+    required this.color,
+  });
+
+  final List<TileMatch> runs;
+  final Set<GridPos> cells;
+  final TileColor color;
+
+  /// Cells where a horizontal and a vertical run cross.
+  List<GridPos> get intersections {
+    final List<GridPos> crossings = <GridPos>[];
+    for (final TileMatch h in runs.where((TileMatch r) => r.horizontal)) {
+      for (final TileMatch v in runs.where((TileMatch r) => !r.horizontal)) {
+        for (final GridPos p in h.cells) {
+          if (v.cells.contains(p)) {
+            crossings.add(p);
+          }
+        }
+      }
+    }
+    return crossings;
+  }
+
+  TileMatch get longestRun =>
+      runs.reduce((TileMatch a, TileMatch b) => b.length > a.length ? b : a);
+
+  /// What this shape awards, by the conventions the genre has trained players
+  /// on: five in a line is the strongest, a crossing beats a four, and a four
+  /// beats a three.
+  SpecialKind get reward {
+    if (intersections.isNotEmpty) {
+      return SpecialKind.bomb;
+    }
+    final int longest = longestRun.length;
+    if (longest >= 5) {
+      return SpecialKind.colorBomb;
+    }
+    if (longest == 4) {
+      return longestRun.horizontal
+          ? SpecialKind.lineHorizontal
+          : SpecialKind.lineVertical;
+    }
+    return SpecialKind.none;
+  }
+
+  /// Where the bonus gem appears.
+  ///
+  /// Under the player's finger when possible - [swapped] is the cell they moved
+  /// - because a gem that materialises somewhere else reads as a glitch. Failing
+  /// that, the crossing of an L or T, and otherwise the middle of the run.
+  GridPos spawnPosition({GridPos? swapped}) {
+    if (swapped != null && cells.contains(swapped)) {
+      return swapped;
+    }
+    final List<GridPos> crossings = intersections;
+    if (crossings.isNotEmpty) {
+      return crossings.first;
+    }
+    final List<GridPos> line = longestRun.cells;
+    return line[line.length ~/ 2];
+  }
+}
+
+/// Groups runs into shapes and works out what each one awards.
+extension MatchGrouping on MatchDetector {
+  /// Runs that share a cell become one [MatchGroup].
+  List<MatchGroup> findGroups(TileGrid grid) {
+    final List<TileMatch> runs = findMatches(grid);
+    final List<MatchGroup> groups = <MatchGroup>[];
+
+    for (final TileMatch run in runs) {
+      MatchGroup? host;
+      for (final MatchGroup candidate in groups) {
+        if (candidate.color != run.color) {
+          continue;
+        }
+        if (run.cells.any(candidate.cells.contains)) {
+          host = candidate;
+          break;
+        }
+      }
+      if (host == null) {
+        groups.add(MatchGroup(
+          runs: <TileMatch>[run],
+          cells: run.cells.toSet(),
+          color: run.color,
+        ));
+        continue;
+      }
+      host.runs.add(run);
+      host.cells.addAll(run.cells);
+    }
+
+    // A third run can bridge two groups that were separate when it was added,
+    // so merge until nothing else touches. Boards are small; this settles in a
+    // pass or two.
+    bool merged = true;
+    while (merged) {
+      merged = false;
+      for (int i = 0; i < groups.length && !merged; i++) {
+        for (int j = i + 1; j < groups.length && !merged; j++) {
+          if (groups[i].color != groups[j].color) {
+            continue;
+          }
+          if (!groups[i].cells.any(groups[j].cells.contains)) {
+            continue;
+          }
+          groups[i].runs.addAll(groups[j].runs);
+          groups[i].cells.addAll(groups[j].cells);
+          groups.removeAt(j);
+          merged = true;
+        }
+      }
+    }
+
+    return groups;
+  }
+}

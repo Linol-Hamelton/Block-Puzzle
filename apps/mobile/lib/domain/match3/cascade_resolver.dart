@@ -113,13 +113,15 @@ class CascadeResolver {
   /// Collapses each column so non-null tiles fall to the bottom, leaving the
   /// holes at the top (to be refilled). Stable within a column (preserves order).
   TileGrid applyGravity(TileGrid grid) {
-    final List<TileColor?> next =
-        List<TileColor?>.filled(grid.width * grid.height, null);
+    final List<Tile?> next =
+        List<Tile?>.filled(grid.width * grid.height, null);
     int index(int x, int y) => (y * grid.width) + x;
     for (int x = 0; x < grid.width; x++) {
       int writeY = grid.height - 1;
       for (int y = grid.height - 1; y >= 0; y--) {
-        final TileColor? c = grid.at(x, y);
+        // Gravity carries the whole tile, so a special that survives a clear
+        // falls with its effect intact rather than landing as a plain gem.
+        final Tile? c = grid.tileAt(x, y);
         if (c != null) {
           next[index(x, writeY)] = c;
           writeY -= 1;

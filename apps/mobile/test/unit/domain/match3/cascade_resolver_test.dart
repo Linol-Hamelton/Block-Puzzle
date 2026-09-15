@@ -13,10 +13,10 @@ const TileColor e = TileColor.emerald;
 TileGrid g(List<List<TileColor>> rows) {
   final int h = rows.length;
   final int w = rows.first.length;
-  return TileGrid(
-    width: w,
+  return TileGrid.ofColors(
+      width: w,
     height: h,
-    cells: <TileColor?>[for (final List<TileColor> row in rows) ...row],
+    colors: <TileColor?>[for (final List<TileColor> row in rows) ...row],
   );
 }
 
@@ -29,7 +29,8 @@ void main() {
           CascadeResolver(spawner: TileSpawner(seed: 1));
       // Column: r (top), hole, c (bottom).
       final TileGrid grid =
-          TileGrid(width: 1, height: 3, cells: <TileColor?>[r, null, c]);
+          TileGrid.ofColors(
+      width: 1, height: 3, colors: <TileColor?>[r, null, c]);
       final TileGrid fallen = resolver.applyGravity(grid);
       expect(fallen.at(0, 0), isNull);
       expect(fallen.at(0, 1), r);

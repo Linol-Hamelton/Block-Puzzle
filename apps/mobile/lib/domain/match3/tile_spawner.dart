@@ -69,18 +69,21 @@ class TileSpawner {
   /// top neighbors. (Solvability — that a legal move exists — is enforced by the
   /// engine, which reshuffles if the fresh board is a dead end.)
   TileGrid fillInitial(int width, int height) {
-    final List<TileColor?> cells = List<TileColor?>.filled(width * height, null);
+    final List<Tile?> cells = List<Tile?>.filled(width * height, null);
     int index(int x, int y) => (y * width) + x;
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        final TileColor? left2 = x >= 2 ? cells[index(x - 1, y)] : null;
+        // Compare colours, not whole tiles: a fresh board has no specials, but
+        // reading the colour keeps this correct if that ever changes.
+        TileColor? colorAt(int cx, int cy) => cells[index(cx, cy)]?.color;
+
         final TileColor? leftMatch =
-            (x >= 2 && cells[index(x - 1, y)] == cells[index(x - 2, y)])
-                ? left2
+            (x >= 2 && colorAt(x - 1, y) == colorAt(x - 2, y))
+                ? colorAt(x - 1, y)
                 : null;
         final TileColor? upMatch =
-            (y >= 2 && cells[index(x, y - 1)] == cells[index(x, y - 2)])
-                ? cells[index(x, y - 1)]
+            (y >= 2 && colorAt(x, y - 1) == colorAt(x, y - 2))
+                ? colorAt(x, y - 1)
                 : null;
         TileColor color = next();
         // Reroll until it doesn't extend a pair into a triple. The palette has
@@ -88,7 +91,7 @@ class TileSpawner {
         while (color == leftMatch || color == upMatch) {
           color = next();
         }
-        cells[index(x, y)] = color;
+        cells[index(x, y)] = Tile(color);
       }
     }
     return TileGrid(width: width, height: height, cells: cells);
@@ -101,7 +104,7 @@ class TileSpawner {
     for (int y = 0; y < grid.height; y++) {
       for (int x = 0; x < grid.width; x++) {
         if (result.at(x, y) == null) {
-          result = result.withCell(x, y, next());
+          result = result.withCell(x, y, Tile(next()));
         }
       }
     }

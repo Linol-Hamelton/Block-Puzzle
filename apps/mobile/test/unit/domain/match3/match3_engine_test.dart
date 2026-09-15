@@ -11,10 +11,10 @@ const TileColor e = TileColor.emerald;
 
 /// A settled 4×4 board with no pre-existing match. Swapping (2,0)<->(2,1)
 /// completes the top row into r,r,r.
-TileGrid craftBoard() => TileGrid(
+TileGrid craftBoard() => TileGrid.ofColors(
       width: 4,
       height: 4,
-      cells: <TileColor?>[
+      colors: <TileColor?>[
         r, r, e, m, // y0
         m, c, r, c, // y1
         c, m, c, e, // y2

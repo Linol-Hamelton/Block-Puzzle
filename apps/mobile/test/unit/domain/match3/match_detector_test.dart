@@ -12,10 +12,10 @@ const TileColor e = TileColor.emerald;
 TileGrid g(List<List<TileColor>> rows) {
   final int h = rows.length;
   final int w = rows.first.length;
-  return TileGrid(
-    width: w,
+  return TileGrid.ofColors(
+      width: w,
     height: h,
-    cells: <TileColor?>[for (final List<TileColor> row in rows) ...row],
+    colors: <TileColor?>[for (final List<TileColor> row in rows) ...row],
   );
 }
 
@@ -37,7 +37,8 @@ void main() {
 
     test('detects a vertical run of three', () {
       final TileGrid grid =
-          TileGrid(width: 1, height: 3, cells: <TileColor?>[r, r, r]);
+          TileGrid.ofColors(
+      width: 1, height: 3, colors: <TileColor?>[r, r, r]);
       final List<TileMatch> matches = detector.findMatches(grid);
       expect(matches, hasLength(1));
       expect(matches.single.horizontal, isFalse);
