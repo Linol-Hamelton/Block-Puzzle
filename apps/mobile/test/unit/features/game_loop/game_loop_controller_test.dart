@@ -133,7 +133,7 @@ void main() {
       expect(
         analytics.trackedEvents.any(
           (event) =>
-              event.name == 'session_start' &&
+              event.name == 'game_session_start' &&
               event.params['ab_bucket'] == 'variant_a' &&
               event.params['ux_variant'] == 'hud_focus_v1' &&
               event.params['difficulty_variant'] == 'fairness_bias_v1',

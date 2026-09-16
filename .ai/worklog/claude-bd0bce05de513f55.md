@@ -2,106 +2,121 @@
 
 Session journal. Owned by this session. No other session writes here.
 
-Newest entry first. Limit 150 lines.
-
----
-
-## 2026-09-15 - Codex audit F1-F7 closed; DEC-0022 authorises gameplay work
+## 2026-09-16 - One material for three games, and effects slow enough to see
 
 Agent: Claude / claude-bd0bce05de513f55.
 
-Action: Read the Codex audit and verified each finding against code before
-acting. Recorded the owner's approval of the gameplay round as DEC-0022,
-superseding DEC-0005 and DEC-0006. Reordered the home screen and rebuilt the
-Tetris control layout into thumb zones. Then fixed F1 through F7.
+Action: Owner asked for a session on the look and feel of all three games -
+aesthetics, ergonomics, absorption, and effects deliberately slowed for
+spectacle. Took baseline screenshots on the Redmi, worked in four stages, and
+re-shot after each.
 
-Result: **F1 was mine and it was serious.** The Firestore rules I wrote and
-recorded as "closed by evidence" denied every cloud save the app has ever made:
-the client sends {progress, lastSyncUtc} with a snake_case model inside, and I
-wrote rules for a flat camelCase document that no part of this app produces. My
-sixteen tests passed because I wrote the fixture from imagination rather than
-from the model - the exact failure I had been calling out in other people's
-work. It was invisible because _saveToCloud swallowed permission-denied as a
-network blip. The fixture is now generated from PlayerProgressState by a Dart
-test, entitlements are stripped before upload and rejected by the rules, and a
-denied write is logged as a broken contract. 21 rules tests pass against the
-emulator; rules deployed.
-F7: dart-defines were lost in AOT because the key was a parameter, so
-String.fromEnvironment could not be const-evaluated. F4: Remote Config reverted
-to bundled defaults on every cold start; the persisted activated values are now
-read on the startup path. F3: the three mode kill switches had no consumer at
-all - GameModeAvailability and ModeGate close the menu and the routes, with
-Daily Challenge following Classic. F2: neither workflow created
-google-services.json, so a clean runner could not build Android; both now decode
-it from a secret and the rules matrix runs as its own CI job. F5: the web target
-is removed rather than patched - it compiled and could not start. F6: snapshots
-carried the board but not the generator, so a resumed run dealt different
-pieces; DeterministicRandom makes the state serialisable and both engines
-version their snapshots.
-flutter analyze --fatal-infos --fatal-warnings exit 0; flutter test exit 0,
-**236 tests**, up from 214. Commits 514b673, 4138b05, 3bec96c, 68434c3.
+Result: Two problems ran under everything and neither was per-game.
+**The figure and the ground were inverted.** Eight stacked nebula layers lit the
+whole frame evenly, brighter than either playfield, so a board read as a hole
+cut in a bright page rather than as the lit thing being looked at. Classic's own
+field was painted at alpha 0.12 over 0.04 - not a board at all, just ambience
+showing through a rounded rectangle. The ambient layer is now dimmed and
+vignetted, and every field is an opaque dark well.
+**Three games painted a block three ways**, and the weakest set the impression.
+`lib/ui/effects/glass_board.dart` now holds both halves of the look - the well
+and the glass - under two rules: light always comes from the top-left, and the
+field is the darkest thing on screen. Match-3 lost 14k characters of duplicated
+painting to a 4k call into it. Tetris and Classic moved onto it too; Classic's
+six skins still tint the well, so they stay six skins.
+The same texture needed different strengths per game, which was only visible on
+a device: sockets that frame a gem on a full 8x8 board become the loudest thing
+on a mostly-empty 10x20 one, so socket strength is a parameter (1.0 / 0.5 / 0.3).
+**Timing was the owner's real point.** A Tetris line clear ran for 120ms - the
+most valuable thing a player does went by in a blink, and a four-line clear
+looked exactly like a single. It is now 380ms, 680ms for a Tetris, and the extra
+time is spent on three beats (ignite, hold, collapse), not on a longer fade.
+Shake scales with the clear instead of switching on at four.
+Match-3 had it worse: the engine settles a whole cascade inside one call, so a
+four-step chain reached the screen as one instant jump. Steps now carry their
+intermediate boards and the controller plays them out, with `grid` for the rules
+and `displayGrid` for the eye. Holds are uneven on purpose - the opening match
+is the player's, a combo is the rarest thing in the mode, and the chain
+accelerates so a deep cascade builds rather than drags. Captions and particles
+moved onto the frames they describe; input is refused mid-cascade.
+Verified on device at each stage. flutter analyze --fatal-infos
+--fatal-warnings exit 0; flutter test exit 0, **322 tests**, up from 312.
 
-Next step: DEC-0022 item three - Match-3 depth: bonus tiles from four, five, T
-and L shapes, a move limit, scoring and round progression. Table-driven tests
-for the detonation matrix before any animation work.
+Next step: DEC-0022 item four - the media acceptance set from DEC-0019.
 
-Open: main is far ahead of origin and nothing is pushed. Release DI, native
-fatal and ANR, and any purchase remain unproven; the diagnostics crash button is
-correctly labelled non-fatal and does not cover that path. Blaze still blocks
-A5. The audit's remaining items - session_start tied to the Classic controller,
-Classic events missing game_id, utility_tools_pass active against DEC-0008 - are
-not addressed here.
+Open: Frame timing is still unmeasured - gfxinfo reports no frames for this
+renderer, so the cost of the added passes is reasoned about, not measured. Not
+done in this session and worth doing: the Tetris Next queue is still coloured
+dots, the HUDs are unstyled panels eating vertical space the boards could use,
+and Classic's rack pieces stay faint. Analytics now reaches Firebase on the
+playback's schedule rather than the engine's - correct for captions, and it
+means a kill mid-cascade loses the tail of a move's events; saveActiveGame
+flushes on pause, which covers the normal path. Nothing is committed and main is
+still far ahead of origin. Release DI, native fatal/ANR and any purchase remain
+unproven; Blaze still blocks A5.
 
 Evidence:
-- anchor: 68434c31c48f7a811ad93238a3a8c313aaa61e4b, uncommitted changes present
-- digest: sha256:71771cab60f8785aa80d1d579783ea43c06f46d46cd183062bf5a85fa51d0ddd over 459 tracked and untracked files
+- anchor: 261a2cba4c00ce5cd51f0220f02bf8a664b5b5cc, uncommitted changes present
+- digest: sha256:be3dce77a42027229d74983a716c1e29a6df54543e562e3100830e996cd9d3d6 over 469 tracked and untracked files
 - digest format: 4
-- recorded: 2026-09-15T16:29:43.504Z by claude-bd0bce05de513f55
+- recorded: 2026-09-15T22:47:24.135Z by claude-bd0bce05de513f55
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 1s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-15 - Stage A4-A6: Firebase connected, rules deployed and proven
+## 2026-09-16 - Classic was broken twice; Match-3 gems get shape as well as colour
 
 Agent: Claude / claude-bd0bce05de513f55.
 
-Action: Built the Android toolchain from nothing - JDK 17 and Android SDK 36 on
-D:, with ANDROID_AVD_HOME set separately so AVDs do not land on C:. Built the
-debug APK, which created the debug keystore; extracted SHA-1 and SHA-256 for the
-owner to register. Added the Crashlytics Gradle plugin, ran flutterfire
-configure, and wired DefaultFirebaseOptions into bootstrap. Generated
-remoteconfig.template.json from the bundled defaults and deployed it. Deployed
-firestore.rules. Refetched google-services.json through the CLI once the owner
-had added the fingerprints. Installed JDK 21 beside 17 for the emulator and ran
-the rules suite. Moved the Gradle cache to D:.
+Action: Owner reported Classic hanging. Reproduced it on the Redmi over adb,
+read the stack from logcat, fixed both defects it exposed, then reworked the
+Match-3 board and gem rendering against what the device actually showed.
 
-Result: **All 16 Firestore rules tests pass against the real emulator**, so A6
-is closed by evidence rather than by reading the file. Remote Config holds 57
-parameters live, verified by reading them back with remoteconfig:get - 54
-translated from the dotted app keys plus the 3 DEC-0002 kill switches. The debug
-APK builds (153 MB, 861 s), which is the first proof that the google-services
-plugin, the ru.luminablocks.game rename and all seven FlutterFire plugins work
-together. google-services.json now carries two oauth_client entries, so Google
-Sign-In is configured on the Firebase side. flutter analyze clean, 214 tests.
-Commits 25583bb, 04b74a2, 6072987 and the ignore fix.
-Two things cost time and are worth remembering: sdkmanager ignores licence
-answers piped from PowerShell and needs cmd redirection from a file, and
-firebase-tools refuses any JDK older than 21 while the Android build runs on 17
-- both JDKs are installed and the rules README explains why the global JAVA_HOME
-must stay on 17.
+Result: **Classic did not hang - it threw, twice, and nothing caught either.**
+Firebase reserves `session_start`; logEvent does not drop or rename such an
+event, it throws. The throw escaped into initialization and killed the board's
+widget subtree, so the mode opened to a grey error slab. Cross-checking all 32
+events the app sends against the reserved list found a second one already in
+place: `ad_impression`, which had not fired only because ads are switched off -
+it would have taken Classic down in production the day they were enabled. Both
+renamed with a `game_` prefix, `session_end` with them so the pair stays
+symmetric in a dashboard. Fixed in three layers, because the defect was three:
+the names, a reserved-name check in AnalyticsSchemaValidator that refuses them
+before the transport, and a catch in FirebaseAnalyticsTracker so telemetry can
+never again take a screen down - logged loudly, never swallowed. Docs and
+dashboard_mvp_contract_v1.json described a contract that could not be met and
+are updated; the spec now carries the naming rule.
+The second defect surfaced only when I placed a piece myself:
+`removeAll(children.whereType<MoveToEffect>())` walks a lazy view of the very
+collection removeAll deletes from, so placing a piece while a return-to-home
+effect was running threw ConcurrentModificationError out of the drop handler.
+Three sites, all materialised with toList().
+Match-3: the first rendering pass was wrong in the way the owner said. Three
+stacked white passes had bleached every gem to pastel, and the gems filled 83%
+of the cell and hid the sockets they were meant to sit in. Sockets are now lit
+as holes, dividers are bevelled grooves rather than hairlines, and the gems
+carry six distinct silhouettes so colour is not asked to carry the board alone.
+Verified on device: Classic opens and accepts placements with a clean log;
+Match-3 resumed a run at round seven with the progression behaving as designed.
+flutter analyze --fatal-infos --fatal-warnings exit 0; flutter test exit 0,
+**312 tests**, up from 308.
 
-Next step: A5 - set the runtime service account on verifyPurchase and deploy it.
-Blocked on the owner enabling Blaze. Then stage B.
+Next step: DEC-0022 item four - the media acceptance set from DEC-0019.
 
-Open: main is 19 commits ahead of origin and nothing is pushed. The old Gradle
-cache at C:/Users/Dmitry/.gradle is 5.65 GB and can be deleted by the owner now
-that D:/Gradle is in use. Crashlytics is not enabled in the console yet, and no
-crash has ever reached it. Nothing has run on a physical device.
+Open: Frame timing is unmeasured - gfxinfo reports no frames for this renderer,
+so the cost of the new gem passes is reasoned about, not measured. Shape per
+colour goes beyond what the owner asked for and is theirs to reject. Nothing is
+committed and main is still far ahead of origin. Release DI, native fatal/ANR
+and any purchase remain unproven, and Blaze still blocks A5. Classic
+`game_start`/`game_end` still omit `game_id`, and `utility_tools_pass` is still
+live against DEC-0008.
+
+Newest entry first. Limit 150 lines.
 
 Evidence:
-- anchor: f60114a1a40b2006cdfba46c4676346c2a726d1a, uncommitted changes present
-- digest: sha256:027907b2bf35ec58c748887ad2f5147ea75b9ff277082511375fa8f32cf30927 over 450 tracked and untracked files
+- anchor: 261a2cba4c00ce5cd51f0220f02bf8a664b5b5cc, uncommitted changes present
+- digest: sha256:467c00117daad876039923a931ba06a613eca167bef17e0ac59acca66f90e830 over 466 tracked and untracked files
 - digest format: 4
-- recorded: 2026-09-15T13:44:03.495Z by claude-bd0bce05de513f55
+- recorded: 2026-09-15T22:20:00.990Z by claude-bd0bce05de513f55
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 1s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify

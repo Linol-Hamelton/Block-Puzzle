@@ -8,7 +8,7 @@ Checklist for rollout readiness in Sprint 8 using gameplay + observability signa
 - `flutter analyze` passed
 - `flutter test` passed
 2. Data contract:
-- `session_start`, `game_start`, `game_end` events are valid
+- `game_session_start`, `game_start`, `game_end` events are valid
 - `ops_session_snapshot` events are present
 - `ops_alert_triggered` events are present when violations happen
 - `ops_error` events are present for runtime failures

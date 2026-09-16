@@ -57,13 +57,19 @@ class TetrisEngine {
     int height = 20,
     int nextPreviewCount = 5,
     Duration lockDelay = const Duration(milliseconds: 500),
-    Duration lineClearDelay = const Duration(milliseconds: 120),
+    // 120ms was a blink. The line clear is the whole point of the game and
+    // it went by before the eye could register it; a four-line clear, the
+    // rarest and most valuable thing a player does, looked exactly like a
+    // single. The genre sits at 300-500ms, and a Tetris earns more.
+    Duration lineClearDelay = const Duration(milliseconds: 380),
+    Duration tetrisClearBonus = const Duration(milliseconds: 300),
     int lockResetCap = 15,
   })  : _board = TetrisBoard(width: width, height: height),
         _bag = SevenBagRandomizer(seed: seed),
         _nextPreviewCount = nextPreviewCount,
         _lockDelayMs = lockDelay.inMilliseconds,
         _clearDelayMs = lineClearDelay.inMilliseconds,
+        _tetrisClearBonusMs = tetrisClearBonus.inMilliseconds,
         _lockResetCap = lockResetCap;
 
   TetrisBoard _board;
@@ -71,6 +77,7 @@ class TetrisEngine {
   final int _nextPreviewCount;
   final int _lockDelayMs;
   final int _clearDelayMs;
+  final int _tetrisClearBonusMs;
   final int _lockResetCap;
 
   // Line-clear animation phase: rows are detected + scored at lock, held
@@ -78,6 +85,9 @@ class TetrisEngine {
   // collapse). Active piece is null during this window.
   List<int> _clearingRows = <int>[];
   int _clearTimerMs = 0;
+  // How long *this* clear runs for. Held separately from _clearDelayMs so
+  // clearProgress still normalises to 0..1 when a Tetris runs longer.
+  int _activeClearDelayMs = 0;
 
   FallingPiece? _active;
   TetrominoType? _hold;
@@ -117,9 +127,13 @@ class TetrisEngine {
   bool get isClearing => _clearingRows.isNotEmpty;
   List<int> get clearingRows => List<int>.unmodifiable(_clearingRows);
   List<TCell> get lastLockedCells => List<TCell>.unmodifiable(_lastLockedCells);
-  double get clearProgress => _clearDelayMs <= 0
+  double get clearProgress => _activeClearDelayMs <= 0
       ? 1
-      : (1 - (_clearTimerMs / _clearDelayMs)).clamp(0, 1).toDouble();
+      : (1 - (_clearTimerMs / _activeClearDelayMs)).clamp(0, 1).toDouble();
+
+  /// How many rows the clear in progress is taking out. Zero when idle. The
+  /// view stages a bigger sequence for a bigger clear.
+  int get clearingRowCount => _clearingRows.length;
 
   List<TetrominoType> get nextQueue => _bag.peek(_nextPreviewCount);
 
@@ -369,7 +383,10 @@ class TetrisEngine {
     // Hold the full rows visible for the clear animation; collapse on the timer
     // (highlight -> dissolve -> collapse).
     _clearingRows = full;
-    _clearTimerMs = _clearDelayMs;
+    // A Tetris holds longer than a single. Same sequence, more time in it.
+    _activeClearDelayMs =
+        _clearDelayMs + (full.length >= 4 ? _tetrisClearBonusMs : 0);
+    _clearTimerMs = _activeClearDelayMs;
   }
 
   /// Immediately completes a pending line-clear (collapse + spawn), skipping the
@@ -385,6 +402,7 @@ class TetrisEngine {
     _board = _board.clearFullRows().board;
     _clearingRows = <int>[];
     _clearTimerMs = 0;
+    _activeClearDelayMs = 0;
     _awardPerfectClearIfEmpty();
     _canHold = true;
     _spawnNext();

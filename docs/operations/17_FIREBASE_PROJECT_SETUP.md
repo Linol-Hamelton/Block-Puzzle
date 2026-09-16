@@ -217,7 +217,7 @@ Git, поэтому на чистом runner его нет. Оба workflow те
 - [ ] Релизная сборка собрана **с `--dart-define`** (`APP_ENV=prod`,
       `APP_FLAVOR=release`) и DI выбрал продакшен-адаптеры, а не debug — это
       отдельный P0 по DEC-0007
-- [ ] В Analytics DebugView видны `session_start`, `game_start`, `game_end`
+- [ ] В Analytics DebugView видны `game_session_start`, `game_start`, `game_end`
       с `game_id` для всех трёх режимов. DebugView требует **явного включения
       debug-режима** на устройстве, это отдельная процедура. Тестовый трафик
       затем **отфильтровать из когорт вручную** — сам он оттуда не исчезает

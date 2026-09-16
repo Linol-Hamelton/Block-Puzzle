@@ -415,6 +415,73 @@ if ($gitCommand -and $script:GitUsable) {
     }
 }
 
+# One version, three files. Nothing compared them and they drifted. See DEC-0021.
+if ($manifest -and $manifest.PSObject.Properties['protocolVersion']) {
+    $declared = [string]$manifest.protocolVersion
+    $sources = @{}
+    $agentsPath = Join-Path $Root 'AGENTS.md'
+    if (Test-Path -LiteralPath $agentsPath -PathType Leaf) {
+        $found = [regex]::Match((Read-ProtocolText $agentsPath), '(?m)^##\s+AI Collaboration Protocol\s+v(\S+)\s*$')
+        if ($found.Success) { $sources['AGENTS.md'] = $found.Groups[1].Value }
+    }
+    $installerPathForVersion = Join-Path $Root 'setup-ai-protocol.ps1'
+    if (Test-Path -LiteralPath $installerPathForVersion -PathType Leaf) {
+        $found = [regex]::Match((Read-ProtocolText $installerPathForVersion), 'protocol v(\d+\.\d+\.\d+)')
+        if ($found.Success) { $sources['setup-ai-protocol.ps1'] = $found.Groups[1].Value }
+    }
+    $drifted = @($sources.Keys | Where-Object { $sources[$_] -ne $declared })
+    if ($drifted.Count -eq 0) { Write-Result "PASS" "one protocol version everywhere: $declared" }
+    else {
+        foreach ($name in $drifted) {
+            Write-Result "FAIL" ("{0} says {1}; protocol-manifest.json says {2}" -f $name, $sources[$name], $declared)
+        }
+    }
+}
+
+# A written decision block is never edited again, says the rule. Nothing checked
+# it, so the text could be rewritten and validation still passed. See DEC-0021.
+if ($gitCommand -and $script:GitUsable -and (Test-Path -LiteralPath $decisionPath -PathType Leaf)) {
+    $committed = Invoke-External $gitCommand.Source @('-C', $Root, 'show', 'HEAD:.ai/DECISIONS.md')
+    if ($committed.Code -ne 0) {
+        Write-Result "WARN" "no committed .ai/DECISIONS.md to compare against; immutability unverified"
+    }
+    else {
+        $pattern = '(?ms)^### DEC-(?<number>\d{4})[^\r\n]*(?:\n|\z)(?<body>.*?)(?=^#{1,3}[ \t]+|\z)'
+        $before = @{}
+        foreach ($block in [regex]::Matches(($committed.Output -replace "`r`n", "`n"), $pattern)) {
+            $before['DEC-' + $block.Groups['number'].Value] = $block.Groups['body'].Value.TrimEnd()
+        }
+        $changed = @()
+        foreach ($block in [regex]::Matches(($decisionText -replace "`r`n", "`n"), $pattern)) {
+            $id = 'DEC-' + $block.Groups['number'].Value
+            if (-not $before.ContainsKey($id)) { continue }
+            if ($before[$id] -cne $block.Groups['body'].Value.TrimEnd()) { $changed += $id }
+        }
+        if ($changed.Count -eq 0) { Write-Result "PASS" ("{0} committed decision blocks are unchanged" -f $before.Count) }
+        else {
+            foreach ($id in $changed) {
+                Write-Result "FAIL" ("$id was edited after it was written; a decision block is never rewritten")
+            }
+        }
+    }
+}
+
+# A journal belongs to one session. Nothing can enforce that inside one
+# checkout, but an entry naming a different agent is worth saying out loud.
+if (Test-Path -LiteralPath $worklogDirectory -PathType Container) {
+    foreach ($journal in (Get-ChildItem -LiteralPath $worklogDirectory -Filter '*.md' -File)) {
+        if ($journal.Name -eq 'README.md') { continue }
+        $prefix = ($journal.BaseName -split '-')[0]
+        $body = Read-ProtocolText $journal.FullName
+        if ($null -eq $body) { continue }
+        $agentLine = [regex]::Match($body, '(?m)^Agent:[ \t]*(.+)$')
+        if (-not $agentLine.Success) { continue }
+        if ($agentLine.Groups[1].Value -notmatch [regex]::Escape($prefix)) {
+            Write-Result "WARN" ("{0} holds an entry whose Agent line does not name {1}" -f $journal.Name, $prefix)
+        }
+    }
+}
+
 $installerPath = Join-Path $Root 'setup-ai-protocol.ps1'
 if ($script:ProtocolRole -ne 'source') {
     Write-Result "PASS" "installed project; the installer lives in the protocol source repository"

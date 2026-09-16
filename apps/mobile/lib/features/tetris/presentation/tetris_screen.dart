@@ -398,33 +398,103 @@ class _TetrisControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Two thumb zones rather than two full-width rows.
+    // Laid out from what the hands actually do, after play-testing on a phone.
     //
-    // A phone is held with both thumbs near the bottom corners, so the centre
-    // of the screen is the hardest place to reach - which is exactly where
-    // movement used to sit. Movement is now under the left thumb and rotation
-    // under the right, both used constantly. Hold takes the awkward middle
-    // slot on purpose: it is pressed about once a round.
+    // The bottom edge of the screen is where a thumb rests and where a stray
+    // tap lands, so the bottom row holds only the two things pressed
+    // constantly and safely: rotation on the left, movement on the right. Both
+    // drops moved up. Hard drop is the single irreversible input in the game,
+    // and having it along the bottom edge meant an accidental brush locked the
+    // piece - the worst mistake in Tetris, caused by the cheapest slip.
     //
-    // Hard drop is deliberately moved away from the movement keys. It is the
-    // only irreversible input in the game, and it used to be the immediate
-    // neighbour of "move right", so a mis-tap locked the piece instantly. It
-    // now lives in the right-hand cluster behind a wider gap, with its own
-    // accent colour.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    // Everything is the same height. The earlier version made the drops
+    // shorter because they are pressed less, which only made them harder to
+    // hit on purpose while doing nothing about hitting them by accident.
+    //
+    // Hold sits in the middle, the hardest place to reach, because it is used
+    // about once a round.
+    const double buttonHeight = 62;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Expanded(
-          flex: 5,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Row(
+        // Top: the two drops, each spanning its whole cluster, so they are
+        // twice the width of a single arrow and unmistakable.
+        //
+        // Hard drop on the left, soft drop on the right, which is how it felt
+        // right in the hand. Soft drop is the one held down repeatedly, so it
+        // sits above the movement arrows the same thumb is already working;
+        // hard drop is a deliberate single press and belongs on the other side.
+        Row(
+          children: <Widget>[
+            Expanded(
+              flex: 5,
+              child: _PadButton(
+                icon: Icons.vertical_align_bottom_rounded,
+                height: buttonHeight,
+                accent: true,
+                onPressed: () => onInput(TetrisInput.hardDrop),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: _PadButton(
+                icon: Icons.layers_rounded,
+                label: 'Hold',
+                height: buttonHeight,
+                onPressed: () => onInput(TetrisInput.hold),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 5,
+              child: _PadButton(
+                icon: Icons.keyboard_arrow_down_rounded,
+                height: buttonHeight,
+                repeating: true,
+                onPressed: () => onInput(TetrisInput.softDrop),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Bottom: rotation under the left thumb, movement under the right.
+        Row(
+          children: <Widget>[
+            Expanded(
+              flex: 5,
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _PadButton(
+                      icon: Icons.rotate_left_rounded,
+                      height: buttonHeight,
+                      onPressed: () => onInput(TetrisInput.rotateCcw),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _PadButton(
+                      icon: Icons.rotate_right_rounded,
+                      height: buttonHeight,
+                      onPressed: () => onInput(TetrisInput.rotateCw),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Spacer(flex: 2),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 5,
+              child: Row(
                 children: <Widget>[
                   Expanded(
                     child: _PadButton(
                       icon: Icons.chevron_left_rounded,
-                      height: 62,
+                      height: buttonHeight,
                       repeating: true,
                       onPressed: () => onInput(TetrisInput.moveLeft),
                     ),
@@ -433,69 +503,15 @@ class _TetrisControls extends StatelessWidget {
                   Expanded(
                     child: _PadButton(
                       icon: Icons.chevron_right_rounded,
-                      height: 62,
+                      height: buttonHeight,
                       repeating: true,
                       onPressed: () => onInput(TetrisInput.moveRight),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              _PadButton(
-                icon: Icons.keyboard_arrow_down_rounded,
-                height: 52,
-                repeating: true,
-                onPressed: () => onInput(TetrisInput.softDrop),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 2,
-          child: _PadButton(
-            icon: Icons.layers_rounded,
-            label: 'Hold',
-            height: 52,
-            onPressed: () => onInput(TetrisInput.hold),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 5,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _PadButton(
-                      icon: Icons.rotate_left_rounded,
-                      height: 62,
-                      onPressed: () => onInput(TetrisInput.rotateCcw),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _PadButton(
-                      icon: Icons.rotate_right_rounded,
-                      height: 62,
-                      onPressed: () => onInput(TetrisInput.rotateCw),
-                    ),
-                  ),
-                ],
-              ),
-              // Wider than the 8 used elsewhere: this gap is what keeps a
-              // rotation press from sliding into the hard drop.
-              const SizedBox(height: 14),
-              _PadButton(
-                icon: Icons.vertical_align_bottom_rounded,
-                height: 52,
-                accent: true,
-                onPressed: () => onInput(TetrisInput.hardDrop),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );

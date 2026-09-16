@@ -9,9 +9,26 @@ Provide a stable event and experiment contract for retention, UX quality, and mo
 - Ad events remain in schema as optional/future-compatible fields and must not be assumed active.
 
 ## 3. Core Event Taxonomy (v1)
+
+### Naming rule
+
+No event may use a name Firebase Analytics reserves, nor start with
+`firebase_`, `google_` or `ga_`. Firebase does not drop or rename such an event:
+`logEvent` throws. That throw escaped into Classic's initialization and left the
+mode opening to a grey error slab, unplayable.
+
+Three of our names collided. `session_start` and `ad_impression` are reserved,
+and `session_end` was renamed with them so the pair stays symmetric in a
+dashboard. They are now `game_session_start`, `game_session_end` and
+`game_ad_impression`.
+
+`AnalyticsSchemaValidator.reservedEventNames` holds the list and refuses any
+name on it before it reaches the transport, so this cannot recur silently.
+Prefer a `game_` prefix for anything that sounds like a platform event.
+
 Required operational/gameplay events:
-- `session_start`
-- `session_end`
+- `game_session_start`
+- `game_session_end`
 - `game_start`
 - `move_made`
 - `game_end`
@@ -36,7 +53,7 @@ Operational observability events:
 - `ops_error`
 
 Optional/future ad events:
-- `ad_impression`
+- `game_ad_impression`
 - `ad_rewarded`
 
 ## 4. Contract Rules

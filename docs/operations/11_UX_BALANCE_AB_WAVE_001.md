@@ -27,7 +27,7 @@ Run the first production-like AB wave for:
 1. `ab_experiment_exposure` must include:
 - `experiment_id = difficulty_curve`
 - `experiment_id = hud_ux`
-2. `session_start`, `game_start`, `game_end` must include:
+2. `game_session_start`, `game_start`, `game_end` must include:
 - `ux_variant`
 - `difficulty_variant`
 

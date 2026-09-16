@@ -63,7 +63,7 @@ class ValidatedAnalyticsTracker implements AnalyticsTracker {
     if (!validation.isValid) {
       _logger.error(
         '[ANALYTICS][QUARANTINE] $eventName '
-        'missing=${validation.missingRequired.join(',')}',
+        '${validation.rejection ?? 'missing=${validation.missingRequired.join(',')}'}',
       );
       return;
     }

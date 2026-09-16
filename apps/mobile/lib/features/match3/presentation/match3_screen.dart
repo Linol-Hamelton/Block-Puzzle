@@ -205,6 +205,7 @@ class _Match3ScreenState extends State<Match3Screen>
                       score: _controller.score,
                       best: _controller.bestScore,
                       moves: _controller.movesUsed,
+                      rounds: _controller.round - 1,
                       onRestart: _controller.restart,
                     ),
                   ),
@@ -233,18 +234,83 @@ class _Match3Hud extends StatelessWidget {
         color: LuminaPalette.panel,
         border: Border.all(color: LuminaPalette.panelBorder),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Expanded(child: _Metric(label: 'Score', value: '${controller.score}')),
-          Expanded(child: _Metric(label: 'Best', value: '${controller.bestScore}')),
-          Expanded(
-            child: _Metric(
-              label: 'Moves',
-              value: movesLeft == null ? '∞' : '$movesLeft',
-            ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _Metric(label: 'Score', value: '${controller.score}'),
+              ),
+              Expanded(
+                child: _Metric(label: 'Best', value: '${controller.bestScore}'),
+              ),
+              Expanded(
+                child: _Metric(
+                  label: 'Moves',
+                  value: movesLeft == null ? '∞' : '$movesLeft',
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 8),
+          _RoundBar(controller: controller),
         ],
       ),
+    );
+  }
+}
+
+/// How far the run is through the current round, and what finishing it pays.
+///
+/// The bar is the only place the move budget is explained: moves tick down in
+/// the metric above, and this is where the player sees where more come from.
+class _RoundBar extends StatelessWidget {
+  const _RoundBar({required this.controller});
+
+  final Match3Controller controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final int target = controller.roundTarget;
+    final int floor = controller.roundFloor;
+    final int into = (controller.score - floor).clamp(0, target - floor);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Text(
+              'Round ${controller.round}',
+              style: const TextStyle(
+                color: Color(0xFFD5F4FF),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
+            ),
+            Text(
+              '$into / ${target - floor}',
+              style: const TextStyle(
+                color: LuminaPalette.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: controller.roundProgress,
+            minHeight: 6,
+            backgroundColor: const Color(0x33FFFFFF),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF5FE08A)),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -290,7 +356,8 @@ class _SwipeHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Text(
-      'Tap two adjacent gems — or swipe one — to match 3+ in a row.',
+      'Match 3 to clear. Four, five or a crossing leaves a bonus gem — '
+      'swap two of those together for a bigger blast.',
       textAlign: TextAlign.center,
       style: TextStyle(color: LuminaPalette.textSecondary, fontSize: 12),
     );
@@ -302,12 +369,14 @@ class _GameOverCard extends StatelessWidget {
     required this.score,
     required this.best,
     required this.moves,
+    required this.rounds,
     required this.onRestart,
   });
 
   final int score;
   final int best;
   final int moves;
+  final int rounds;
   final VoidCallback onRestart;
 
   @override
@@ -342,7 +411,7 @@ class _GameOverCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Moves played $moves',
+            'Moves played $moves   ·   Rounds cleared $rounds',
             style: const TextStyle(color: LuminaPalette.textSecondary),
           ),
           const SizedBox(height: 20),

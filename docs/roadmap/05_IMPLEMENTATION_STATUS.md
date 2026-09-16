@@ -69,7 +69,7 @@ These are allowed only for `dev/debug` builds.
 
 ## Acceptance Gates Before Any Publish Decision
 - Persisted progress survives cold restart and corrupted cache recovery (Phase 1 Week 2)
-- Release builds send `session_start`, `game_start`, `game_end`, and `ops_*` via Firebase Analytics (Phase 1 Week 3)
+- Release builds send `game_session_start`, `game_start`, `game_end`, and `ops_*` via Firebase Analytics (Phase 1 Week 3)
 - Crashlytics receives real crash/ANR events from release builds (Phase 1 Week 1)
 - Real Google Play billing sandbox passes purchase + restore + reinstall for at least one cosmetic SKU (Phase 1 Week 3)
 - Store metadata and screenshots match shipped functionality (Phase 2 Week 5)

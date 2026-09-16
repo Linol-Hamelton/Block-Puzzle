@@ -36,6 +36,15 @@ void main() {
   Map<String, Object?> paramsOf(String event) =>
       analytics.tracked.firstWhere((_Tracked t) => t.name == event).params;
 
+  /// Lets a cascade finish. The playback runs on real timers, so this waits
+  /// rather than faking a clock - the holds are a few hundred milliseconds and
+  /// the loop gives up long before a hang could go unnoticed.
+  Future<void> pumpPlayback(Match3Controller controller) async {
+    for (int i = 0; i < 200 && controller.isBusy; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+    }
+  }
+
   test('initialize starts a fresh round and emits game_start(match3)', () async {
     final Match3Controller controller = makeController();
     await controller.initialize();
@@ -58,8 +67,18 @@ void main() {
     final bool ok = controller.trySwap(hint!.$1, hint.$2);
 
     expect(ok, isTrue);
+    // The rules settle immediately; only the picture is paced.
     expect(controller.score, greaterThan(0));
     expect(controller.movesUsed, 1);
+    expect(controller.isBusy, isTrue,
+        reason: 'the cascade is still playing out on screen');
+
+    // The clear is announced when the frame that shows it appears, not the
+    // instant the engine worked it out - a caption that arrives before the
+    // board it describes is worse than no caption.
+    expect(analytics.names, isNot(contains('line_clear')));
+    await pumpPlayback(controller);
+    expect(controller.isBusy, isFalse);
     expect(analytics.names, contains('line_clear'));
     expect(paramsOf('line_clear')['game_id'], 'match3');
   });

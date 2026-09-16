@@ -89,13 +89,14 @@ function runCheck(root, name) {
   return { name, code: result.status, seconds: Math.round((Date.now() - started) / 1000) };
 }
 
-function renderEvidence(state, checks, owner) {
+function renderEvidence(state, checks, owner, entryDigest) {
   const lines = [
     'Evidence:',
     `- anchor: ${state.commit || 'no commits'}${state.dirty ? ', uncommitted changes present' : ', clean tree'}`,
     `- digest: ${state.digest} over ${state.fileCount} tracked and untracked files`,
     `- digest format: ${state.format}`,
     `- recorded: ${new Date().toISOString()} by ${owner}`,
+    `- entry: ${entryDigest} of this entry without this block`,
     '- scope: protocol checks only; host-project tests run separately',
   ];
   for (const check of checks) {
@@ -129,6 +130,29 @@ function attach(journalPath, block) {
   fs.writeFileSync(journalPath, found.sections.join(''));
 }
 
+// The digest deliberately excludes .ai/worklog, or writing the Evidence block
+// would invalidate the evidence the moment it was written. The consequence was
+// that the one artifact the protocol calls a record could be rewritten after
+// certification and verify would still pass. Three reviewers found it.
+//
+// The entry hash closes the loop without reintroducing the cycle: it covers the
+// entry body with its own Evidence block removed. See DEC-0021.
+function entryBody(journalPath) {
+  const text = fs.readFileSync(journalPath, 'utf8');
+  const found = newestSection(text);
+  if (!found) return null;
+  let section = found.sections[found.index];
+  section = section.replace(/\n-{3,}[ \t]*$/, '\n');
+  section = section.replace(/\n*^Evidence:[\s\S]*$/m, '\n');
+  return section.replace(/\s+$/, '');
+}
+
+function entryHash(journalPath) {
+  const body = entryBody(journalPath);
+  if (body === null) return null;
+  return `sha256:${crypto.createHash('sha256').update(body, 'utf8').digest('hex')}`;
+}
+
 function readEvidence(journalPath) {
   const text = fs.readFileSync(journalPath, 'utf8');
   const found = newestSection(text);
@@ -137,7 +161,9 @@ function readEvidence(journalPath) {
   if (!body) return null;
   const digest = body.match(/digest:\s*(sha256:[a-f0-9]{64})/);
   const format = body.match(/digest format:\s*(\d+)/);
-  return { body, digest: digest ? digest[1] : null, format: format ? Number(format[1]) : 1 };
+  const entry = body.match(/entry:\s*(sha256:[a-f0-9]{64})/);
+  return { body, digest: digest ? digest[1] : null, format: format ? Number(format[1]) : 1,
+    entry: entry ? entry[1] : null };
 }
 
 function resolveJournal(root, explicit, owner) {
@@ -164,28 +190,33 @@ function reportOne(root, journalPath, state) {
   const evidence = readEvidence(journalPath);
   const relative = path.relative(root, journalPath);
   if (!evidence) {
-    process.stderr.write(`AI protocol: ${relative} has no Evidence block on its newest entry.
-`);
+    process.stderr.write(`AI protocol: ${relative} has no Evidence block on its newest entry.\n`);
     return 1;
   }
   if (evidence.format !== state.format) {
     process.stderr.write(`AI protocol: ${relative} evidence uses digest format ${evidence.format}; ` +
-      `this build computes format ${state.format}. The two cannot be compared. Re-record to refresh it.
-`);
+      `this build computes format ${state.format}. The two cannot be compared. Re-record to refresh it.\n`);
+    return 1;
+  }
+  if (evidence.entry === null) {
+    process.stderr.write(`AI protocol: ${relative} evidence predates entry hashing. ` +
+      'Re-record it so the entry itself is covered.\n');
+    return 1;
+  }
+  if (evidence.entry !== entryHash(journalPath)) {
+    process.stderr.write(`AI protocol: ${relative} entry was changed after it was certified. ` +
+      `Recorded ${evidence.entry}, the entry now hashes to ${entryHash(journalPath)}.\n`);
     return 1;
   }
   if (evidence.digest !== state.digest) {
-    process.stderr.write(`AI protocol: ${relative} evidence is stale. Recorded ${evidence.digest}, tree is now ${state.digest}.
-`);
+    process.stderr.write(`AI protocol: ${relative} evidence is stale. Recorded ${evidence.digest}, tree is now ${state.digest}.\n`);
     return 1;
   }
   if (/exit [^0]/.test(evidence.body)) {
-    process.stderr.write(`AI protocol: ${relative} evidence matches the tree but records a failing check.
-`);
+    process.stderr.write(`AI protocol: ${relative} evidence matches the tree but records a failing check.\n`);
     return 1;
   }
-  process.stdout.write(`${relative}: evidence matches the current tree
-`);
+  process.stdout.write(`${relative}: evidence matches the current tree\n`);
   return 0;
 }
 
@@ -218,7 +249,10 @@ function main(argv) {
     // Re-anchor: the checks may have touched the tree. Evidence must describe
     // the state it was actually measured against.
     const after = anchor(root);
-    attach(journalPath, renderEvidence(after, checks, options.owner));
+    // Hash the entry as it stands before the block is attached, so the
+    // hash covers the claim and not itself.
+    const entryDigest = entryHash(journalPath);
+    attach(journalPath, renderEvidence(after, checks, options.owner, entryDigest));
     process.stdout.write(`${path.relative(root, journalPath)}: evidence recorded\n`);
     process.stdout.write('Protocol checks only; run and report the host project tests separately.\n');
     for (const check of checks) process.stdout.write(`  ${check.name}: exit ${check.code}\n`);
@@ -255,7 +289,8 @@ function main(argv) {
       return 1;
     }
     const matching = carrying.filter(item => item.evidence.format === state.format &&
-      item.evidence.digest === state.digest && !/exit [^0]/.test(item.evidence.body));
+      item.evidence.digest === state.digest && item.evidence.entry === entryHash(item.file) &&
+      !/exit [^0]/.test(item.evidence.body));
     if (matching.length) {
       for (const item of matching) {
         process.stdout.write(`${path.relative(root, item.file)}: evidence matches the current tree\n`);
@@ -264,7 +299,9 @@ function main(argv) {
     }
     process.stderr.write(`AI protocol: no evidence matches the current tree ${state.digest}.\n`);
     for (const item of carrying) {
-      const why = item.evidence.format !== state.format
+      const why = item.evidence.entry !== null && item.evidence.entry !== entryHash(item.file)
+        ? 'the entry was changed after it was certified'
+        : item.evidence.format !== state.format
         ? `recorded with digest format ${item.evidence.format}, not comparable`
         : (item.evidence.digest === state.digest ? 'records a failing check' : 'anchored to a different tree');
       process.stderr.write(`  ${path.relative(root, item.file)}: ${why}\n`);

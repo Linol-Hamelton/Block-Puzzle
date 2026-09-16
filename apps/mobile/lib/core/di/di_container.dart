@@ -170,7 +170,7 @@ Future<void> configureDependencies() async {
     () => useDebugAdapters
         ? DebugAnalyticsTracker(logger: sl())
         : ValidatedAnalyticsTracker(
-            inner: FirebaseAnalyticsTracker(),
+            inner: FirebaseAnalyticsTracker(logger: sl()),
             logger: sl(),
           ),
   );

@@ -56,7 +56,7 @@ The **one real asset** is the meta-layer plus the fact that `MoveValidator`/`Lin
                                       ▼
         ┌───────────────────────────────────────────────────────────┐
         │            GameSessionController  (was GameLoopController)  │  shared lifecycle:
-        │  init · snapshot · analytics · ads · revive/undo/hint hooks │  session_start/_end,
+        │  init · snapshot · analytics · ads · revive/undo/hint hooks │  game_session_start/_end,
         │            delegates the RULES STEP to ──────────┐          │  ad guardrails, IAP
         └──────────────────────────────────────────────────┼─────────┘
                                                             ▼

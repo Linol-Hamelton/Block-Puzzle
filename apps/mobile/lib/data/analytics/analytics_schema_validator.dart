@@ -19,12 +19,17 @@ class AnalyticsValidationResult {
     required this.missingRequired,
     required this.unknownParams,
     required this.warnings,
+    this.rejection,
   });
 
   final bool isValid;
   final List<String> missingRequired;
   final List<String> unknownParams;
   final List<String> warnings;
+
+  /// Why the event was refused outright, when the reason is not a missing
+  /// parameter. Set for a name the analytics backend will not accept.
+  final String? rejection;
 }
 
 class AnalyticsSchemaValidator {
@@ -38,6 +43,71 @@ class AnalyticsSchemaValidator {
     'event_ts_utc',
   };
 
+  /// Event names Firebase Analytics keeps for itself.
+  ///
+  /// Sending one does not get dropped or renamed - `logEvent` throws. That
+  /// throw happened inside Classic's initialization and killed the board's
+  /// widget subtree, so the mode opened to a grey slab. An analytics call has
+  /// no business being able to do that, which is why the name is now checked
+  /// here, before it reaches the transport, and refused loudly.
+  ///
+  /// Prefixes are reserved as well ([_reservedPrefixes]). Parameter names have
+  /// their own reserved prefixes; those are not checked here because nothing in
+  /// this app names a parameter that way.
+  static const Set<String> reservedEventNames = <String>{
+    'ad_activeview',
+    'ad_click',
+    'ad_exposure',
+    'ad_impression',
+    'ad_query',
+    'ad_reward',
+    'adunit_exposure',
+    'app_background',
+    'app_clear_data',
+    'app_exception',
+    'app_remove',
+    'app_store_refund',
+    'app_store_subscription_cancel',
+    'app_store_subscription_convert',
+    'app_store_subscription_renew',
+    'app_update',
+    'app_upgrade',
+    'dynamic_link_app_open',
+    'dynamic_link_app_update',
+    'dynamic_link_first_open',
+    'error',
+    'first_open',
+    'first_visit',
+    'in_app_purchase',
+    'notification_dismiss',
+    'notification_foreground',
+    'notification_open',
+    'notification_receive',
+    'os_update',
+    'session_start',
+    'session_start_with_rollout',
+    'user_engagement',
+  };
+
+  static const List<String> _reservedPrefixes = <String>[
+    'firebase_',
+    'google_',
+    'ga_',
+  ];
+
+  /// True when [eventName] is one the analytics backend refuses.
+  static bool isReservedEventName(String eventName) {
+    if (reservedEventNames.contains(eventName)) {
+      return true;
+    }
+    for (final String prefix in _reservedPrefixes) {
+      if (eventName.startsWith(prefix)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   final String schemaVersion;
   final Map<String, AnalyticsEventSchema> _schemas;
 
@@ -48,6 +118,16 @@ class AnalyticsSchemaValidator {
     final List<String> missingRequired = <String>[];
     final List<String> unknownParams = <String>[];
     final List<String> warnings = <String>[];
+
+    if (isReservedEventName(eventName)) {
+      return AnalyticsValidationResult(
+        isValid: false,
+        missingRequired: missingRequired,
+        unknownParams: unknownParams,
+        warnings: warnings,
+        rejection: 'reserved event name "$eventName"',
+      );
+    }
 
     if (!_hasNonEmptyValue(params['schema_version'])) {
       missingRequired.add('schema_version');
@@ -104,7 +184,7 @@ class AnalyticsSchemaValidator {
 
   static const Map<String, AnalyticsEventSchema> _defaultSchemas =
       <String, AnalyticsEventSchema>{
-    'session_start': AnalyticsEventSchema(
+    'game_session_start': AnalyticsEventSchema(
       requiredParams: <String>{
         'session_id',
         'app_version',
@@ -116,7 +196,7 @@ class AnalyticsSchemaValidator {
         'difficulty_variant',
       },
     ),
-    'session_end': AnalyticsEventSchema(
+    'game_session_end': AnalyticsEventSchema(
       requiredParams: <String>{
         'session_id',
         'duration_sec',
@@ -321,7 +401,7 @@ class AnalyticsSchemaValidator {
         'credits_balance',
       },
     ),
-    'ad_impression': AnalyticsEventSchema(
+    'game_ad_impression': AnalyticsEventSchema(
       requiredParams: <String>{
         'placement',
         'ad_type',

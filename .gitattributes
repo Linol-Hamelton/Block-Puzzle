@@ -8,6 +8,7 @@ validate-protocol.ps1 text eol=lf
 .ai/bin/protocol-hooks.cjs text eol=lf
 .ai/bin/protocol-lock.cjs text eol=lf
 .ai/bin/protocol-handoff.cjs text eol=lf
+.ai/bin/protocol-session.cjs text eol=lf
 .claude/hooks/protocol-hooks.cjs text eol=lf
 .claude/hooks/session-start.sh text eol=lf
 .claude/hooks/stop-worklog-check.sh text eol=lf

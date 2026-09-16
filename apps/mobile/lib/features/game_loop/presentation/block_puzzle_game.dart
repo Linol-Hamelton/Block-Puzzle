@@ -14,6 +14,7 @@ import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
 import '../../../ui/effects/burst_field.dart';
+import '../../../ui/effects/glass_board.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -1025,11 +1026,54 @@ class BoardComponent extends PositionComponent {
     required int anchorY,
     required bool valid,
   }) {
+    Set<int> clearingRows = const <int>{};
+    Set<int> clearingCols = const <int>{};
+    if (valid) {
+      final Set<BoardCell> simulated = <BoardCell>{..._boardState.occupiedCells};
+      for (final PieceCellOffset offset in piece.cells) {
+        final int x = anchorX + offset.dx;
+        final int y = anchorY + offset.dy;
+        if (x >= 0 && x < _boardState.size && y >= 0 && y < _boardState.size) {
+          simulated.add(BoardCell(x: x, y: y));
+        }
+      }
+      final Set<int> rows = <int>{};
+      final Set<int> cols = <int>{};
+      for (int y = 0; y < _boardState.size; y++) {
+        bool full = true;
+        for (int x = 0; x < _boardState.size; x++) {
+          if (!simulated.contains(BoardCell(x: x, y: y))) {
+            full = false;
+            break;
+          }
+        }
+        if (full) {
+          rows.add(y);
+        }
+      }
+      for (int x = 0; x < _boardState.size; x++) {
+        bool full = true;
+        for (int y = 0; y < _boardState.size; y++) {
+          if (!simulated.contains(BoardCell(x: x, y: y))) {
+            full = false;
+            break;
+          }
+        }
+        if (full) {
+          cols.add(x);
+        }
+      }
+      clearingRows = rows;
+      clearingCols = cols;
+    }
+
     _previewState = _PreviewState(
       piece: piece,
       anchorX: anchorX,
       anchorY: anchorY,
       valid: valid,
+      clearingRows: clearingRows,
+      clearingCols: clearingCols,
     );
   }
 
@@ -1078,77 +1122,42 @@ class BoardComponent extends PositionComponent {
       final PictureRecorder recorder = PictureRecorder();
       final Canvas cacheCanvas = Canvas(recorder);
 
-      final Rect boardRect = Rect.fromLTWH(0, 0, size.x, size.y);
-      final RRect boardRRect = RRect.fromRectAndRadius(
-        boardRect,
-        const Radius.circular(18),
-      );
-      final Color boardTop = _withAlpha(
-        _mixColor(_boardBackgroundColor, const Color(0xFF4E7AD2), 0.42),
-        0.12,
-      );
-      final Color boardBottom = _withAlpha(
-        _mixColor(_boardBackgroundColor, const Color(0xFF090F24), 0.5),
-        0.04,
+      // The field, from the shared well.
+      //
+      // It used to be painted at alpha 0.12 over alpha 0.04 - so close to
+      // transparent that the board was not a board at all, just the ambient
+      // background showing through a rounded rectangle. Against a bright
+      // nebula that reads as a pale sheet of plastic, and the blocks on it had
+      // nothing to sit against.
+      //
+      // Sockets are held back: Classic starts empty and fills up, so at full
+      // strength the texture shouts loudest exactly when the board is emptiest.
+      paintBoardWell(
+        cacheCanvas,
+        width: size.x,
+        height: size.y,
+        cell: cellSize,
+        cols: _boardState.size,
+        rows: _boardState.size,
+        cornerRadius: 18,
+        socketStrength: 0.5,
+        // The skin still colours the field and its light, so the six themes
+        // stay six themes rather than collapsing into one.
+        tint: _boardBackgroundColor,
+        accent: _occupiedColor,
       );
 
-      final Paint boardBackground = Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(0.0, -0.12),
-          radius: 1.24,
-          colors: <Color>[
-            boardTop,
-            _mixColor(boardTop, boardBottom, 0.45),
-            boardBottom,
-          ],
-          stops: const <double>[0, 0.56, 1],
-        ).createShader(boardRect);
-      final Paint boardGlow = Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(0, -0.2),
-          radius: 1.08,
-          colors: <Color>[
-            Color(0x4E9EE8FF),
-            Colors.transparent,
-          ],
-        ).createShader(boardRect);
-      final Paint boardPrismGlow = Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(0.34, 0.22),
-          radius: 1.15,
-          colors: <Color>[
-            Color(0x289882FF),
-            Colors.transparent,
-          ],
-        ).createShader(boardRect);
-      final Paint boardOuterGlow = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.95
-        ..color = const Color(0x76ACEFFF)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.8);
-      final Paint borderPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.15
-        ..color = const Color(0xB6DCF7FF);
-      final Paint minorGridPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0
-        ..color = const Color(0x4778B5DE);
-      final Paint majorGridPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.12
-        ..color = const Color(0x639CD4F1);
+      // Classic keeps its own starfield inside the well - it is the mode's
+      // signature and costs one pass on a cached picture.
       final Paint starCorePaint = Paint()..color = const Color(0x2999D3EE);
       final Paint starAuraPaint = Paint()
         ..color = const Color(0x1492D3F4)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.8);
-
-      cacheCanvas.drawRRect(boardRRect, boardBackground);
-      cacheCanvas.drawRRect(boardRRect, boardGlow);
-      cacheCanvas.drawRRect(boardRRect, boardPrismGlow);
-
       cacheCanvas.save();
-      cacheCanvas.clipRRect(boardRRect);
+      cacheCanvas.clipRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.x, size.y),
+        const Radius.circular(18),
+      ));
       for (int i = 0; i < _starMap.length; i++) {
         if (i % 2 != 0) {
           continue;
@@ -1158,23 +1167,7 @@ class BoardComponent extends PositionComponent {
         cacheCanvas.drawCircle(point, cellSize * 0.013, starAuraPaint);
         cacheCanvas.drawCircle(point, cellSize * 0.005, starCorePaint);
       }
-      for (int i = 0; i <= _boardState.size; i++) {
-        final double lineOffset = i * cellSize;
-        final Paint paint = (i % 2 == 0) ? majorGridPaint : minorGridPaint;
-        cacheCanvas.drawLine(
-          Offset(lineOffset, 0),
-          Offset(lineOffset, size.y),
-          paint,
-        );
-        cacheCanvas.drawLine(
-          Offset(0, lineOffset),
-          Offset(size.x, lineOffset),
-          paint,
-        );
-      }
       cacheCanvas.restore();
-      cacheCanvas.drawRRect(boardRRect.inflate(0.4), boardOuterGlow);
-      cacheCanvas.drawRRect(boardRRect, borderPaint);
 
       for (final BoardCell cell in _boardState.occupiedCells) {
         final double tone =
@@ -1233,6 +1226,38 @@ class BoardComponent extends PositionComponent {
 
     final _PreviewState? preview = _previewState;
     if (preview != null) {
+      // Pre-clear highlight: lines about to be cleared catch light before drop.
+      if (preview.clearingRows.isNotEmpty || preview.clearingCols.isNotEmpty) {
+        final Paint lineGlow = Paint()
+          ..color = const Color(0x355DE8FF)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, cellSize * 0.12);
+        final Paint lineLip = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1.4, cellSize * 0.04)
+          ..color = const Color(0x75A5F4FF);
+
+        for (final int r in preview.clearingRows) {
+          final Rect rRect =
+              Rect.fromLTWH(0, (r * cellSize) + 2, size.x, cellSize - 4);
+          final RRect rr = RRect.fromRectAndRadius(
+            rRect,
+            Radius.circular(cellSize * 0.18),
+          );
+          canvas.drawRRect(rr, lineGlow);
+          canvas.drawRRect(rr, lineLip);
+        }
+        for (final int c in preview.clearingCols) {
+          final Rect cRect =
+              Rect.fromLTWH((c * cellSize) + 2, 0, cellSize - 4, size.y);
+          final RRect rr = RRect.fromRectAndRadius(
+            cRect,
+            Radius.circular(cellSize * 0.18),
+          );
+          canvas.drawRRect(rr, lineGlow);
+          canvas.drawRRect(rr, lineLip);
+        }
+      }
+
       final Color previewTint =
           preview.valid ? const Color(0xFFA0E6FF) : const Color(0xFFFF7E97);
       for (final PieceCellOffset offset in preview.piece.cells) {
@@ -1253,7 +1278,7 @@ class BoardComponent extends PositionComponent {
           rect: previewRect,
           tint: previewTint,
           preset: _visualPreset,
-          opacity: preview.valid ? 0.54 : 0.5,
+          opacity: preview.valid ? 0.62 : 0.5,
           intenseGlow: preview.valid,
         );
       }
@@ -1329,7 +1354,11 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   void updateHome(Vector2 newHome) {
     _homePosition = newHome.clone();
     if (!_dragging) {
-      removeAll(children.whereType<MoveToEffect>());
+      // toList() first: whereType over children is lazy, and removeAll
+      // deletes from the very collection it is walking. Placing a piece
+      // while one of these effects was still running threw a
+      // ConcurrentModificationError straight out of the drop handler.
+      removeAll(children.whereType<MoveToEffect>().toList());
       add(
         MoveToEffect(
           _homePosition.clone(),
@@ -1340,7 +1369,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   }
 
   void resetToHome() {
-    removeAll(children.whereType<MoveToEffect>());
+    removeAll(children.whereType<MoveToEffect>().toList());
     add(
       MoveToEffect(
         _homePosition.clone(),
@@ -1441,7 +1470,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
 
   @override
   void onDragStart(DragStartEvent event) {
-    removeAll(children.whereType<MoveToEffect>());
+    removeAll(children.whereType<MoveToEffect>().toList());
     _dragPending = true;
     _pendingDistance = 0;
     _pendingDelta.setZero();
@@ -1528,12 +1557,16 @@ class _PreviewState {
     required this.anchorX,
     required this.anchorY,
     required this.valid,
+    this.clearingRows = const <int>{},
+    this.clearingCols = const <int>{},
   });
 
   final Piece piece;
   final int anchorX;
   final int anchorY;
   final bool valid;
+  final Set<int> clearingRows;
+  final Set<int> clearingCols;
 }
 
 class _HintState {

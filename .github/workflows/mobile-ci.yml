@@ -68,7 +68,7 @@ jobs:
         run: flutter analyze --fatal-infos --fatal-warnings
 
       - name: Tests
-        run: flutter test --reporter expanded
+        run: flutter test --exclude-tags simulation --reporter expanded
 
       - name: Build Android debug APK
         run: flutter build apk --debug

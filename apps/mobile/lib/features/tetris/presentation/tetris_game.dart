@@ -8,6 +8,7 @@ import '../../../domain/tetris/falling_piece.dart';
 import '../../../domain/tetris/tetris_engine.dart';
 import '../../../domain/tetris/tetromino.dart';
 import '../../../ui/effects/burst_field.dart';
+import '../../../ui/effects/glass_board.dart';
 import '../application/tetris_controller.dart';
 
 /// Mino colors (neon palette consistent with the Lumina look).
@@ -82,8 +83,14 @@ class TetrisFlameGame extends FlameGame {
         if (event.detail > 0) {
           _spawnScorePop('+${event.detail}');
         }
+        // Scaled, not switched on at four. A double should feel like more than
+        // a single, or three quarters of the game's clears feel identical.
+        const List<double> shakeByRows = <double>[0, 0.22, 0.4, 0.62, 1];
+        _shake = math.max(
+          _shake,
+          shakeByRows[event.value.clamp(0, 4)],
+        );
         if (event.value >= 4) {
-          _shake = math.max(_shake, 1);
           _pulse('TETRIS!', 3);
         }
         break;
@@ -237,7 +244,7 @@ class TetrisFlameGame extends FlameGame {
 
     final Set<int> clearing =
         engine.isClearing ? engine.clearingRows.toSet() : const <int>{};
-    final double clearHi = engine.clearProgress;
+    final _ClearBeats beats = _ClearBeats(engine.clearProgress);
 
     final double sx = _shake > 0 ? math.sin(_shake * 53) * _shake * 7 : 0;
     final double sy = _shake > 0 ? math.cos(_shake * 61) * _shake * 7 : 0;
@@ -250,6 +257,7 @@ class TetrisFlameGame extends FlameGame {
       for (int x = 0; x < cols; x++) {
         final TetrominoType? type = engine.board.cellAt(x, y);
         if (type != null) {
+          final bool isClearing = clearing.contains(y);
           _paintCell(
             canvas,
             ox,
@@ -258,7 +266,7 @@ class TetrisFlameGame extends FlameGame {
             y,
             cell,
             tetrominoColors[type]!,
-            highlight: clearing.contains(y) ? clearHi : 0,
+            beats: isClearing ? beats : null,
           );
         }
       }
@@ -268,6 +276,7 @@ class TetrisFlameGame extends FlameGame {
     final FallingPiece? ghost = engine.ghost;
     if (ghost != null && active != null) {
       final Color color = tetrominoColors[active.type]!;
+      _paintDropShaft(canvas, ox, oy, cell, color, active, ghost);
       for (final TCell c in ghost.absoluteCells()) {
         if (c.y >= 0) {
           _paintGhost(canvas, ox, oy, c.x, c.y, cell, color);
@@ -462,7 +471,12 @@ class TetrisFlameGame extends FlameGame {
   }
 
   /// Paints the static board chrome at a local (0,0) origin (the caller
-  /// translates). Kept separate so it can be recorded into a cached [ui.Picture].
+  /// translates). Kept separate so it can be recorded into a cached
+  /// [ui.Picture].
+  ///
+  /// Delegates to the shared well so Tetris, Match-3 and Classic are played on
+  /// the same field. It used to be a flat navy rectangle with hairline grid
+  /// lines, which on a phone read as an empty hole rather than as a board.
   void _paintBackground(
     Canvas canvas,
     double boardW,
@@ -471,37 +485,25 @@ class TetrisFlameGame extends FlameGame {
     int cols,
     int rows,
   ) {
-    final Rect rect = Rect.fromLTWH(0, 0, boardW, boardH);
-    final RRect rr = RRect.fromRectAndRadius(rect, const Radius.circular(14));
-
-    final Paint bg = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: <Color>[Color(0xFF0C1B37), Color(0xFF0A1326)],
-      ).createShader(rect);
-    canvas.drawRRect(rr, bg);
-
-    final Paint grid = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = const Color(0x2278B5DE);
-    for (int x = 1; x < cols; x++) {
-      final double gx = x * cell;
-      canvas.drawLine(Offset(gx, 0), Offset(gx, boardH), grid);
-    }
-    for (int y = 1; y < rows; y++) {
-      final double gy = y * cell;
-      canvas.drawLine(Offset(0, gy), Offset(boardW, gy), grid);
-    }
-
-    final Paint border = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..color = const Color(0x99B6E6FF);
-    canvas.drawRRect(rr, border);
+    paintBoardWell(
+      canvas,
+      width: boardW,
+      height: boardH,
+      cell: cell,
+      cols: cols,
+      rows: rows,
+      cornerRadius: 14,
+      // Quiet. Match-3 fills every cell, so a full-strength socket frames the
+      // gem in it; Tetris is mostly empty, and two hundred of them turned the
+      // field into the loudest thing on screen.
+      socketStrength: 0.3,
+    );
   }
 
+  /// One locked or falling mino.
+  ///
+  /// [beats] is non-null only while this cell's row is clearing, and it carries
+  /// the whole sequence: ignite, hold, collapse.
   void _paintCell(
     Canvas canvas,
     double ox,
@@ -510,57 +512,59 @@ class TetrisFlameGame extends FlameGame {
     int y,
     double cell,
     Color color, {
-    double highlight = 0,
+    _ClearBeats? beats,
   }) {
-    final double inset = cell * 0.06;
-    final Rect rect = Rect.fromLTWH(
+    final double inset = cell * 0.075;
+    Rect rect = Rect.fromLTWH(
       ox + (x * cell) + inset,
       oy + (y * cell) + inset,
       cell - (inset * 2),
       cell - (inset * 2),
     );
-    final RRect rr = RRect.fromRectAndRadius(
-      rect,
-      Radius.circular(cell * 0.18),
+
+    if (beats != null) {
+      // The row squashes shut about its own centre rather than blinking out.
+      final double midY = rect.center.dy;
+      final double h = rect.height * beats.squash;
+      if (h <= 0.5) {
+        return;
+      }
+      rect = Rect.fromLTWH(rect.left, midY - (h / 2), rect.width, h);
+    }
+
+    final Path path = roundedSquarePath(rect, cell * 0.2);
+
+    // The same glass the gems are cut from. Tetris used to paint a three-pass
+    // block of its own - body, sheen, edge - and next to Match-3 it read as a
+    // different game by a different hand.
+    paintGlassFacet(
+      canvas,
+      path: path,
+      bounds: rect,
+      tint: color,
+      unit: cell,
+      opacity: beats?.alpha ?? 1,
+      // A clearing row charges up before it goes: the bloom is what makes the
+      // clear an event rather than a disappearance.
+      glow: beats?.ignite ?? 0,
     );
 
-    final Color light = Color.lerp(color, Colors.white, 0.36) ?? color;
-    final Color dark = Color.lerp(color, const Color(0xFF0A1222), 0.4) ?? color;
-
-    final Paint body = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: <Color>[light, color, dark],
-        stops: const <double>[0, 0.5, 1],
-      ).createShader(rect);
-    canvas.drawRRect(rr, body);
-
-    final Paint sheen = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: <Color>[Color(0x59FFFFFF), Color(0x00FFFFFF)],
-        stops: <double>[0, 0.55],
-      ).createShader(rect);
-    canvas.drawRRect(rr, sheen);
-
-    final Paint edge = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = Color.lerp(color, Colors.white, 0.5) ?? color;
-    canvas.drawRRect(rr, edge);
-
-    if (highlight > 0) {
-      canvas.drawRRect(
-        rr,
+    if (beats != null) {
+      canvas.drawPath(
+        path,
         Paint()
           ..color = Colors.white
-              .withValues(alpha: (highlight * 0.85).clamp(0, 1).toDouble()),
+              .withValues(alpha: beats.whiteness.clamp(0, 1).toDouble()),
       );
     }
   }
 
+  /// The landing footprint of the active piece.
+  ///
+  /// It used to be a single dim outline, which on a dark board was nearly
+  /// invisible - and the ghost is the primary aiming aid in the game, not
+  /// decoration. It is now a filled translucent piece under a bright rim, so it
+  /// reads as the same shape waiting in place.
   void _paintGhost(
     Canvas canvas,
     double ox,
@@ -570,22 +574,81 @@ class TetrisFlameGame extends FlameGame {
     double cell,
     Color color,
   ) {
-    final double inset = cell * 0.1;
+    final double inset = cell * 0.09;
     final Rect rect = Rect.fromLTWH(
       ox + (x * cell) + inset,
       oy + (y * cell) + inset,
       cell - (inset * 2),
       cell - (inset * 2),
     );
-    final RRect rr = RRect.fromRectAndRadius(
-      rect,
-      Radius.circular(cell * 0.16),
+    final Path path = roundedSquarePath(rect, cell * 0.18);
+
+    canvas.drawPath(path, Paint()..color = color.withValues(alpha: 0.16));
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.4, cell * 0.055)
+        ..color = color.withValues(alpha: 0.6),
     );
-    final Paint outline = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(1.5, cell * 0.06)
-      ..color = Color.lerp(color, const Color(0x00101A30), 0.55) ?? color;
-    canvas.drawRRect(rr, outline);
+  }
+
+  /// The column the active piece will fall down, tinted from the piece to its
+  /// landing place.
+  ///
+  /// This is the cheapest readability win in the game: the eye can follow the
+  /// path instead of comparing two positions twenty rows apart, and on a fast
+  /// level that is the difference between aiming and guessing.
+  void _paintDropShaft(
+    Canvas canvas,
+    double ox,
+    double oy,
+    double cell,
+    Color color,
+    FallingPiece active,
+    FallingPiece ghost,
+  ) {
+    final Map<int, int> topByColumn = <int, int>{};
+    for (final TCell c in active.absoluteCells()) {
+      final int existing = topByColumn[c.x] ?? 1 << 30;
+      if (c.y < existing) {
+        topByColumn[c.x] = c.y;
+      }
+    }
+    final Map<int, int> bottomByColumn = <int, int>{};
+    for (final TCell c in ghost.absoluteCells()) {
+      final int existing = bottomByColumn[c.x] ?? -1;
+      if (c.y > existing) {
+        bottomByColumn[c.x] = c.y;
+      }
+    }
+
+    for (final MapEntry<int, int> entry in topByColumn.entries) {
+      final int bottom = bottomByColumn[entry.key] ?? entry.value;
+      final double top = oy + (math.max(entry.value, 0) * cell);
+      final double end = oy + ((bottom + 1) * cell);
+      if (end - top <= cell) {
+        continue;
+      }
+      final Rect shaft = Rect.fromLTWH(
+        ox + (entry.key * cell) + (cell * 0.22),
+        top,
+        cell - (cell * 0.44),
+        end - top,
+      );
+      canvas.drawRect(
+        shaft,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[
+              color.withValues(alpha: 0.02),
+              color.withValues(alpha: 0.13),
+            ],
+          ).createShader(shaft),
+      );
+    }
   }
 }
 
@@ -596,4 +659,44 @@ class _LockFlash {
   final int x;
   final int y;
   double life;
+}
+
+/// The three beats a clearing row plays out, derived from the engine's
+/// 0..1 clear progress.
+///
+/// A line clear used to be a linear fade to white over 120ms, which read as the
+/// row briefly glitching. The same event staged in three beats - ignite, hold,
+/// collapse - reads as something happening *to* the row, and the hold is what
+/// gives the eye time to see it. This is the whole reason the clear delay went
+/// up: the extra time is spent on a beat, not on a longer fade.
+class _ClearBeats {
+  _ClearBeats(double progress)
+      : ignite = (progress / _igniteEnd).clamp(0, 1).toDouble(),
+        collapse =
+            ((progress - _holdEnd) / (1 - _holdEnd)).clamp(0, 1).toDouble(),
+        hold = progress >= _igniteEnd && progress < _holdEnd
+            ? ((progress - _igniteEnd) / (_holdEnd - _igniteEnd))
+                .clamp(0, 1)
+                .toDouble()
+            : (progress < _igniteEnd ? 0 : 1);
+
+  static const double _igniteEnd = 0.26;
+  static const double _holdEnd = 0.58;
+
+  /// 0 -> 1 as the row goes white-hot.
+  final double ignite;
+
+  /// 0 -> 1 across the burn, used to sweep a light bar along the row.
+  final double hold;
+
+  /// 0 -> 1 as the row squashes shut and drains.
+  final double collapse;
+
+  /// Vertical scale of the row about its own centre: 1 while it burns, 0 when
+  /// it is gone. Eased in, so the collapse accelerates like a thing falling.
+  double get squash => 1 - (collapse * collapse);
+
+  double get whiteness => ignite * (1 - (collapse * 0.55));
+
+  double get alpha => 1 - (collapse * collapse * collapse);
 }

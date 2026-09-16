@@ -157,8 +157,15 @@ function changedFiles(before, after) {
     .filter(name => before[name] !== after[name]);
 }
 
+// Any assistant may take part, not only the two with hooks. The name becomes a
+// filename, so it is restricted to a slug rather than to a fixed list. See
+// DEC-0019.
+const AGENT_NAME = /^[a-z][a-z0-9-]{1,23}$/;
+
 function sessionPaths(root, sessionId, agent = 'claude') {
-  if (!['claude', 'codex'].includes(agent)) throw new Error('Unsupported hook agent.');
+  if (!AGENT_NAME.test(agent)) {
+    throw new Error('Agent name must be 2 to 24 lowercase letters, digits or hyphens, starting with a letter.');
+  }
   if (typeof sessionId !== 'string' || !sessionId.trim()) {
     throw new Error('Hook input has no session_id; per-session tracking is unavailable.');
   }
@@ -204,8 +211,11 @@ const REQUIRED_LABELS = ['Agent', 'Action', 'Result', 'Next step', 'Open'];
 const ENTRY_LABELS = [...REQUIRED_LABELS, 'Evidence'];
 
 function entryField(section, label) {
-  const following = ENTRY_LABELS.slice(ENTRY_LABELS.indexOf(label) + 1);
-  const end = following.map(next => `${next}:`).join('|') || '(?!)';
+  // Terminate on any other label, not only the ones that come later in the
+  // canonical order. Writing Open before Agent used to make Open swallow every
+  // field after it while the entry still counted as complete. See DEC-0021.
+  const others = ENTRY_LABELS.filter(name => name !== label);
+  const end = others.map(next => `${next}:`).join('|') || '(?!)';
   const match = section.match(new RegExp(`^${label}:[ \\t]*([\\s\\S]*?)(?=^(?:${end})|(?![\\s\\S]))`, 'm'));
   return match ? match[1].trim() : null;
 }
@@ -219,7 +229,9 @@ function latestCompleteEntry(text) {
     if (!/^## \d{4}-\d{2}-\d{2} - .+/.test(section)) return false;
     return REQUIRED_LABELS.every(label => {
       const value = entryField(section, label);
-      return value && !/^_(?:What|Assumptions)/.test(value);
+      // A floor against stubs, not a judgement of substance: "a"/"b"/"c"/"d"
+      // used to pass as a handoff. Nothing here can tell filler from work.
+      return value && value.length >= 3 && !/^_(?:What|Assumptions)/.test(value);
     });
   })?.trim() || null;
 }
@@ -228,11 +240,42 @@ function readText(root, relative) {
   return fs.readFileSync(path.join(root, relative), 'utf8');
 }
 
-function context(root, worklog) {
+// Who does what in the current task. The first pilot gave one task to two
+// assistants and received two answers to it, so every session is now told its
+// own role before it starts. The owner writes the section; nothing here
+// assigns, rotates or enforces anything. See DEC-0020.
+function assignment(root) {
+  let text;
+  try { text = fs.readFileSync(path.join(root, '.ai', 'TASK.md'), 'utf8').replace(/\r\n/g, '\n'); }
+  catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+  const section = text.split(/(?=^## )/m).find(part => /^## Roles\b/.test(part));
+  if (!section) return [];
+  const entries = [];
+  for (const line of section.split('\n')) {
+    const match = line.match(/^[-*][ \t]+([a-z][a-z0-9-]{1,23})[ \t]*:[ \t]*(\S.*?)[ \t]*$/);
+    if (match) entries.push({ agent: match[1], role: match[2] });
+  }
+  return entries;
+}
+
+function assignmentLines(root, agent) {
+  const roles = assignment(root);
+  if (!roles.length) return '';
+  const mine = roles.filter(entry => entry.agent === agent).map(entry => entry.role);
+  const everyone = roles.map(entry => `${entry.agent} = ${entry.role}`).join(', ');
+  const yours = mine.length
+    ? `Your role in this task: ${mine.join('; ')}\n`
+    : `This task names ${roles.map(entry => entry.agent).join(', ')}. You are ${agent} and are `
+      + 'not among them. Ask the owner before starting work.\n';
+  return `${yours}Assignment: ${everyone}\n`;
+}
+
+function context(root, worklog, agent) {
   let result = '# AI protocol state (injected at session start)\n\n';
   result += `Active checkout: ${root}\nRules: AGENTS.md\nYour worklog: ${worklog}\n`;
   result += 'Prepend a complete entry to this session-specific worklog; create it if needed.\n';
   result += 'Shared metadata has one writer: use .ai/bin/protocol-lock.cjs before editing it.\n';
+  result += assignmentLines(root, agent);
   result += 'This bounded context is a starting point. Read omitted files when relevant.\n\n';
   const add = (heading, body, maximum = 5000) => {
     const block = `## ${heading}\n\n${body.trim()}\n\n`;
@@ -300,7 +343,7 @@ function run(event, input, agent = 'claude') {
     // Resume and compaction must not erase the pre-edit baseline.
     if (!previous) saveState(paths.state, current, true);
     return { suppressOutput: true, hookSpecificOutput: {
-      hookEventName: 'SessionStart', additionalContext: context(root, paths.worklog),
+      hookEventName: 'SessionStart', additionalContext: context(root, paths.worklog, agent),
     } };
   }
   if (event !== 'Stop') throw new Error(`Unknown hook event: ${event}`);
@@ -333,4 +376,4 @@ function main(agent = 'claude') {
 }
 
 if (require.main === module) main();
-module.exports = { SNAPSHOT_FORMAT, latestCompleteEntry, entryField, sessionPaths, run, changedFiles, snapshot, fingerprint, main };
+module.exports = { SNAPSHOT_FORMAT, AGENT_NAME, context, assignment, latestCompleteEntry, entryField, sessionPaths, run, changedFiles, snapshot, fingerprint, main };

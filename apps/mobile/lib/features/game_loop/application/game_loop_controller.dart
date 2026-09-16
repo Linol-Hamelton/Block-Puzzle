@@ -207,7 +207,11 @@ class GameLoopController {
 
     logger.info('Game loop initialized with config: $_remoteConfig');
     await analyticsTracker.track(
-      'session_start',
+      // Not 'session_start': Firebase reserves that name for the session event
+      // it emits itself, and logging it throws. The throw landed inside
+      // initialization and took the whole Classic board down with it - the mode
+      // opened to a grey slab and could not be played at all.
+      'game_session_start',
       params: <String, Object?>{
         'session_id': _sessionId,
         'app_version': appVersion,
@@ -1148,7 +1152,10 @@ class GameLoopController {
       params['ecpm_usd'] = adResult.ecpmUsd;
     }
     await analyticsTracker.track(
-      'ad_impression',
+      // Firebase reserves 'ad_impression' for its own ad reporting and
+      // throws on it, exactly as it did for 'session_start'. This one had
+      // not fired yet only because ads are switched off.
+      'game_ad_impression',
       params: params,
     );
   }
@@ -1233,7 +1240,7 @@ class GameLoopController {
       );
     }
     await analyticsTracker.track(
-      'session_end',
+      'game_session_end',
       params: <String, Object?>{
         'session_id': _sessionId ?? 'unknown_session',
         'duration_sec': durationSec,

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-## AI Collaboration Protocol v1.6.2
+## AI Collaboration Protocol v1.9.0
 
 Several AI coding assistants work in this repository: GPT/Codex, Claude, and
 others. They do not share chat history. The filesystem is the only channel
@@ -42,6 +42,26 @@ is a source of truth.
 - Any agent may challenge any other agent. Record the disagreement in
   `.ai/TASK.md` under Open questions. Do not silently overwrite.
 - The human owner decides. Ask rather than assume.
+
+### Who does what
+
+`.ai/TASK.md` may carry a `## Roles` section naming one assistant per line:
+
+```markdown
+## Roles
+
+- qwen: implementer
+- deepseek: reviewer, opposes the result before handoff
+- claude: second reviewer only if the two disagree
+```
+
+The owner writes it. Nothing here assigns, rotates or enforces: the role text
+is free, so a priority or a condition can be written into it, and the owner
+changes it per task at will.
+
+At session start each assistant is told its own role. One that is not named is
+told so and told to ask before starting. This exists because the first pilot
+gave one task to two assistants and received two answers to it.
 
 ---
 
@@ -88,8 +108,16 @@ lock is needed here.
 
 - Claude/Codex with active hooks: use the journal created by SessionStart.
   Use its basename without `.md` as the lock owner and evidence owner.
-- Without active hooks: name the file after the session id used for the lock.
-  Keep that same journal if hooks are configured during this session.
+- Any other assistant, or one whose hooks are not active, starts its session
+  explicitly and receives the same journal and the same context:
+
+```bash
+node .ai/bin/protocol-session.cjs start --agent <name>
+```
+
+  It prints the context, the session id and one owner name. Use that name for
+  the journal, for the lock and for the evidence. `stop --agent <name>
+  --session <id>` runs the same check the Stop hook runs.
 - `README.md` in that directory is not a journal. Every other file is one.
 
 Every entry needs all five labels, or the Stop hook will not count it:

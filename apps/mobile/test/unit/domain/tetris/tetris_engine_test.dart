@@ -108,11 +108,59 @@ void main() {
           engine.drainEvents().map((TetrisEvent e) => e.type).toList();
       expect(events, contains(TetrisEventType.lineClear));
 
-      // After the clear delay it collapses and a new piece spawns.
-      engine.tick(const Duration(milliseconds: 200));
+      // After the clear delay it collapses and a new piece spawns. The delay
+      // is deliberately long enough to be seen - see lineClearDelay - so this
+      // ticks well past it rather than encoding the exact number.
+      engine.tick(const Duration(seconds: 1));
       expect(engine.isClearing, isFalse);
       expect(engine.active, isNotNull);
       expect(engine.linesCleared, 1);
+    });
+
+    test('a four-row clear is held longer than a single', () {
+      // The rule, not the numbers: the rarest and most valuable clear in the
+      // game must not go by in the same blink as the commonest one. A single
+      // and a Tetris used to run for exactly the same 120ms.
+      TetrisEngine engineWith(List<int> filledRows, TetrominoType spawn) {
+        final List<TetrominoType?> cells =
+            List<TetrominoType?>.filled(4 * 8, null);
+        int idx(int x, int y) => (y * 4) + x;
+        for (final int row in filledRows) {
+          for (int x = 1; x < 4; x++) {
+            cells[idx(x, row)] = TetrominoType.l;
+          }
+        }
+        return TetrisEngine(width: 4, height: 8)
+          ..restore(<String, Object?>{
+            'board': TetrisBoard(width: 4, height: 8, cells: cells).toJson(),
+            'active': FallingPiece(
+              type: spawn,
+              rotationIndex: 1,
+              originX: -2,
+              originY: 0,
+            ).toJson(),
+          });
+      }
+
+      // A vertical I in column 0 completes one row, or four at once.
+      final TetrisEngine single = engineWith(<int>[7], TetrominoType.i)
+        ..applyInput(TetrisInput.hardDrop);
+      final TetrisEngine tetris =
+          engineWith(<int>[4, 5, 6, 7], TetrominoType.i)
+            ..applyInput(TetrisInput.hardDrop);
+
+      expect(single.clearingRowCount, 1);
+      expect(tetris.clearingRowCount, 4);
+
+      // Tick both by the same amount: the single is done, the Tetris is not.
+      single.tick(const Duration(milliseconds: 400));
+      tetris.tick(const Duration(milliseconds: 400));
+      expect(single.isClearing, isFalse);
+      expect(tetris.isClearing, isTrue,
+          reason: 'a Tetris holds longer than a single');
+
+      tetris.tick(const Duration(seconds: 1));
+      expect(tetris.isClearing, isFalse);
     });
 
     test('flushPendingClear collapses a pending clear immediately', () {
@@ -159,7 +207,7 @@ void main() {
         });
 
       engine.applyInput(TetrisInput.hardDrop);
-      engine.tick(const Duration(milliseconds: 200));
+      engine.tick(const Duration(seconds: 1));
 
       final List<TetrisEventType> events =
           engine.drainEvents().map((TetrisEvent e) => e.type).toList();

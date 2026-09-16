@@ -1,52 +1,59 @@
 # Current Task
 
-Status: In progress - stage A integration gaps reopened by independent audit
+Status: In progress - DEC-0022 items 1-3 done plus a visual pass; item 4 open
 
 Owner: RuslanFomenko
-Last update: 2026-09-15
+Last update: 2026-09-16
 
 ---
 
 ## Objective
 
-Execute the approved plan: converge documents and branches, then close the
-production-wiring gaps so a release build behaves as a release build.
+Execute DEC-0022: home screen order, Tetris control ergonomics, Match-3 depth,
+then media. Stage A release proof stays open behind it.
 
 ## Problem
 
-Stale roadmaps, sibling-branch fixes and release/media readiness need evidence.
+Match-3 had no bonus gems, no rounds and a flat move limit; the audit's stage A
+gaps (release DI, native fatal, purchases) are still unproven.
 
 ## Constraints
 
-Stages 0 and A are authorized by DEC-0015. Decisions DEC-0001..DEC-0021 are
-binding and outrank any plan. No commits, pushes or deployments unless the owner
-asks. Reviewers write in their own journal, never another session's.
+DEC-0015 authorizes stages 0 and A; DEC-0022 authorizes the gameplay round and
+supersedes DEC-0005/0006. Decisions DEC-0001..DEC-0022 outrank any plan. No
+commits, pushes or deployments unless the owner asks. Reviewers write in their
+own journal, never another session's.
 
 ## Acceptance criteria
 
-- [x] Plans 12 and 13 merged into one live plan; both marked superseded.
-- [x] Review items R1, R5-R11 applied to docs 17/18/19 and the checklist.
-- [x] Batch 2 (db8d05e) converged with the Match-3 line and merged to main.
+- [x] Audit findings F1-F7 closed with tests; plans 12/13 superseded.
+- [x] DEC-0022 items 1-3: home order, Tetris controls, Match-3 depth.
+- [x] Visual pass: one material and one field across all three games.
+- [ ] DEC-0022 item 4: media acceptance set per DEC-0019.
 - [ ] Release build proves DI resolves production adapters (DEC-0007).
-- [x] Remote Config keys map and merge with defaults instead of replacing them.
-- [ ] Real client progress passes Firestore rules; CI supplies Firebase config.
-- [ ] Remote Config survives restart/offline and mode flags block navigation.
+- [ ] Real client progress passes Firestore rules in a live run.
 
 ## Current state
 
 Live plan: docs/roadmap/14_EXECUTION_PLAN_2026-09-14.md; plans 12/13 are history.
-Production code for defines, bootstrap, package, RC mapping and Firebase is in
-main. Live Remote Config has 57 parameters matching the tracked template.
-Claude's eb47a89 records a Redmi profile run with production defines and
-telemetry uploads; release DI, native fatal/ANR and purchases remain unproven.
 Codex audit: docs/audit/05_CLAUDE_EXECUTION_AUDIT_2026-09-15.md, cutoff eb47a89.
-Emulator reproduces rejection of the real progress envelope; existing rules
-tests use a different schema. CI does not provision google-services.json.
-Mode flags have no consumers; RC restart/offline and deterministic game restore
-remain open. AOT loses optional environment overrides. See audit F1-F7.
-Strict analyze and 214 Flutter tests pass; these do not certify device/store
-acceptance. Media tools run, but the full DEC-0019 acceptance set is incomplete.
-README/status/PLAN still need reconciliation with code and approved decisions.
+Match-3 spawns bonus gems, resolves special-on-special swaps through one
+detonation chain, and runs on rounds that pay out moves; 20 opening moves.
+Classic's two crashes are fixed: Firebase-reserved event names threw out of
+initialization, and a lazy iterable passed to removeAll threw on piece
+placement. Event names are now validated against the reserved list.
+All three games share one material (lib/ui/effects/glass_board.dart) and one
+recessed field; the ambient background is dimmed and vignetted so the board is
+the brightest thing on screen. Tetris line clears run 380ms (680ms for a Tetris)
+in three staged beats; Match-3 cascades play out step by step, with grid for the
+rules and displayGrid for the eye.
+Strict analyze clean, 322 Flutter tests pass, up from 236.
+Uncommitted: all of the above. Device-verified on a Redmi at each stage.
+Frame timing is unmeasured - gfxinfo reports no frames for this renderer.
+Not done: Tetris Next-queue art, HUD styling and the vertical space it eats,
+Classic rack legibility.
+Release DI, native fatal/ANR and any purchase remain unproven. Blaze still
+blocks A5. README/status/PLAN still need reconciliation with code.
 
 ## Active agent
 
@@ -64,8 +71,8 @@ Not decisions - actions and external dependencies:
 3. Formulas, denominators and minimum sample size for the KPI sets in DEC-0004.
 4. Provenance for the model weights: checksums and a manifest for the
    acceptance set required by DEC-0019.
-5. Audit disagreement: Claude's journal closes A6, but the actual Dart payload
-   is denied by repo rules. Keep A6 open until the client/rules contract passes.
+5. Round tuning is a guess until it is played: 20 opening moves, +6 a round,
+   targets 1200 then +400 a round. Needs a device session to confirm.
 
 ---
 

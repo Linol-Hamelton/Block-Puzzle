@@ -30,7 +30,7 @@ Client (Flutter)
 7. **Rollout gates** — per-window hard/soft gate pass state (green/yellow/red) with direct link to the acceptance checklist.
 
 ## 4. Source Data Expectations
-- Every production release emits `session_start`, `session_end`, `game_start`, `game_end`, and `ops_session_snapshot` within 10 minutes of install.
+- Every production release emits `game_session_start`, `game_session_end`, `game_start`, `game_end`, and `ops_session_snapshot` within 10 minutes of install.
 - Every gameplay round emits exactly one `game_end` with session_id, score, lines_cleared, rounds, early_gameover flag.
 - Analytics events are Firebase Analytics snake_case with `schema_version`, `app_version`, `build_flavor`, `config_version`, and `ab_*` variant parameters.
 - BigQuery export includes the `user_pseudo_id` for cohort joining.

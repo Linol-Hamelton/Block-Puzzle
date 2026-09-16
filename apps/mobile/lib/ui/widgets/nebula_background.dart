@@ -16,10 +16,14 @@ class NebulaBackground extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: <Color>[
-            Color(0xFF060C2A),
-            Color(0xFF101F51),
-            Color(0xFF1B235C),
-            Color(0xFF0B1645),
+            // Darkened from 060C2A/101F51/1B235C/0B1645. The ambient layer used
+            // to out-shine both playfields, which inverted the figure-ground
+            // relationship: the board read as a hole cut in a bright page
+            // instead of as the lit thing the player is looking at.
+            Color(0xFF04091C),
+            Color(0xFF0A1334),
+            Color(0xFF111740),
+            Color(0xFF070E2C),
           ],
         ),
       ),
@@ -76,10 +80,10 @@ class _NebulaBackgroundPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: <Color>[
-          Color(0x1C113064),
-          Color(0x181D3A73),
-          Color(0x151A376B),
-          Color(0x10142E5C),
+          Color(0x0F113064),
+          Color(0x0D1D3A73),
+          Color(0x0B1A376B),
+          Color(0x08142E5C),
         ],
       ).createShader(rect);
     final Paint cyanNebula = Paint()
@@ -87,8 +91,8 @@ class _NebulaBackgroundPainter extends CustomPainter {
         center: const Alignment(-0.16, -0.34),
         radius: 1.04,
         colors: <Color>[
-          _withAlpha(const Color(0xFF56D4FF), 0.3),
-          _withAlpha(const Color(0xFF56D4FF), 0.13),
+          _withAlpha(const Color(0xFF56D4FF), 0.165),
+          _withAlpha(const Color(0xFF56D4FF), 0.072),
           Colors.transparent,
         ],
       ).createShader(rect);
@@ -97,8 +101,8 @@ class _NebulaBackgroundPainter extends CustomPainter {
         center: const Alignment(0.58, 0.1),
         radius: 1.1,
         colors: <Color>[
-          _withAlpha(const Color(0xFFA286FF), 0.27),
-          _withAlpha(const Color(0xFFA286FF), 0.13),
+          _withAlpha(const Color(0xFFA286FF), 0.149),
+          _withAlpha(const Color(0xFFA286FF), 0.072),
           Colors.transparent,
         ],
       ).createShader(rect);
@@ -107,7 +111,7 @@ class _NebulaBackgroundPainter extends CustomPainter {
         center: const Alignment(0.06, 0.84),
         radius: 1.0,
         colors: <Color>[
-          _withAlpha(const Color(0xFF4FA8FF), 0.18),
+          _withAlpha(const Color(0xFF4FA8FF), 0.099),
           Colors.transparent,
         ],
       ).createShader(rect);
@@ -116,7 +120,7 @@ class _NebulaBackgroundPainter extends CustomPainter {
         center: const Alignment(0.88, -0.02),
         radius: 1.08,
         colors: <Color>[
-          _withAlpha(const Color(0xFF6CB8FF), 0.14),
+          _withAlpha(const Color(0xFF6CB8FF), 0.077),
           Colors.transparent,
         ],
       ).createShader(rect);
@@ -125,8 +129,8 @@ class _NebulaBackgroundPainter extends CustomPainter {
         center: const Alignment(0.58, 0.34),
         radius: 0.82,
         colors: <Color>[
-          _withAlpha(const Color(0xFF8B7FFF), 0.18),
-          _withAlpha(const Color(0xFF57D4FF), 0.13),
+          _withAlpha(const Color(0xFF8B7FFF), 0.099),
+          _withAlpha(const Color(0xFF57D4FF), 0.072),
           Colors.transparent,
         ],
       ).createShader(rect);
@@ -135,8 +139,8 @@ class _NebulaBackgroundPainter extends CustomPainter {
         center: const Alignment(0.1, 0.08),
         radius: 0.82,
         colors: <Color>[
-          _withAlpha(const Color(0xFF7DDCFF), 0.15),
-          _withAlpha(const Color(0xFF9E86FF), 0.13),
+          _withAlpha(const Color(0xFF7DDCFF), 0.083),
+          _withAlpha(const Color(0xFF9E86FF), 0.072),
           Colors.transparent,
         ],
       ).createShader(rect);
@@ -145,8 +149,8 @@ class _NebulaBackgroundPainter extends CustomPainter {
         center: const Alignment(0.0, 1.04),
         radius: 0.95,
         colors: <Color>[
-          _withAlpha(const Color(0xFF846FFF), 0.12),
-          _withAlpha(const Color(0xFF59CAFF), 0.1),
+          _withAlpha(const Color(0xFF846FFF), 0.066),
+          _withAlpha(const Color(0xFF59CAFF), 0.055),
           Colors.transparent,
         ],
       ).createShader(rect);
@@ -163,6 +167,26 @@ class _NebulaBackgroundPainter extends CustomPainter {
     canvas.drawRect(rect, midNebula);
     canvas.drawRect(rect, boardHalo);
     canvas.drawRect(rect, bottomMist);
+
+    // Vignette. Eight stacked nebula layers lit the whole frame evenly, and an
+    // evenly lit frame has no subject: the eye had nothing telling it where the
+    // game was. This darkens the edges so the centre - where the board sits -
+    // is the brightest region of the background, and the board itself is
+    // brighter still.
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0, -0.1),
+          radius: 0.95,
+          colors: <Color>[
+            Colors.transparent,
+            _withAlpha(const Color(0xFF02040E), 0.35),
+            _withAlpha(const Color(0xFF01020A), 0.72),
+          ],
+          stops: const <double>[0.35, 0.78, 1],
+        ).createShader(rect),
+    );
 
     for (int i = 0; i < _stars.length; i++) {
       if (i.isOdd) {

@@ -158,13 +158,18 @@ class MatchGroup {
   /// What this shape awards, by the conventions the genre has trained players
   /// on: five in a line is the strongest, a crossing beats a four, and a four
   /// beats a three.
+  ///
+  /// The order of these tests is the rule, not an implementation detail. A run
+  /// of five that also has a crossing arm is a bigger shape than either on its
+  /// own, so it must not pay out *less* than the plain five would - checking
+  /// the crossing first would have handed the rarer shape the weaker gem.
   SpecialKind get reward {
-    if (intersections.isNotEmpty) {
-      return SpecialKind.bomb;
-    }
     final int longest = longestRun.length;
     if (longest >= 5) {
       return SpecialKind.colorBomb;
+    }
+    if (intersections.isNotEmpty) {
+      return SpecialKind.bomb;
     }
     if (longest == 4) {
       return longestRun.horizontal

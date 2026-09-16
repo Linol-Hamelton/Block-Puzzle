@@ -86,7 +86,7 @@ void main() {
 
     test('returns invalid when required fields are missing', () {
       final AnalyticsValidationResult result = validator.validate(
-        'ad_impression',
+        'game_ad_impression',
         params: <String, Object?>{
           'schema_version': '1.0.0',
           'placement': 'game_over_interstitial',
@@ -344,6 +344,66 @@ void main() {
       expect(result.isValid, isTrue);
       expect(result.missingRequired, isEmpty);
       expect(result.unknownParams, isEmpty);
+    });
+
+    group('reserved names', () {
+      // Firebase does not drop or rename a reserved event: logEvent throws.
+      // That throw escaped into Classic's initialization and left the mode
+      // opening to a grey error slab, unplayable. The name is refused here now,
+      // before it can reach the SDK at all.
+      test('a reserved name is refused, not merely warned about', () {
+        final AnalyticsValidationResult result = validator.validate(
+          'session_start',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'session_id': 'session_1',
+          },
+        );
+
+        expect(result.isValid, isFalse);
+        expect(result.rejection, contains('session_start'));
+        expect(result.missingRequired, isEmpty,
+            reason: 'the name is the problem, not the payload');
+      });
+
+      test('the whole reserved list is refused', () {
+        for (final String name
+            in AnalyticsSchemaValidator.reservedEventNames) {
+          expect(
+            validator.validate(name, params: const <String, Object?>{
+              'schema_version': '1.1.0',
+            }).isValid,
+            isFalse,
+            reason: '$name is reserved by the analytics backend',
+          );
+        }
+      });
+
+      test('reserved prefixes are refused too', () {
+        for (final String name in <String>[
+          'firebase_anything',
+          'google_anything',
+          'ga_anything',
+        ]) {
+          expect(AnalyticsSchemaValidator.isReservedEventName(name), isTrue);
+        }
+      });
+
+      test('the names this app actually sends are all allowed', () {
+        // The regression guard: whatever the schema declares must be sendable.
+        // A schema entry for a reserved name is a contract that cannot be met.
+        for (final String name in <String>[
+          'game_session_start',
+          'game_session_end',
+          'game_start',
+          'game_end',
+          'line_clear',
+          'ops_error',
+        ]) {
+          expect(AnalyticsSchemaValidator.isReservedEventName(name), isFalse,
+              reason: '$name is sent by this app and must not be reserved');
+        }
+      });
     });
   });
 }

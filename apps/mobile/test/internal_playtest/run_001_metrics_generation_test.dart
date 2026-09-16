@@ -28,7 +28,10 @@ import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_servic
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Generate run_001 internal playtest metrics', () async {
+  test(
+    'Generate run_001 internal playtest metrics',
+    tags: const <String>['simulation'],
+    () async {
     final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
     final InMemoryRemoteConfigRepository configRepository = InMemoryRemoteConfigRepository();
     final InMemoryPlayerProgressRepository progressRepository = InMemoryPlayerProgressRepository();

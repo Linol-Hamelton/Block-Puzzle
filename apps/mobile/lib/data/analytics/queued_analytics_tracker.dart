@@ -171,7 +171,7 @@ class QueuedAnalyticsTracker implements AnalyticsTracker {
     if (_queue.length >= _batchSize) {
       return true;
     }
-    return eventName == 'session_end' ||
+    return eventName == 'game_session_end' ||
         eventName == 'ops_session_snapshot' ||
         eventName == 'ops_alert_triggered' ||
         eventName == 'ops_error';

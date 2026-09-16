@@ -1,6 +1,6 @@
 {
     "comment":  "Installed copy. The protocol source repository holds the installer, the test suite and the templates; this project holds only the runtime it needs.",
-    "protocolVersion":  "1.6.1",
+    "protocolVersion":  "1.9.0",
     "role":  "installed",
     "managed":  [
                     "protocol-manifest.json",
@@ -12,6 +12,7 @@
                     ".ai/bin/protocol-hooks.cjs",
                     ".ai/bin/protocol-lock.cjs",
                     ".ai/bin/protocol-handoff.cjs",
+                    ".ai/bin/protocol-session.cjs",
                     ".claude/hooks/protocol-hooks.cjs",
                     ".claude/hooks/session-start.sh",
                     ".claude/hooks/stop-worklog-check.sh",
