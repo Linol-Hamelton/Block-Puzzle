@@ -312,16 +312,35 @@ class _ProductCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: <Widget>[
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE4EEFC),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.palette_outlined,
-                color: Color(0xFF2D5684),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE4EEFC),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: product.id == 'skin_pack_neon'
+                    ? Image.asset(
+                        'assets/branding/skin_neon_preview.png',
+                        width: 42,
+                        height: 42,
+                        fit: BoxFit.cover,
+                        errorBuilder: (
+                          BuildContext context,
+                          Object error,
+                          StackTrace? stackTrace,
+                        ) =>
+                            const Icon(
+                          Icons.palette_outlined,
+                          color: Color(0xFF2D5684),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.palette_outlined,
+                        color: Color(0xFF2D5684),
+                      ),
               ),
             ),
             const SizedBox(width: 12),

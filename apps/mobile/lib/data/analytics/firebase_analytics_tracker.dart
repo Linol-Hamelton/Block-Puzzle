@@ -5,10 +5,17 @@ import 'analytics_tracker.dart';
 
 /// Production [AnalyticsTracker] that routes to Firebase Analytics.
 class FirebaseAnalyticsTracker implements AnalyticsTracker {
-  FirebaseAnalyticsTracker({required AppLogger logger}) : _logger = logger;
+  FirebaseAnalyticsTracker({
+    required AppLogger logger,
+    FirebaseAnalytics? analytics,
+  })  : _logger = logger,
+        _customAnalytics = analytics;
 
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
   final AppLogger _logger;
+  final FirebaseAnalytics? _customAnalytics;
+
+  FirebaseAnalytics get _analytics =>
+      _customAnalytics ?? FirebaseAnalytics.instance;
 
   @override
   Future<void> track(

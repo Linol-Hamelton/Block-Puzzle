@@ -1,0 +1,92 @@
+{
+  "manifest_version": "1.0.0",
+  "generated_at_utc": "2026-09-16T01:55:00Z",
+  "governing_decisions": ["DEC-0019", "DEC-0022"],
+  "environment": {
+    "host_cpu": "Intel Core i9-13900HX (24C/32T)",
+    "host_ram_gb": 31.7,
+    "host_gpu": "NVIDIA GeForce RTX 4060 Laptop (8GB VRAM)",
+    "execution_type": "local_inference"
+  },
+  "acceptance_set": {
+    "visual_cosmetic_first": {
+      "asset_id": "skin_neon_bg",
+      "target_cosmetic": "skin_pack_neon",
+      "file_path": "assets/branding/skin_neon_bg.png",
+      "preview_file_path": "assets/branding/skin_neon_preview.png",
+      "model": "SDXL Base 1.0",
+      "checkpoint": "sd_xl_base_1.0.safetensors",
+      "toolchain": "ComfyUI (local)",
+      "license": "CreativeML Open RAIL++-M (commercial use permitted)",
+      "prompt": "game asset, single glossy glass puzzle block tile, rounded square, deep violet and cyan gradient, inner glow, soft specular highlight, centered, isolated on plain dark background, clean vector-like shading, mobile game UI icon, high detail",
+      "negative_prompt": "text, watermark, letters, blurry, noisy, photo, hands, people, cluttered background",
+      "seed": 777,
+      "steps": 25,
+      "cfg_scale": 7.0,
+      "sampler": "dpmpp_2m",
+      "scheduler": "karras",
+      "dimensions": "1024x1024",
+      "format": "PNG",
+      "generation_time_sec": 26.4,
+      "peak_memory_mb": 8188,
+      "human_acceptance": "approved (vibrant neon glass mosaic, high contrast, readable on AMOLED/LCD screens)"
+    },
+    "music_loop": {
+      "asset_id": "music_loop",
+      "file_path": "assets/audio/music_loop.wav",
+      "model": "Stable Audio 3 Medium",
+      "checkpoint": "stabilityai/stable-audio-3-medium",
+      "toolchain": "stable-audio-3 (run_local.py, local)",
+      "license": "Stability AI Community License (free commercial up to $1M/yr)",
+      "prompt": "Ambient electronic puzzle music loop, chill hypnotic synth pads, soft pulsing rhythm, smooth melodic flow, clean mix, seamless loop",
+      "steps": 8,
+      "duration_sec": 19.5,
+      "sample_rate_hz": 44100,
+      "channels": 2,
+      "format": "WAV 16-bit Signed PCM",
+      "generation_time_sec": 5.8,
+      "peak_memory_vram_gb": 5.06,
+      "post_processing": "0.5s equal-power crossfade loop blend, peak normalized to -1.0 dBFS",
+      "human_acceptance": "approved (seamless loop, no clicks/pops on repeat, unobtrusive background presence)"
+    },
+    "sfx_line_clear": {
+      "asset_id": "line_clear",
+      "file_path": "assets/audio/line_clear.wav",
+      "model": "Stable Audio 3 Medium",
+      "checkpoint": "stabilityai/stable-audio-3-medium",
+      "toolchain": "stable-audio-3 (run_local.py, local)",
+      "license": "Stability AI Community License (free commercial up to $1M/yr)",
+      "prompt": "Futuristic crystalline glass line clear chime, ascending shimmer, clean positive game UI sound effect, short punchy reverb tail",
+      "duration_sec": 1.8,
+      "sample_rate_hz": 44100,
+      "channels": 2,
+      "format": "WAV 16-bit Signed PCM",
+      "generation_time_sec": 1.4,
+      "peak_memory_vram_gb": 5.06,
+      "post_processing": "Trimmed to 1.8s, 50ms cosine fade-out, peak normalized to -0.4 dBFS",
+      "human_acceptance": "approved (punchy crystalline attack, positive gameplay feedback)"
+    },
+    "sfx_piece_placed": {
+      "asset_id": "piece_placed",
+      "file_path": "assets/audio/piece_placed.wav",
+      "source_type": "procedural_synthesized (DEC-0019 fallback)",
+      "license": "Project-owned / Public Domain",
+      "duration_sec": 0.11,
+      "sample_rate_hz": 44100,
+      "channels": 1,
+      "format": "WAV 16-bit Signed PCM",
+      "human_acceptance": "approved (crisp low-latency tactile feedback)"
+    },
+    "sfx_combo": {
+      "asset_id": "combo",
+      "file_path": "assets/audio/combo.wav",
+      "source_type": "procedural_synthesized (DEC-0019 fallback)",
+      "license": "Project-owned / Public Domain",
+      "duration_sec": 0.21,
+      "sample_rate_hz": 44100,
+      "channels": 1,
+      "format": "WAV 16-bit Signed PCM",
+      "human_acceptance": "approved (escalating harmonic cascade on multiple clears)"
+    }
+  }
+}

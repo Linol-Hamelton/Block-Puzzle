@@ -60,12 +60,15 @@ import '../logging/app_logger.dart';
 
 final GetIt sl = GetIt.instance;
 
-Future<void> configureDependencies() async {
+Future<void> configureDependencies({
+  AppConfig? overrideAppConfig,
+  RemoteConfigRepository? overrideRemoteConfigRepository,
+}) async {
   if (sl.isRegistered<AppConfig>()) {
     return;
   }
 
-  final AppConfig appConfig = AppConfig.fromEnvironment();
+  final AppConfig appConfig = overrideAppConfig ?? AppConfig.fromEnvironment();
   final AppLogger logger = AppLogger();
   final bool useDebugAdapters = appConfig.useDebugAdapters;
 
@@ -83,12 +86,14 @@ Future<void> configureDependencies() async {
     );
   }
 
-  final RemoteConfigRepository bootstrapRemoteConfigRepository = useDebugAdapters
-      ? InMemoryRemoteConfigRepository(appConfig: appConfig)
-      : FirebaseRemoteConfigRepository(
-          appConfig: appConfig,
-          logger: logger,
-        );
+  final RemoteConfigRepository bootstrapRemoteConfigRepository =
+      overrideRemoteConfigRepository ??
+          (useDebugAdapters
+              ? InMemoryRemoteConfigRepository(appConfig: appConfig)
+              : FirebaseRemoteConfigRepository(
+                  appConfig: appConfig,
+                  logger: logger,
+                ));
   final Map<String, Object?> bootstrapRemoteConfig =
       await bootstrapRemoteConfigRepository.getCached();
   final RemoteConfigReader bootstrapConfigReader =
@@ -298,4 +303,9 @@ bool _resolveIapBundleEnabled(Map<String, Object?> config) {
       (config['iap.rollout_strategy'] as String?)?.trim() ?? 'cosmetics_first';
   return rolloutStrategy == 'cosmetics_bundle' ||
       rolloutStrategy == 'bundle_first';
+}
+
+@visibleForTesting
+Future<void> resetDependencies() async {
+  await sl.reset();
 }

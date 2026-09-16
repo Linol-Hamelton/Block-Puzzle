@@ -17,12 +17,15 @@ class CloudFunctionsReceiptValidator implements PurchaseReceiptValidator {
     FirebaseFunctions? functions,
     Duration timeout = const Duration(seconds: 20),
   })  : _logger = logger,
-        _functions = functions ?? FirebaseFunctions.instance,
+        _customFunctions = functions,
         _timeout = timeout;
 
   final AppLogger _logger;
-  final FirebaseFunctions _functions;
+  final FirebaseFunctions? _customFunctions;
   final Duration _timeout;
+
+  FirebaseFunctions get _functions =>
+      _customFunctions ?? FirebaseFunctions.instance;
 
   @override
   Future<ReceiptValidationResult> validate({

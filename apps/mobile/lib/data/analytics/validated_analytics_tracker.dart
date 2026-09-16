@@ -33,6 +33,7 @@ class ValidatedAnalyticsTracker implements AnalyticsTracker {
         _nowUtc = nowUtcProvider ?? (() => DateTime.now().toUtc());
 
   final AnalyticsTracker _inner;
+  AnalyticsTracker get inner => _inner;
   final AppLogger _logger;
   final AnalyticsSchemaValidator _schemaValidator;
   final DateTime Function() _nowUtc;

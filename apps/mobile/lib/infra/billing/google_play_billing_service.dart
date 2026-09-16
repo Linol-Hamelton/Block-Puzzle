@@ -34,7 +34,7 @@ class GooglePlayBillingService implements IapStoreService {
         _remoteConfigRepository = remoteConfigRepository,
         _receiptValidator = receiptValidator,
         _logger = logger,
-        _iap = inAppPurchase ?? InAppPurchase.instance,
+        _customIap = inAppPurchase,
         _purchaseTimeout = purchaseTimeout,
         _restoreWindow = restoreWindow;
 
@@ -42,9 +42,11 @@ class GooglePlayBillingService implements IapStoreService {
   final RemoteConfigRepository _remoteConfigRepository;
   final PurchaseReceiptValidator _receiptValidator;
   final AppLogger _logger;
-  final InAppPurchase _iap;
+  final InAppPurchase? _customIap;
   final Duration _purchaseTimeout;
   final Duration _restoreWindow;
+
+  InAppPurchase get _iap => _customIap ?? InAppPurchase.instance;
 
   Future<void>? _initFuture;
   bool _available = false;
