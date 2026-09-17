@@ -50,13 +50,16 @@ class TetrisFlameGame extends FlameGame {
   double _loy = 0;
   double _lcell = 0;
 
-  // Cached static board background (gradient + grid + border), recorded at a
-  // local origin and re-recorded only when the board geometry changes. Avoids
-  // rebuilding gradient shaders and drawing every grid line each frame.
-  ui.Picture? _bgPicture;
+  // Cached static board background (gradient + grid + border), rasterised once
+  // into a texture at physical resolution. Blitting the texture is close to free,
+  // avoiding replaying ~130 gradient shaders and blurs every frame from a Picture.
+  ui.Image? _bgImage;
   double _bgW = -1;
   double _bgH = -1;
   double _bgCell = -1;
+  double _bgRatio = 0;
+  int _bgCols = 0;
+  int _bgRows = 0;
 
   @override
   Color backgroundColor() => const Color(0x00000000);
@@ -69,8 +72,8 @@ class TetrisFlameGame extends FlameGame {
 
   @override
   void onRemove() {
-    _bgPicture?.dispose();
-    _bgPicture = null;
+    _bgImage?.dispose();
+    _bgImage = null;
     super.onRemove();
   }
 
@@ -452,52 +455,44 @@ class TetrisFlameGame extends FlameGame {
     int cols,
     int rows,
   ) {
-    if (_bgPicture == null ||
+    final double ratio = boardWellPixelRatio();
+    if (_bgImage == null ||
         _bgW != boardW ||
         _bgH != boardH ||
-        _bgCell != cell) {
-      final ui.PictureRecorder recorder = ui.PictureRecorder();
-      _paintBackground(Canvas(recorder), boardW, boardH, cell, cols, rows);
-      _bgPicture?.dispose();
-      _bgPicture = recorder.endRecording();
+        _bgCell != cell ||
+        _bgCols != cols ||
+        _bgRows != rows ||
+        _bgRatio != ratio) {
+      _bgImage?.dispose();
+      _bgImage = rasterizeBoardWell(
+        width: boardW,
+        height: boardH,
+        cell: cell,
+        cols: cols,
+        rows: rows,
+        devicePixelRatio: ratio,
+        cornerRadius: 14,
+        // Quiet. Match-3 fills every cell, so a full-strength socket frames the
+        // gem in it; Tetris is mostly empty, and two hundred of them turned the
+        // field into the loudest thing on screen.
+        socketStrength: 0.3,
+      );
       _bgW = boardW;
       _bgH = boardH;
       _bgCell = cell;
+      _bgCols = cols;
+      _bgRows = rows;
+      _bgRatio = ratio;
     }
     canvas.save();
     canvas.translate(ox, oy);
-    canvas.drawPicture(_bgPicture!);
-    canvas.restore();
-  }
-
-  /// Paints the static board chrome at a local (0,0) origin (the caller
-  /// translates). Kept separate so it can be recorded into a cached
-  /// [ui.Picture].
-  ///
-  /// Delegates to the shared well so Tetris, Match-3 and Classic are played on
-  /// the same field. It used to be a flat navy rectangle with hairline grid
-  /// lines, which on a phone read as an empty hole rather than as a board.
-  void _paintBackground(
-    Canvas canvas,
-    double boardW,
-    double boardH,
-    double cell,
-    int cols,
-    int rows,
-  ) {
-    paintBoardWell(
+    drawBoardWellImage(
       canvas,
+      _bgImage!,
       width: boardW,
       height: boardH,
-      cell: cell,
-      cols: cols,
-      rows: rows,
-      cornerRadius: 14,
-      // Quiet. Match-3 fills every cell, so a full-strength socket frames the
-      // gem in it; Tetris is mostly empty, and two hundred of them turned the
-      // field into the loudest thing on screen.
-      socketStrength: 0.3,
     );
+    canvas.restore();
   }
 
   /// One locked or falling mino.

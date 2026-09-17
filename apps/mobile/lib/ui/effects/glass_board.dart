@@ -18,7 +18,7 @@
 library;
 
 import 'dart:math' as math;
-import 'dart:ui' show Picture, PictureRecorder;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -26,7 +26,7 @@ import 'package:flutter/material.dart';
 /// cell, a bevelled groove on every boundary, and a rim.
 ///
 /// Returns nothing and draws at the canvas origin - callers record it into a
-/// [Picture] (see [recordBoardWell]) because none of it moves.
+/// [ui.Picture] (see [recordBoardWell]) because none of it moves.
 void paintBoardWell(
   Canvas canvas, {
   required double width,
@@ -176,7 +176,7 @@ void paintBoardWell(
 /// [paintBoardWell] recorded into a picture. Nothing in the well moves, and
 /// re-running its gradients and blurs every frame would spend the budget the
 /// pieces need.
-Picture recordBoardWell({
+ui.Picture recordBoardWell({
   required double width,
   required double height,
   required double cell,
@@ -187,7 +187,7 @@ Picture recordBoardWell({
   double socketStrength = 1,
   Color? tint,
 }) {
-  final PictureRecorder recorder = PictureRecorder();
+  final ui.PictureRecorder recorder = ui.PictureRecorder();
   paintBoardWell(
     Canvas(recorder),
     width: width,
@@ -201,6 +201,102 @@ Picture recordBoardWell({
     tint: tint,
   );
   return recorder.endRecording();
+}
+
+/// [recordBoardWell] rasterised once into a texture.
+///
+/// Recording into a [ui.Picture] removes the cost of *recording* the well and
+/// nothing else. A picture is a command list, and the GPU re-executes the whole
+/// list on every frame: the well is roughly 130 gradient shaders - two per
+/// socket, fill and lip - plus the two blurs on the grooves and the rim. Step
+/// 1h of DEC-0024 bisected a benchmark scene layer by layer and priced that
+/// replay at +11.35 ms of a 19.25 ms frame, 81% of everything the scene added,
+/// while the 64 glass gems on top of it cost -0.01 ms. An image is a texture,
+/// and blitting a texture is close to free.
+///
+/// [devicePixelRatio] is what keeps the board sharp, and getting it wrong is
+/// the one way this function makes the game look worse: the image is sized in
+/// physical pixels and drawn back at logical size, so rasterising at 1.0 on a
+/// 2.75x screen yields a board upscaled 2.75x - a soapy one. Pass
+/// [boardWellPixelRatio], or the ratio of the view being drawn into.
+///
+/// The caller owns the result. Dispose it when the geometry changes and in
+/// `onRemove`, or every rotation of the screen leaks a texture.
+ui.Image rasterizeBoardWell({
+  required double width,
+  required double height,
+  required double cell,
+  required int cols,
+  required int rows,
+  required double devicePixelRatio,
+  Color accent = const Color(0xFF9FD8F5),
+  double cornerRadius = 16,
+  double socketStrength = 1,
+  Color? tint,
+}) {
+  final double ratio = devicePixelRatio > 0 ? devicePixelRatio : 1;
+  final ui.PictureRecorder recorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
+  // Paint in logical units onto a canvas scaled to physical ones, so every
+  // gradient and blur inside the well is resolved at the screen's resolution
+  // rather than stretched up to it afterwards.
+  canvas.scale(ratio);
+  paintBoardWell(
+    canvas,
+    width: width,
+    height: height,
+    cell: cell,
+    cols: cols,
+    rows: rows,
+    accent: accent,
+    cornerRadius: cornerRadius,
+    socketStrength: socketStrength,
+    tint: tint,
+  );
+  final ui.Picture picture = recorder.endRecording();
+  // toImageSync, not toImage: toImage is a future, and a board that arrives one
+  // frame late is a board that is missing on the first frame the player sees.
+  final ui.Image image = picture.toImageSync(
+    math.max(1, (width * ratio).ceil()),
+    math.max(1, (height * ratio).ceil()),
+  );
+  picture.dispose();
+  return image;
+}
+
+/// Draws an image from [rasterizeBoardWell] back at its logical size.
+///
+/// The image is larger than [width] x [height] by the device pixel ratio it was
+/// rasterised at, so this maps it down to exactly the rectangle the well used
+/// to paint into - one texture blit in place of the command list.
+void drawBoardWellImage(
+  Canvas canvas,
+  ui.Image image, {
+  required double width,
+  required double height,
+}) {
+  canvas.drawImageRect(
+    image,
+    Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+    Rect.fromLTWH(0, 0, width, height),
+    _wellBlitPaint,
+  );
+}
+
+/// Bilinear, because the destination rectangle is the source divided by the
+/// pixel ratio and the `ceil` above leaves it a fraction of a pixel off exact.
+final Paint _wellBlitPaint = Paint()..filterQuality = FilterQuality.low;
+
+/// The ratio to rasterise the well at.
+///
+/// Read from the platform view rather than from a [BuildContext]: this is
+/// wanted inside `render`, where taking an inherited-widget dependency on
+/// [MediaQuery] would be the wrong thing to do during paint. The game runs in
+/// the implicit view, and 1 is a defensive floor rather than an expected value.
+double boardWellPixelRatio() {
+  final double ratio =
+      ui.PlatformDispatcher.instance.implicitView?.devicePixelRatio ?? 1;
+  return ratio > 0 ? ratio : 1;
 }
 
 /// Cuts one piece of coloured glass to [path].

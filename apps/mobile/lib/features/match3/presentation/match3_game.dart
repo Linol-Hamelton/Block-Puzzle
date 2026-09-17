@@ -1,7 +1,8 @@
 import 'dart:math' as math;
-import 'dart:ui' show Picture;
+import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 
 import '../../../domain/match3/match3_engine.dart';
@@ -60,10 +61,21 @@ class Match3FlameGame extends FlameGame {
   // The board behind the gems: sockets, grooves and rim. None of it moves, so
   // it is recorded once and replayed, and re-recorded only when the geometry
   // actually changes (rotation, a different board size).
-  Picture? _boardPicture;
-  double _boardPictureCell = 0;
-  int _boardPictureCols = 0;
-  int _boardPictureRows = 0;
+  ui.Image? _boardWellImage;
+  double _boardWellCell = 0;
+  int _boardWellCols = 0;
+  int _boardWellRows = 0;
+  double _boardWellRatio = 0;
+
+  // Cached picture for static gems (plain gems without effects, not igniting).
+  // Recorded once per settled board, re-recorded only when the board, igniting set,
+  // or geometry changes.
+  ui.Picture? _staticGemsPicture;
+  TileGrid? _cachedGemsGrid;
+  Set<GridPos> _cachedIgniting = const <GridPos>{};
+  double _cachedGemsCell = 0;
+  int _cachedGemsCols = 0;
+  int _cachedGemsRows = 0;
 
   int get _cols => controller.engine.width;
   int get _rows => controller.engine.height;
@@ -80,8 +92,10 @@ class Match3FlameGame extends FlameGame {
 
   @override
   void onRemove() {
-    _boardPicture?.dispose();
-    _boardPicture = null;
+    _boardWellImage?.dispose();
+    _boardWellImage = null;
+    _staticGemsPicture?.dispose();
+    _staticGemsPicture = null;
     super.onRemove();
   }
 
@@ -288,10 +302,22 @@ class Match3FlameGame extends FlameGame {
 
     _renderBackground(canvas, ox, oy, boardW, boardH, cell);
 
+    _updateStaticGemsPicture(grid, igniting, cell, _cols, _rows);
+    if (_staticGemsPicture != null) {
+      canvas.save();
+      canvas.translate(ox, oy);
+      canvas.drawPicture(_staticGemsPicture!);
+      canvas.restore();
+    }
+
     for (int y = 0; y < _rows; y++) {
       for (int x = 0; x < _cols; x++) {
         final Tile? tile = grid.tileAt(x, y);
         if (tile == null) {
+          continue;
+        }
+        final bool isIgniting = igniting.contains(GridPos(x, y));
+        if (!tile.isSpecial && !isIgniting) {
           continue;
         }
         final Color color = gemColors[tile.color]!;
@@ -304,7 +330,7 @@ class Match3FlameGame extends FlameGame {
           cell,
           tile.color,
           color,
-          charge: igniting.contains(GridPos(x, y)) ? charge : 0,
+          charge: isIgniting ? charge : 0,
         );
         if (tile.isSpecial) {
           _paintSpecial(canvas, ox, oy, x, y, cell, tile.special, color);
@@ -340,7 +366,8 @@ class Match3FlameGame extends FlameGame {
   }
 
   /// The board the gems sit in, from the shared well so all three games are
-  /// played on the same field. Recorded once - nothing in it moves.
+  /// played on the same field. Rasterised once - nothing in it moves, and a
+  /// replayed picture costs its shaders again on every frame.
   void _renderBackground(
     Canvas canvas,
     double ox,
@@ -349,26 +376,120 @@ class Match3FlameGame extends FlameGame {
     double boardH,
     double cell,
   ) {
-    if (_boardPicture == null ||
-        _boardPictureCell != cell ||
-        _boardPictureCols != _cols ||
-        _boardPictureRows != _rows) {
-      _boardPicture?.dispose();
-      _boardPicture = recordBoardWell(
+    final double ratio = boardWellPixelRatio();
+    if (_boardWellImage == null ||
+        _boardWellCell != cell ||
+        _boardWellCols != _cols ||
+        _boardWellRows != _rows ||
+        _boardWellRatio != ratio) {
+      _boardWellImage?.dispose();
+      _boardWellImage = rasterizeBoardWell(
         width: boardW,
         height: boardH,
         cell: cell,
         cols: _cols,
         rows: _rows,
+        devicePixelRatio: ratio,
       );
-      _boardPictureCell = cell;
-      _boardPictureCols = _cols;
-      _boardPictureRows = _rows;
+      _boardWellCell = cell;
+      _boardWellCols = _cols;
+      _boardWellRows = _rows;
+      _boardWellRatio = ratio;
     }
     canvas.save();
     canvas.translate(ox, oy);
-    canvas.drawPicture(_boardPicture!);
+    drawBoardWellImage(
+      canvas,
+      _boardWellImage!,
+      width: boardW,
+      height: boardH,
+    );
     canvas.restore();
+  }
+
+  /// Checks if the cached static gems picture is still valid for the given board
+  /// state, igniting cells, and cell geometry.
+  bool _canReuseGemsPicture(
+    TileGrid grid,
+    Set<GridPos> igniting,
+    double cell,
+    int cols,
+    int rows,
+  ) {
+    if (_staticGemsPicture == null) {
+      return false;
+    }
+    if (_cachedGemsCell != cell ||
+        _cachedGemsCols != cols ||
+        _cachedGemsRows != rows) {
+      return false;
+    }
+    if (!setEquals(_cachedIgniting, igniting)) {
+      return false;
+    }
+    if (identical(_cachedGemsGrid, grid)) {
+      return true;
+    }
+    if (_cachedGemsGrid == null ||
+        _cachedGemsGrid!.width != grid.width ||
+        _cachedGemsGrid!.height != grid.height) {
+      return false;
+    }
+    for (int y = 0; y < rows; y++) {
+      for (int x = 0; x < cols; x++) {
+        final Tile? a = _cachedGemsGrid!.tileAt(x, y);
+        final Tile? b = grid.tileAt(x, y);
+        if (a?.color != b?.color || a?.special != b?.special) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /// Pre-records all unchanged static gems (plain gems, not igniting, no special)
+  /// into a single replayed [ui.Picture].
+  void _updateStaticGemsPicture(
+    TileGrid grid,
+    Set<GridPos> igniting,
+    double cell,
+    int cols,
+    int rows,
+  ) {
+    if (_canReuseGemsPicture(grid, igniting, cell, cols, rows)) {
+      return;
+    }
+    _staticGemsPicture?.dispose();
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas recorderCanvas = Canvas(recorder);
+
+    for (int y = 0; y < rows; y++) {
+      for (int x = 0; x < cols; x++) {
+        final Tile? tile = grid.tileAt(x, y);
+        if (tile == null || tile.isSpecial || igniting.contains(GridPos(x, y))) {
+          continue;
+        }
+        final Color color = gemColors[tile.color]!;
+        _paintGem(
+          recorderCanvas,
+          0,
+          0,
+          x,
+          y,
+          cell,
+          tile.color,
+          color,
+          charge: 0,
+        );
+      }
+    }
+
+    _staticGemsPicture = recorder.endRecording();
+    _cachedGemsGrid = grid;
+    _cachedIgniting = Set<GridPos>.of(igniting);
+    _cachedGemsCell = cell;
+    _cachedGemsCols = cols;
+    _cachedGemsRows = rows;
   }
 
   /// The silhouette a gem of this colour is cut to.

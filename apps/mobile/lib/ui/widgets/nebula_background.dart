@@ -10,26 +10,28 @@ class NebulaBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            // Darkened from 060C2A/101F51/1B235C/0B1645. The ambient layer used
-            // to out-shine both playfields, which inverted the figure-ground
-            // relationship: the board read as a hole cut in a bright page
-            // instead of as the lit thing the player is looking at.
-            Color(0xFF04091C),
-            Color(0xFF0A1334),
-            Color(0xFF111740),
-            Color(0xFF070E2C),
-          ],
+    return const RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[
+              // Darkened from 060C2A/101F51/1B235C/0B1645. The ambient layer used
+              // to out-shine both playfields, which inverted the figure-ground
+              // relationship: the board read as a hole cut in a bright page
+              // instead of as the lit thing the player is looking at.
+              Color(0xFF04091C),
+              Color(0xFF0A1334),
+              Color(0xFF111740),
+              Color(0xFF070E2C),
+            ],
+          ),
         ),
-      ),
-      child: CustomPaint(
-        painter: _NebulaBackgroundPainter(),
-        child: SizedBox.expand(),
+        child: CustomPaint(
+          painter: _NebulaBackgroundPainter(),
+          child: SizedBox.expand(),
+        ),
       ),
     );
   }
