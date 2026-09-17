@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../features/diagnostics/diagnostics_screen.dart';
+import '../../features/diagnostics/frame_timing_recorder.dart';
 import '../../core/audio/music_controller.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/config/remote_config_reader.dart';
@@ -184,7 +186,7 @@ Future<void> configureDependencies({
   sl.registerLazySingleton<LineClearService>(BasicLineClearService.new);
   sl.registerLazySingleton<ScoreService>(BasicScoreService.new);
   sl.registerLazySingleton<PieceGenerationService>(
-    BasicPieceGenerationService.new,
+    () => BasicPieceGenerationService(moveValidator: sl()),
   );
   sl.registerLazySingleton<DifficultyTuner>(BasicDifficultyTuner.new);
 
@@ -279,6 +281,12 @@ Future<void> configureDependencies({
       logger: sl(),
     ),
   );
+
+  if (kDiagnosticsEnabled) {
+    sl.registerLazySingleton<FrameTimingRecorder>(
+      () => FrameTimingRecorder(capacity: 3600),
+    );
+  }
 }
 
 bool _resolveIapBundleEnabled(Map<String, Object?> config) {

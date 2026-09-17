@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -10,6 +11,8 @@ import '../firebase_options.dart';
 import '../core/di/di_container.dart';
 import '../core/logging/app_logger.dart';
 import '../data/analytics/analytics_tracker.dart';
+import '../features/diagnostics/diagnostics_screen.dart';
+import '../features/diagnostics/frame_timing_recorder.dart';
 import '../infra/monitoring/crash_reporter.dart';
 import 'block_puzzle_app.dart';
 
@@ -43,6 +46,14 @@ Future<void> bootstrap() async {
   );
   await configureDependencies();
   _configureGlobalErrorHandlers();
+
+  if (kDiagnosticsEnabled) {
+    SchedulerBinding.instance.addTimingsCallback((List<FrameTiming> timings) {
+      if (sl.isRegistered<FrameTimingRecorder>()) {
+        sl<FrameTimingRecorder>().addTimings(timings);
+      }
+    });
+  }
 
   if (!_firebaseReady) {
     // Now that DI exists the analytics queue can carry it too, but the log

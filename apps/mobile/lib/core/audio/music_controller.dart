@@ -11,7 +11,7 @@ class MusicController {
 
   final AppLogger _logger;
   static const String _enabledKey = 'music_enabled';
-  static const String _track = 'music_loop.wav';
+  static const String _track = 'music_loop.m4a';
   static const String _audioPrefix = 'assets/audio/';
 
   bool _enabled = true;

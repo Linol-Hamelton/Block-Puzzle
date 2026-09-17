@@ -45,3 +45,10 @@ ui-debug.log
 
 # Node dependencies
 node_modules/
+
+# Third-party reference audio: stylistic reference only, never shipped.
+# saplesmusic/ holds the Parkan OST (Nikita Ltd). It is 39 MB of copyrighted
+# material sitting one `git add -A` away from the repository history, and it
+# must stay out of it. Our own tracks are generated and live in
+# apps/mobile/assets/audio/.
+saplesmusic/
