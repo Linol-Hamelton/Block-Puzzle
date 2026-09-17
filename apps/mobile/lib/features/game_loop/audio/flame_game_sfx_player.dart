@@ -8,19 +8,54 @@ import 'game_sfx_player.dart';
 class FlameGameSfxPlayer implements GameSfxPlayer {
   FlameGameSfxPlayer({
     required AppLogger logger,
-  }) : _logger = logger;
+    DateTime Function()? nowUtcProvider,
+  })  : _logger = logger,
+        _nowUtc = nowUtcProvider ?? (() => DateTime.now().toUtc());
 
   final AppLogger _logger;
+  final DateTime Function() _nowUtc;
 
   static const String _piecePlaced = 'piece_placed.wav';
   static const String _invalidMove = 'invalid_move.wav';
   static const String _lineClear = 'line_clear.wav';
   static const String _combo = 'combo.wav';
+  static const List<String> _comboSteps = <String>[
+    'combo_01.wav',
+    'combo_02.wav',
+    'combo_03.wav',
+    'combo_04.wav',
+    'combo_05.wav',
+    'combo_06.wav',
+    'combo_07.wav',
+  ];
   static const String _gameOver = 'game_over.wav';
   static const String _rotate = 'rotate.wav';
   static const String _hold = 'hold.wav';
   static const String _hardDrop = 'hard_drop.wav';
   static const String _audioPrefix = 'assets/audio/';
+
+  static const Duration comboResetThreshold = Duration(milliseconds: 2500);
+
+  DateTime? _lastComboTimeUtc;
+  int _lastComboStep = 1;
+
+  int get lastComboStep => _lastComboStep;
+
+  /// Resolves the ladder step (1..7) based on [comboStreak] and [now].
+  /// Resets to step 1 after [comboResetThreshold] (2.5s) without a combo.
+  int resolveComboStep({
+    required int comboStreak,
+    required DateTime now,
+  }) {
+    if (_lastComboTimeUtc == null ||
+        now.difference(_lastComboTimeUtc!) >= comboResetThreshold) {
+      _lastComboTimeUtc = now;
+      _lastComboStep = 1;
+      return 1;
+    }
+    _lastComboTimeUtc = now;
+    return _lastComboStep = comboStreak.clamp(1, 7);
+  }
 
   bool _initialized = false;
   Future<void>? _preloadFuture;
@@ -66,7 +101,17 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
     try {
       FlameAudio.updatePrefix(_audioPrefix);
       await FlameAudio.audioCache.loadAll(
-        <String>[_piecePlaced, _invalidMove, _lineClear, _combo, _gameOver, _rotate, _hold, _hardDrop],
+        <String>[
+          _piecePlaced,
+          _invalidMove,
+          _lineClear,
+          _combo,
+          ..._comboSteps,
+          _gameOver,
+          _rotate,
+          _hold,
+          _hardDrop,
+        ],
       );
 
       await _rebuildPools();
@@ -89,7 +134,18 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
       }
       FlameAudio.updatePrefix(_audioPrefix);
       await FlameAudio.audioCache.loadAll(
-          <String>[_piecePlaced, _invalidMove, _lineClear, _combo, _gameOver, _rotate, _hold, _hardDrop]);
+        <String>[
+          _piecePlaced,
+          _invalidMove,
+          _lineClear,
+          _combo,
+          ..._comboSteps,
+          _gameOver,
+          _rotate,
+          _hold,
+          _hardDrop,
+        ],
+      );
       _consecutivePlaybackFailures = 0;
       _logger.info('SFX audio session refreshed');
     } catch (error) {
@@ -117,8 +173,11 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   Future<void> playCombo({
     required int comboStreak,
   }) async {
+    final DateTime now = _nowUtc();
+    final int step = resolveComboStep(comboStreak: comboStreak, now: now);
+    final String fileName = _comboSteps[step - 1];
     final double volume = comboStreak >= 4 ? 1.0 : 0.82;
-    await _play(_combo, volume: volume);
+    await _play(fileName, volume: volume);
   }
 
   @override
@@ -238,6 +297,13 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
       minPlayers: 2,
       maxPlayers: 6,
     );
+    for (final String stepFile in _comboSteps) {
+      _pools[stepFile] = await FlameAudio.createPool(
+        stepFile,
+        minPlayers: 2,
+        maxPlayers: 6,
+      );
+    }
     _pools[_gameOver] = await FlameAudio.createPool(
       _gameOver,
       minPlayers: 1,

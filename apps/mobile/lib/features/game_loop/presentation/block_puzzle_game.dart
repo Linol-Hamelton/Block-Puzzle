@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
+import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -15,6 +16,9 @@ import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
 import '../../../ui/effects/burst_field.dart';
 import '../../../ui/effects/glass_board.dart';
+import '../../diagnostics/diagnostics_screen.dart';
+import '../../diagnostics/step1j_decomposition.dart';
+import '../../diagnostics/step6_benchmark.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -22,6 +26,7 @@ import '../application/models/models.dart';
 
 class BlockPuzzleGame extends FlameGame {
   static const double _touchDragLiftPixels = 50;
+  static double get touchDragLiftPixels => _touchDragLiftPixels;
 
   BlockPuzzleGame({
     required this.controller,
@@ -116,6 +121,9 @@ class BlockPuzzleGame extends FlameGame {
 
     add(_boardComponent);
     add(_BurstLayer(_burst));
+    if (kDiagnosticsEnabled) {
+      add(_Step6BenchRunnerComponent(this));
+    }
 
     _stateListener = _syncWithState;
     controller.stateListenable.addListener(_stateListener!);
@@ -336,6 +344,7 @@ class BlockPuzzleGame extends FlameGame {
         strength: result.clearedLines,
         clearedCells: result.clearedCells,
       );
+      _playShockwave(result.clearedCells);
       final int scoreDelta = controller.state.scoreState.totalScore - prevScore;
       if (scoreDelta > 0) {
         _playScorePop(scoreDelta, result.clearedCells);
@@ -693,19 +702,66 @@ class BlockPuzzleGame extends FlameGame {
     if (cells.isEmpty) {
       return;
     }
-    double sumX = 0;
-    double sumY = 0;
-    for (final BoardCell c in cells) {
-      sumX += c.x;
-      sumY += c.y;
-    }
-    final double cx =
-        _boardOrigin.x + (((sumX / cells.length) + 0.5) * _boardCellSize);
-    final double cy =
-        _boardOrigin.y + (((sumY / cells.length) + 0.5) * _boardCellSize);
+    final Vector2 centroid = computeClearedCentroid(
+      cells: cells,
+      boardOrigin: _boardOrigin,
+      cellSize: _boardCellSize,
+    );
     add(
       ScorePopComponent(
         text: '+$delta',
+        startPosition: centroid,
+      ),
+    );
+  }
+
+  void _playShockwave(Set<BoardCell> cells) {
+    if (cells.isEmpty) {
+      return;
+    }
+    final Vector2 centroid = computeClearedCentroid(
+      cells: cells,
+      boardOrigin: _boardOrigin,
+      cellSize: _boardCellSize,
+    );
+    add(
+      ShockwaveRingComponent(
+        center: centroid,
+        boardRect: Rect.fromLTWH(
+          _boardOrigin.x,
+          _boardOrigin.y,
+          _boardCellSize * 8,
+          _boardCellSize * 8,
+        ),
+        color: _currentPalette.occupiedColor,
+      ),
+    );
+  }
+
+  void triggerStep6BenchEvent(int index) {
+    if (!kDiagnosticsEnabled || !Step6Benchmark.effectsEnabled.value) {
+      return;
+    }
+    final BoardCell cell =
+        Step6Benchmark.benchCentroids[index % Step6Benchmark.benchCentroids.length];
+    final double cx = _boardOrigin.x + (cell.x + 0.5) * _boardCellSize;
+    final double cy = _boardOrigin.y + (cell.y + 0.5) * _boardCellSize;
+    final Rect boardRect = Rect.fromLTWH(
+      _boardOrigin.x,
+      _boardOrigin.y,
+      _boardCellSize * 8,
+      _boardCellSize * 8,
+    );
+    add(
+      ShockwaveRingComponent(
+        center: Vector2(cx, cy),
+        boardRect: boardRect,
+        color: _currentPalette.occupiedColor,
+      ),
+    );
+    add(
+      ScorePopComponent(
+        text: '+${(index + 1) * 10}',
         startPosition: Vector2(cx, cy),
       ),
     );
@@ -1012,12 +1068,31 @@ class BoardComponent extends PositionComponent {
   Color _occupiedColor = const Color(0xFF55CEFF);
   BlockVisualPreset _visualPreset = BlockVisualPreset.soft;
 
-  Picture? _cachedBoardPicture;
-  Vector2 _cachedBoardSize = Vector2.zero();
+  ui.Image? _boardWellImage;
+  Vector2 _boardWellSize = Vector2.zero();
+  double _boardWellRatio = 0;
+  Color _boardWellBgColor = const Color(0x00000000);
+  Color _boardWellOccupiedColor = const Color(0x00000000);
+  int _boardWellGridSize = 0;
+
+  ui.Image? _cachedPiecesImage;
+  Vector2 _cachedPiecesSize = Vector2.zero();
+  double _cachedPiecesRatio = 0;
+  static final Paint _piecesBlitPaint = Paint()..filterQuality = FilterQuality.low;
 
   void setBoardState(BoardState boardState) {
     _boardState = boardState;
-    _cachedBoardPicture = null;
+    _cachedPiecesImage?.dispose();
+    _cachedPiecesImage = null;
+  }
+
+  @override
+  void onRemove() {
+    _boardWellImage?.dispose();
+    _boardWellImage = null;
+    _cachedPiecesImage?.dispose();
+    _cachedPiecesImage = null;
+    super.onRemove();
   }
 
   void setPreview({
@@ -1103,12 +1178,14 @@ class BoardComponent extends PositionComponent {
   }) {
     _boardBackgroundColor = boardBackgroundColor;
     _occupiedColor = occupiedColor;
-    _cachedBoardPicture = null;
+    _cachedPiecesImage?.dispose();
+    _cachedPiecesImage = null;
   }
 
   void setVisualPreset(BlockVisualPreset preset) {
     _visualPreset = preset;
-    _cachedBoardPicture = null;
+    _cachedPiecesImage?.dispose();
+    _cachedPiecesImage = null;
   }
 
   @override
@@ -1116,36 +1193,49 @@ class BoardComponent extends PositionComponent {
     super.render(canvas);
 
     final double cellSize = size.x / _boardState.size;
+    final double ratio = boardWellPixelRatio();
 
-    if (_cachedBoardPicture == null || _cachedBoardSize != size) {
-      _cachedBoardSize = size.clone();
-      final PictureRecorder recorder = PictureRecorder();
-      final Canvas cacheCanvas = Canvas(recorder);
-
-      // The field, from the shared well.
-      //
-      // It used to be painted at alpha 0.12 over alpha 0.04 - so close to
-      // transparent that the board was not a board at all, just the ambient
-      // background showing through a rounded rectangle. Against a bright
-      // nebula that reads as a pale sheet of plastic, and the blocks on it had
-      // nothing to sit against.
-      //
-      // Sockets are held back: Classic starts empty and fills up, so at full
-      // strength the texture shouts loudest exactly when the board is emptiest.
-      paintBoardWell(
-        cacheCanvas,
+    if (_boardWellImage == null ||
+        _boardWellSize != size ||
+        _boardWellRatio != ratio ||
+        _boardWellBgColor != _boardBackgroundColor ||
+        _boardWellOccupiedColor != _occupiedColor ||
+        _boardWellGridSize != _boardState.size) {
+      _boardWellImage?.dispose();
+      _boardWellImage = rasterizeBoardWell(
         width: size.x,
         height: size.y,
         cell: cellSize,
         cols: _boardState.size,
         rows: _boardState.size,
+        devicePixelRatio: ratio,
         cornerRadius: 18,
         socketStrength: 0.5,
-        // The skin still colours the field and its light, so the six themes
-        // stay six themes rather than collapsing into one.
         tint: _boardBackgroundColor,
         accent: _occupiedColor,
       );
+      _boardWellSize = size.clone();
+      _boardWellRatio = ratio;
+      _boardWellBgColor = _boardBackgroundColor;
+      _boardWellOccupiedColor = _occupiedColor;
+      _boardWellGridSize = _boardState.size;
+    }
+
+    drawBoardWellImage(
+      canvas,
+      _boardWellImage!,
+      width: size.x,
+      height: size.y,
+    );
+
+    if (_cachedPiecesImage == null ||
+        _cachedPiecesSize != size ||
+        _cachedPiecesRatio != ratio) {
+      _cachedPiecesSize = size.clone();
+      _cachedPiecesRatio = ratio;
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas cacheCanvas = Canvas(recorder);
+      cacheCanvas.scale(ratio);
 
       // Classic keeps its own starfield inside the well - it is the mode's
       // signature and costs one pass on a cached picture.
@@ -1194,11 +1284,28 @@ class BoardComponent extends PositionComponent {
           intenseGlow: true,
         );
       }
-      _cachedBoardPicture = recorder.endRecording();
+      final ui.Picture picture = recorder.endRecording();
+      _cachedPiecesImage?.dispose();
+      _cachedPiecesImage = picture.toImageSync(
+        math.max(1, (size.x * ratio).ceil()),
+        math.max(1, (size.y * ratio).ceil()),
+      );
+      picture.dispose();
     }
 
-    canvas.drawPicture(_cachedBoardPicture!);
-
+    if (!Step1jDecomposition.hideD && _cachedPiecesImage != null) {
+      canvas.drawImageRect(
+        _cachedPiecesImage!,
+        Rect.fromLTWH(
+          0,
+          0,
+          _cachedPiecesImage!.width.toDouble(),
+          _cachedPiecesImage!.height.toDouble(),
+        ),
+        Rect.fromLTWH(0, 0, size.x, size.y),
+        _piecesBlitPaint,
+      );
+    }
 
     final _HintState? hint = _hintState;
     if (hint != null) {
@@ -1441,17 +1548,19 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     }
 
     final double scale = lerpDouble(1, 1.035, _dragVisualProgress) ?? 1;
-    if ((scale - 1).abs() > 0.0001) {
-      canvas.save();
-      final double cx = size.x * 0.5;
-      final double cy = size.y * 0.5;
-      canvas.translate(cx, cy);
-      canvas.scale(scale, scale);
-      canvas.translate(-cx, -cy);
-      canvas.drawPicture(_cachedPicture!);
-      canvas.restore();
-    } else {
-      canvas.drawPicture(_cachedPicture!);
+    if (!Step1jDecomposition.hideE) {
+      if ((scale - 1).abs() > 0.0001) {
+        canvas.save();
+        final double cx = size.x * 0.5;
+        final double cy = size.y * 0.5;
+        canvas.translate(cx, cy);
+        canvas.scale(scale, scale);
+        canvas.translate(-cx, -cy);
+        canvas.drawPicture(_cachedPicture!);
+        canvas.restore();
+      } else {
+        canvas.drawPicture(_cachedPicture!);
+      }
     }
   }
 
@@ -1466,6 +1575,14 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
           ? (_dragVisualProgress + step).clamp(0, targetVisual).toDouble()
           : (_dragVisualProgress - step).clamp(targetVisual, 1).toDouble();
     }
+  }
+
+  /// Calculates the horizontal shift required to center the piece horizontally on the touch point.
+  static double horizontalCenterOffset({
+    required double localTouchX,
+    required double pieceWidth,
+  }) {
+    return localTouchX - (pieceWidth * 0.5);
   }
 
   @override
@@ -1483,6 +1600,16 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
       position.y -= _dragLiftPixels;
       unawaited(haptics.lightImpact());
     }
+    // DEC-0024 point 5: Center horizontally on the piece's bounding box.
+    // Horizontal centring makes left/right placement predictable.
+    // Vertical lift (_touchDragLiftPixels = 50) is kept intact above so
+    // the piece stays visible above the finger.
+    final double hOffset = horizontalCenterOffset(
+      localTouchX: event.localPosition.x,
+      pieceWidth: size.x,
+    );
+    position.x += hOffset;
+
     onDragMoved(this);
     super.onDragStart(event);
   }
@@ -1710,20 +1837,35 @@ class ScorePopComponent extends PositionComponent {
   ScorePopComponent({
     required this.text,
     required this.startPosition,
+    this.duration = 0.8,
   }) {
     priority = 212;
+    _painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          fontSize: 20.0,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFFD6FFE0),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
   }
 
   final String text;
   final Vector2 startPosition;
-  static const double _duration = 0.85;
+  final double duration;
   double _elapsed = 0;
+  late final TextPainter _painter;
+
+  bool get isFinished => _elapsed >= duration;
 
   @override
   void update(double dt) {
     super.update(dt);
     _elapsed += dt;
-    if (_elapsed >= _duration) {
+    if (_elapsed >= duration) {
       removeFromParent();
     }
   }
@@ -1731,29 +1873,90 @@ class ScorePopComponent extends PositionComponent {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final double t = (_elapsed / _duration).clamp(0, 1);
-    final double opacity = (1 - t).clamp(0, 1);
-    final double yOffset = t * 40;
-    final TextPaint textPaint = TextPaint(
-      style: TextStyle(
-        fontSize: 22 - (t * 3),
-        fontWeight: FontWeight.w800,
-        color: Color.fromRGBO(214, 255, 224, opacity),
-        shadows: <Shadow>[
-          Shadow(
-            color: Color.fromRGBO(95, 224, 138, opacity * 0.9),
-            blurRadius: 12,
-          ),
-        ],
+    final double t = (_elapsed / duration).clamp(0.0, 1.0);
+    final double yOffset = t * 36.0;
+    _painter.paint(
+      canvas,
+      Offset(
+        startPosition.x - (_painter.width / 2),
+        startPosition.y - yOffset - (_painter.height / 2),
       ),
     );
-    textPaint.render(
-      canvas,
-      text,
-      Vector2(startPosition.x, startPosition.y - yOffset),
-      anchor: Anchor.center,
-    );
   }
+}
+
+/// Lightweight vector shockwave ring expanding from centroid, clipped to board.
+/// Implements DEC-0024 step 6 (no fragment shaders, no fullscreen blur, no saveLayer).
+class ShockwaveRingComponent extends Component {
+  ShockwaveRingComponent({
+    required this.center,
+    required this.boardRect,
+    Color? color,
+    this.maxRadius = 140.0,
+    this.duration = 0.8,
+  }) : color = color ?? const Color(0xFF64D2FF) {
+    priority = 210;
+  }
+
+  final Vector2 center;
+  final Rect boardRect;
+  final Color color;
+  final double maxRadius;
+  final double duration;
+
+  double _elapsed = 0;
+  bool get isFinished => _elapsed >= duration;
+
+  final Paint _paint = Paint()
+    ..style = PaintingStyle.stroke
+    ..isAntiAlias = true;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _elapsed += dt;
+    if (_elapsed >= duration) {
+      removeFromParent();
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    final double t = (_elapsed / duration).clamp(0.0, 1.0);
+    final double progress = 1.0 - math.pow(1.0 - t, 2.0).toDouble();
+    final double radius = progress * maxRadius;
+    final double opacity = (1.0 - t).clamp(0.0, 1.0);
+    final double strokeWidth = (3.5 * (1.0 - t)).clamp(0.5, 3.5);
+
+    _paint.strokeWidth = strokeWidth;
+    _paint.color = color.withValues(alpha: opacity * 0.7);
+
+    canvas.save();
+    canvas.clipRect(boardRect, doAntiAlias: false);
+    canvas.drawCircle(Offset(center.x, center.y), radius, _paint);
+    canvas.restore();
+  }
+}
+
+/// Geometric centroid calculator for cleared cells.
+Vector2 computeClearedCentroid({
+  required Iterable<BoardCell> cells,
+  required Vector2 boardOrigin,
+  required double cellSize,
+}) {
+  if (cells.isEmpty) {
+    return boardOrigin.clone();
+  }
+  double sumX = 0;
+  double sumY = 0;
+  for (final BoardCell c in cells) {
+    sumX += c.x;
+    sumY += c.y;
+  }
+  final double cx = boardOrigin.x + (((sumX / cells.length) + 0.5) * cellSize);
+  final double cy = boardOrigin.y + (((sumY / cells.length) + 0.5) * cellSize);
+  return Vector2(cx, cy);
 }
 
 /// Thin Flame layer that advances and draws the shared [BurstField] on top of
@@ -1775,5 +1978,31 @@ class _BurstLayer extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
     _field.render(canvas);
+  }
+}
+
+class _Step6BenchRunnerComponent extends Component {
+  _Step6BenchRunnerComponent(this.game);
+
+  final BlockPuzzleGame game;
+  final List<double> _eventTimers =
+      List<double>.generate(8, (int i) => (7 - i) * 0.1);
+  static const double _eventDuration = 0.8;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (!kDiagnosticsEnabled || !Step6Benchmark.benchActive.value) {
+      return;
+    }
+    for (int i = 0; i < 8; i++) {
+      _eventTimers[i] += dt;
+      if (_eventTimers[i] >= _eventDuration) {
+        _eventTimers[i] -= _eventDuration;
+        if (Step6Benchmark.effectsEnabled.value) {
+          game.triggerStep6BenchEvent(i);
+        }
+      }
+    }
   }
 }

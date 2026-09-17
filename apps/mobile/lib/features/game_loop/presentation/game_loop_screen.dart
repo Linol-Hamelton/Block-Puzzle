@@ -13,6 +13,11 @@ import '../../../ui/theme/app_theme.dart';
 import '../../../ui/widgets/game_over_overlay_card.dart';
 import '../../../ui/widgets/nebula_background.dart';
 import '../../../ui/widgets/onboarding_overlay_card.dart';
+import '../../../domain/gameplay/board_state.dart';
+import '../../diagnostics/diagnostics_screen.dart';
+import '../../diagnostics/frame_timing_recorder.dart';
+import '../../diagnostics/step1j_decomposition.dart';
+import '../../diagnostics/step6_benchmark.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -189,31 +194,198 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     });
   }
 
+  void _showStep1jSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext sheetContext) {
+        final FrameTimingRecorder? recorder =
+            sl.isRegistered<FrameTimingRecorder>()
+                ? sl<FrameTimingRecorder>()
+                : null;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ValueListenableBuilder<Step1jConfig>(
+                  valueListenable: Step1jDecomposition.activeConfig,
+                  builder: (BuildContext context, Step1jConfig cfg, Widget? _) {
+                    return Text(
+                      'Diagnostics: ${cfg.label}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    );
+                  },
+                ),
+                if (recorder != null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    'FPS: ${recorder.snapshot.windowFps.toStringAsFixed(1)} | '
+                    'Raster p50: ${recorder.snapshot.rasterP50Ms.toStringAsFixed(2)} ms | '
+                    'Build p50: ${recorder.snapshot.buildP50Ms.toStringAsFixed(2)} ms | '
+                    'Frames: ${recorder.snapshot.totalWindowFrames}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: Step1jConfig.values.map((Step1jConfig cfg) {
+                    return FilledButton.tonal(
+                      key: Key('btn_switch_${cfg.code}'),
+                      onPressed: () {
+                        Step1jDecomposition.activeConfig.value = cfg;
+                        recorder?.reset();
+                        Navigator.of(sheetContext).pop();
+                      },
+                      child: Text(cfg.code),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const Key('btn_seed_half_board'),
+                        icon: const Icon(Icons.grid_4x4, size: 16),
+                        label: const Text('Seed 26 Cells'),
+                        onPressed: () {
+                          _game.controller.debugSetBoardState(
+                            BoardState(
+                              size: 8,
+                              occupiedCells: Step6Benchmark.halfBoard26Cells,
+                            ),
+                          );
+                          recorder?.reset();
+                          Navigator.of(sheetContext).pop();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const Key('btn_reset_timing'),
+                        icon: const Icon(Icons.cleaning_services_outlined, size: 16),
+                        label: const Text('Reset Timing'),
+                        onPressed: () {
+                          recorder?.reset();
+                          Navigator.of(sheetContext).pop();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: Step6Benchmark.benchActive,
+                        builder: (BuildContext context, bool active, Widget? _) {
+                          return FilledButton.tonal(
+                            key: const Key('btn_toggle_step6_bench'),
+                            onPressed: () {
+                              final bool next = !active;
+                              if (next) {
+                                _game.controller.debugSetBoardState(
+                                  BoardState(
+                                    size: 8,
+                                    occupiedCells: Step6Benchmark.halfBoard26Cells,
+                                  ),
+                                );
+                              }
+                              Step6Benchmark.benchActive.value = next;
+                              recorder?.reset();
+                              Navigator.of(sheetContext).pop();
+                            },
+                            child: Text('Bench: ${active ? "STOP" : "RUN (8 ev)"}'),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: Step6Benchmark.effectsEnabled,
+                        builder: (BuildContext context, bool enabled, Widget? _) {
+                          return FilledButton.tonal(
+                            key: const Key('btn_toggle_step6_effects'),
+                            onPressed: () {
+                              Step6Benchmark.effectsEnabled.value = !enabled;
+                              recorder?.reset();
+                              Navigator.of(sheetContext).pop();
+                            },
+                            child: Text('Effects: ${enabled ? "ON" : "OFF"}'),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Classic Mode',
-          style: TextStyle(
-            color: Color(0xFFC5F2FF),
-            fontWeight: FontWeight.w400,
-            fontSize: 24,
-            letterSpacing: 0.3,
-            shadows: <Shadow>[
-              Shadow(
-                color: Color(0x7A53D5FF),
-                blurRadius: 16,
+    return ValueListenableBuilder<Step1jConfig>(
+      valueListenable: Step1jDecomposition.activeConfig,
+      builder: (BuildContext context, Step1jConfig _, Widget? __) {
+        return Scaffold(
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(kToolbarHeight),
+            child: Visibility(
+              visible: !Step1jDecomposition.hideB,
+              maintainSize: true,
+              maintainState: true,
+              maintainAnimation: true,
+              maintainSemantics: true,
+              child: AppBar(
+                title: GestureDetector(
+                  onTap: kDiagnosticsEnabled ? _showStep1jSheet : null,
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: Step6Benchmark.benchActive,
+                    builder: (BuildContext context, bool benchActive, Widget? _) {
+                      return ValueListenableBuilder<bool>(
+                        valueListenable: Step6Benchmark.effectsEnabled,
+                        builder: (BuildContext context, bool effectsEnabled, Widget? _) {
+                          final String titleText = benchActive
+                              ? 'Classic (Bench: ${effectsEnabled ? "FX ON" : "FX OFF"})'
+                              : 'Classic Mode';
+                          return Text(
+                            titleText,
+                            style: const TextStyle(
+                              color: Color(0xFFC5F2FF),
+                              fontWeight: FontWeight.w400,
+                              fontSize: 20,
+                              letterSpacing: 0.3,
+                              shadows: <Shadow>[
+                                Shadow(
+                                  color: Color(0x7A53D5FF),
+                                  blurRadius: 16,
+                                ),
+                                Shadow(
+                                  color: Color(0x6640B9FF),
+                                  blurRadius: 30,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
               ),
-              Shadow(
-                color: Color(0x6640B9FF),
-                blurRadius: 30,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-      body: ValueListenableBuilder<GameLoopViewState>(
+          body: ValueListenableBuilder<GameLoopViewState>(
         valueListenable: _controller.stateListenable,
         builder:
             (BuildContext context, GameLoopViewState state, Widget? child) {
@@ -252,17 +424,21 @@ class _GameLoopScreenState extends State<GameLoopScreen>
                           padding: EdgeInsets.symmetric(
                             horizontal: layout.surfaceHorizontalPadding,
                           ),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: GameWidget(
-                                game: _game,
-                              ),
-                            ),
-                          ),
+                          child: Step1jDecomposition.hideC
+                              ? GameWidget(
+                                  game: _game,
+                                )
+                              : DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: GameWidget(
+                                      game: _game,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -280,10 +456,17 @@ class _GameLoopScreenState extends State<GameLoopScreen>
                           constraints: BoxConstraints(
                             maxWidth: layout.surfaceMaxWidth,
                           ),
-                          child: _HudPanel(
-                            state: state,
-                            uiScale: layout.uiScale,
-                            compact: layout.compactHud,
+                          child: Visibility(
+                            visible: !Step1jDecomposition.hideB,
+                            maintainSize: true,
+                            maintainState: true,
+                            maintainAnimation: true,
+                            maintainSemantics: true,
+                            child: _HudPanel(
+                              state: state,
+                              uiScale: layout.uiScale,
+                              compact: layout.compactHud,
+                            ),
                           ),
                         ),
                       ),
@@ -304,8 +487,15 @@ class _GameLoopScreenState extends State<GameLoopScreen>
                           ),
                           child: Align(
                             alignment: Alignment.topRight,
-                            child: _ComboStackOverlay(
-                              entries: _comboToasts,
+                            child: Visibility(
+                              visible: !Step1jDecomposition.hideB,
+                              maintainSize: true,
+                              maintainState: true,
+                              maintainAnimation: true,
+                              maintainSemantics: true,
+                              child: _ComboStackOverlay(
+                                entries: _comboToasts,
+                              ),
                             ),
                           ),
                         ),
@@ -428,7 +618,9 @@ class _GameLoopScreenState extends State<GameLoopScreen>
         },
       ),
     );
-  }
+  },
+);
+}
 
   Future<void> _onRevivePressed() async {
     final RewardedReviveResult result = await _controller.useRewardedRevive();

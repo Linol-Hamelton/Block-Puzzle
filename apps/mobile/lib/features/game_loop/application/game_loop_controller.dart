@@ -1249,6 +1249,13 @@ class GameLoopController {
     );
   }
 
+  void debugSetBoardState(BoardState boardState) {
+    if (!kDebugMode && !const bool.fromEnvironment('ENABLE_DIAGNOSTICS', defaultValue: false)) {
+      return;
+    }
+    _stateNotifier.value = state.copyWith(boardState: boardState);
+  }
+
   void dispose() {
     unawaited(
       _trackSessionEnd().whenComplete(analyticsTracker.close),

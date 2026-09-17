@@ -1,7 +1,11 @@
 import 'dart:math';
 
+import '../gameplay/basic_move_validator.dart';
 import '../gameplay/board_state.dart';
+import '../gameplay/move.dart';
+import '../gameplay/move_validator.dart';
 import '../gameplay/piece.dart';
+import '../gameplay/validation_result.dart';
 import 'difficulty_profile.dart';
 import 'piece_generation_service.dart';
 import 'piece_triplet.dart';
@@ -9,10 +13,15 @@ import 'piece_triplet.dart';
 class BasicPieceGenerationService implements PieceGenerationService {
   BasicPieceGenerationService({
     Random? random,
-  }) : _random = random ?? Random();
+    MoveValidator? moveValidator,
+  })  : _random = random ?? Random(),
+        _moveValidator = moveValidator ?? const BasicMoveValidator();
 
   Random _random;
+  final MoveValidator _moveValidator;
   int _idSequence = 0;
+
+  static const int maxFairAttempts = 10;
 
   @override
   void setSeed(int? seed) {
@@ -195,6 +204,59 @@ class BasicPieceGenerationService implements PieceGenerationService {
     final List<Piece> result = <Piece>[];
     int hardUsed = 0;
 
+    // Piece 0 (First piece): Fair Bag guarantee.
+    // The first piece of a dealt triplet is guaranteed mathematically placeable
+    // against the current board at deal time.
+    final bool firstPickHard = runtimeBalance.maxHardPiecesPerTriplet > 0 &&
+        _random.nextDouble() < runtimeBalance.hardPieceWeight;
+    _PieceTemplate firstTemplate = _pickTemplate(
+      hard: firstPickHard,
+    );
+
+    if (!_canPlaceTemplate(boardState, firstTemplate)) {
+      bool foundPlaceable = false;
+      for (int attempt = 0; attempt < maxFairAttempts; attempt++) {
+        final _PieceTemplate candidate = _pickTemplate(
+          hard: false,
+        );
+        if (_canPlaceTemplate(boardState, candidate)) {
+          firstTemplate = candidate;
+          foundPlaceable = true;
+          break;
+        }
+      }
+
+      // Deterministic fallback if random retry budget is exhausted:
+      // Walk through easy templates in fixed deterministic order.
+      if (!foundPlaceable) {
+        for (final _PieceTemplate fallback in _easyTemplates) {
+          if (_canPlaceTemplate(boardState, fallback)) {
+            firstTemplate = fallback;
+            foundPlaceable = true;
+            break;
+          }
+        }
+      }
+
+      // If even deterministic fallback cannot place any piece (e.g. board 100% full),
+      // keep the fallback piece ('dot') so the deal safely terminates.
+      if (!foundPlaceable) {
+        firstTemplate = _easyTemplates.first;
+      }
+    }
+
+    if (firstTemplate.isHard) {
+      hardUsed += 1;
+    }
+    result.add(
+      Piece(
+        id: '${firstTemplate.key}_${_idSequence++}',
+        cells: firstTemplate.cells,
+      ),
+    );
+
+    // Pieces 1 and 2: Standard deal.
+    // Placing the first piece may make pieces 2 and 3 unplaceable, and that is fair.
     while (result.length < 3) {
       final bool hardCandidateAllowed =
           hardUsed < runtimeBalance.maxHardPiecesPerTriplet;
@@ -217,6 +279,22 @@ class BasicPieceGenerationService implements PieceGenerationService {
     }
 
     return PieceTriplet(pieces: result);
+  }
+
+  bool _canPlaceTemplate(BoardState boardState, _PieceTemplate template) {
+    final Piece testPiece = Piece(id: 'probe', cells: template.cells);
+    for (int y = 0; y < boardState.size; y++) {
+      for (int x = 0; x < boardState.size; x++) {
+        final ValidationResult result = _moveValidator.validate(
+          boardState: boardState,
+          move: Move(piece: testPiece, anchorX: x, anchorY: y),
+        );
+        if (result.isValid) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   _RuntimeBalance _resolveRuntimeBalance({
