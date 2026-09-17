@@ -15,6 +15,7 @@ import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
 import '../../../ui/effects/burst_field.dart';
+import '../../../ui/effects/effect_timing.dart';
 import '../../../ui/effects/glass_board.dart';
 import '../../diagnostics/diagnostics_screen.dart';
 import '../../diagnostics/step1j_decomposition.dart';
@@ -738,6 +739,19 @@ class BlockPuzzleGame extends FlameGame {
     );
   }
 
+  /// Drops the board's cached GPU surfaces so the next frame rebuilds them.
+  ///
+  /// Called when the app returns to the foreground: the render surface may
+  /// have been torn down while it was away, and a `toImageSync` image lives on
+  /// the GPU. Drawing one that did not survive is a native crash, which no
+  /// error handler in this app can catch, so the cache is rebuilt instead.
+  void dropCachedSurfaces() {
+    _boardComponent.dropCachedSurfaces();
+    for (final RackPieceComponent component in _rackComponents) {
+      component.dropCachedSurfaces();
+    }
+  }
+
   void triggerStep6BenchEvent(int index) {
     if (!kDiagnosticsEnabled || !Step6Benchmark.effectsEnabled.value) {
       return;
@@ -1088,11 +1102,24 @@ class BoardComponent extends PositionComponent {
 
   @override
   void onRemove() {
-    _boardWellImage?.dispose();
-    _boardWellImage = null;
-    _cachedPiecesImage?.dispose();
-    _cachedPiecesImage = null;
+    dropCachedSurfaces();
     super.onRemove();
+  }
+
+  /// Releases every GPU-resident surface this component caches.
+  ///
+  /// `toImageSync` hands back an image that lives on the GPU, and a surface
+  /// can be torn down and rebuilt underneath us - backgrounding the app is the
+  /// common way. Dropping the caches costs one re-rasterisation and removes
+  /// the question of whether an image outlived its context.
+  void dropCachedSurfaces() {
+    final ui.Image? staleWell = _boardWellImage;
+    _boardWellImage = null;
+    staleWell?.dispose();
+
+    final ui.Image? stalePieces = _cachedPiecesImage;
+    _cachedPiecesImage = null;
+    stalePieces?.dispose();
   }
 
   void setPreview({
@@ -1201,7 +1228,13 @@ class BoardComponent extends PositionComponent {
         _boardWellBgColor != _boardBackgroundColor ||
         _boardWellOccupiedColor != _occupiedColor ||
         _boardWellGridSize != _boardState.size) {
-      _boardWellImage?.dispose();
+      // Clear the field before disposing, never after. If the rasterisation
+      // below throws, whatever is left in the field is drawn on the next
+      // frame, and drawing a disposed ui.Image is a native crash, not a Dart
+      // exception: the zone guard never sees it and the app simply closes.
+      final ui.Image? staleWell = _boardWellImage;
+      _boardWellImage = null;
+      staleWell?.dispose();
       _boardWellImage = rasterizeBoardWell(
         width: size.x,
         height: size.y,
@@ -1221,12 +1254,15 @@ class BoardComponent extends PositionComponent {
       _boardWellGridSize = _boardState.size;
     }
 
-    drawBoardWellImage(
-      canvas,
-      _boardWellImage!,
-      width: size.x,
-      height: size.y,
-    );
+    final ui.Image? wellImage = _boardWellImage;
+    if (wellImage != null) {
+      drawBoardWellImage(
+        canvas,
+        wellImage,
+        width: size.x,
+        height: size.y,
+      );
+    }
 
     if (_cachedPiecesImage == null ||
         _cachedPiecesSize != size ||
@@ -1285,7 +1321,9 @@ class BoardComponent extends PositionComponent {
         );
       }
       final ui.Picture picture = recorder.endRecording();
-      _cachedPiecesImage?.dispose();
+      final ui.Image? stalePieces = _cachedPiecesImage;
+      _cachedPiecesImage = null;
+      stalePieces?.dispose();
       _cachedPiecesImage = picture.toImageSync(
         math.max(1, (size.x * ratio).ceil()),
         math.max(1, (size.y * ratio).ceil()),
@@ -1492,12 +1530,30 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   }) {
     _baseColor = baseColor;
     _dragColor = dragColor;
-    _cachedPicture = null;
+    dropCachedSurfaces();
   }
 
   void updateVisualPreset(BlockVisualPreset preset) {
     _visualPreset = preset;
+    dropCachedSurfaces();
+  }
+
+  /// Disposes the recorded piece and clears the field.
+  ///
+  /// A `Picture` holds native memory that the garbage collector does not
+  /// account for, so dropping the reference without disposing leaks it. This
+  /// used to happen on every palette change, every preset change and every
+  /// drag, because dragging re-records the piece in its drag colour.
+  void dropCachedSurfaces() {
+    final Picture? stale = _cachedPicture;
     _cachedPicture = null;
+    stale?.dispose();
+  }
+
+  @override
+  void onRemove() {
+    dropCachedSurfaces();
+    super.onRemove();
   }
 
   @override
@@ -1516,6 +1572,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     
     final bool isDragging = _dragging;
     if (_cachedPicture == null || _cachedIsDragging != isDragging) {
+      dropCachedSurfaces();
       _cachedIsDragging = isDragging;
       final PictureRecorder recorder = PictureRecorder();
       final Canvas cacheCanvas = Canvas(recorder);
@@ -1548,7 +1605,8 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     }
 
     final double scale = lerpDouble(1, 1.035, _dragVisualProgress) ?? 1;
-    if (!Step1jDecomposition.hideE) {
+    final Picture? piecePicture = _cachedPicture;
+    if (!Step1jDecomposition.hideE && piecePicture != null) {
       if ((scale - 1).abs() > 0.0001) {
         canvas.save();
         final double cx = size.x * 0.5;
@@ -1556,10 +1614,10 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
         canvas.translate(cx, cy);
         canvas.scale(scale, scale);
         canvas.translate(-cx, -cy);
-        canvas.drawPicture(_cachedPicture!);
+        canvas.drawPicture(piecePicture);
         canvas.restore();
       } else {
-        canvas.drawPicture(_cachedPicture!);
+        canvas.drawPicture(piecePicture);
       }
     }
   }
@@ -1750,7 +1808,7 @@ class LineClearFlashComponent extends PositionComponent {
   final Vector2 boardOrigin;
   final Vector2 boardSize;
   final int strength;
-  static const double _duration = 0.32;
+  static const double _duration = 0.32 * kEffectTimeScale;
   double _elapsed = 0;
 
   @override
@@ -1794,7 +1852,7 @@ class ComboPulseComponent extends PositionComponent {
 
   final String text;
   final Vector2 startPosition;
-  static const double _duration = 0.75;
+  static const double _duration = 0.75 * kEffectTimeScale;
   double _elapsed = 0;
 
   @override
@@ -1837,7 +1895,7 @@ class ScorePopComponent extends PositionComponent {
   ScorePopComponent({
     required this.text,
     required this.startPosition,
-    this.duration = 0.8,
+    this.duration = 0.8 * kEffectTimeScale,
   }) {
     priority = 212;
     _painter = TextPainter(
@@ -1893,7 +1951,7 @@ class ShockwaveRingComponent extends Component {
     required this.boardRect,
     Color? color,
     this.maxRadius = 140.0,
-    this.duration = 0.8,
+    this.duration = 0.8 * kEffectTimeScale,
   }) : color = color ?? const Color(0xFF64D2FF) {
     priority = 210;
   }

@@ -80,6 +80,11 @@ class _Match3ScreenState extends State<Match3Screen>
     }
     switch (state) {
       case AppLifecycleState.resumed:
+        // The render surface may have been torn down while we were away, and
+        // the cached ui.Image lives on the GPU. Rebuild it rather than bet on
+        // it: one rasterisation against an app that closes without a catchable
+        // exception.
+        _game.dropCachedSurfaces();
         _game.resumeEngine();
         unawaited(_sfx.onAppResumed());
         unawaited(_music.resume());

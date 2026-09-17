@@ -72,9 +72,20 @@ class TetrisFlameGame extends FlameGame {
 
   @override
   void onRemove() {
-    _bgImage?.dispose();
-    _bgImage = null;
+    if (identical(controller.onVisualEvent, _onVisualEvent)) {
+      controller.onVisualEvent = null;
+    }
+    dropCachedSurfaces();
     super.onRemove();
+  }
+
+  /// Releases every GPU-resident surface this game caches. See the twin in
+  /// Classic's `BoardComponent`: `toImageSync` images live on the GPU and are
+  /// not guaranteed to survive their surface being rebuilt.
+  void dropCachedSurfaces() {
+    final ui.Image? staleBg = _bgImage;
+    _bgImage = null;
+    staleBg?.dispose();
   }
 
   void _onVisualEvent(TetrisEvent event) {
@@ -463,7 +474,12 @@ class TetrisFlameGame extends FlameGame {
         _bgCols != cols ||
         _bgRows != rows ||
         _bgRatio != ratio) {
-      _bgImage?.dispose();
+      // Cleared before disposal, never after: a disposed ui.Image left in the
+      // field is drawn on the next frame, and that is a native crash the zone
+      // guard cannot catch.
+      final ui.Image? staleBg = _bgImage;
+      _bgImage = null;
+      staleBg?.dispose();
       _bgImage = rasterizeBoardWell(
         width: boardW,
         height: boardH,
@@ -484,11 +500,15 @@ class TetrisFlameGame extends FlameGame {
       _bgRows = rows;
       _bgRatio = ratio;
     }
+    final ui.Image? bgImage = _bgImage;
+    if (bgImage == null) {
+      return;
+    }
     canvas.save();
     canvas.translate(ox, oy);
     drawBoardWellImage(
       canvas,
-      _bgImage!,
+      bgImage,
       width: boardW,
       height: boardH,
     );

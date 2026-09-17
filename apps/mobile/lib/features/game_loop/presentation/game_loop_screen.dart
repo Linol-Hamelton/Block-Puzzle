@@ -93,6 +93,10 @@ class _GameLoopScreenState extends State<GameLoopScreen>
 
     switch (state) {
       case AppLifecycleState.resumed:
+        // The render surface may have been rebuilt while the app was away and
+        // the cached board images live on the GPU. Rebuilding them costs one
+        // rasterisation; drawing one that did not survive closes the app.
+        _game.dropCachedSurfaces();
         _controller.resumeGame();
         _game.resumeEngine();
         unawaited(_sfxPlayer.onAppResumed());

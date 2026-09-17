@@ -76,6 +76,9 @@ class _TetrisScreenState extends State<TetrisScreen>
     }
     switch (state) {
       case AppLifecycleState.resumed:
+        // See the twin in Match-3: a cached GPU image is not guaranteed to
+        // survive the render surface being rebuilt while the app was away.
+        _game.dropCachedSurfaces();
         _game.resumeEngine();
         unawaited(_sfx.onAppResumed());
         unawaited(_music.resume());

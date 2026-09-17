@@ -9,6 +9,7 @@ import '../../../domain/match3/match3_engine.dart';
 import '../../../domain/match3/tile.dart';
 import '../../../domain/match3/tile_grid.dart';
 import '../../../ui/effects/burst_field.dart';
+import '../../../ui/effects/effect_timing.dart';
 import '../../../ui/effects/glass_board.dart';
 import '../application/match3_controller.dart';
 
@@ -45,8 +46,10 @@ class Match3FlameGame extends FlameGame {
   double _shake = 0;
   String? _pulseText;
   double _pulseElapsed = 0;
+  static const double _pulseLife = 1.0 * kEffectTimeScale;
   String? _scorePopText;
   double _scorePopElapsed = 0;
+  static const double _scorePopLife = 0.9 * kEffectTimeScale;
   double _clock = 0;
   int _lastScore = 0;
   int _chargeSerial = -1;
@@ -92,11 +95,31 @@ class Match3FlameGame extends FlameGame {
 
   @override
   void onRemove() {
-    _boardWellImage?.dispose();
-    _boardWellImage = null;
-    _staticGemsPicture?.dispose();
-    _staticGemsPicture = null;
+    // onLoad made this game the controller's visual listener. The controller
+    // outlives the game, so leaving the reference in place points a live
+    // controller at a removed game holding disposed surfaces.
+    if (identical(controller.onVisualEvent, _onVisualEvent)) {
+      controller.onVisualEvent = null;
+    }
+    dropCachedSurfaces();
     super.onRemove();
+  }
+
+  /// Releases every GPU-resident surface this game caches.
+  ///
+  /// `toImageSync` hands back an image that lives on the GPU. A surface can be
+  /// torn down and rebuilt underneath us - backgrounding the app is the common
+  /// way - and an image from the old one is not guaranteed to survive it.
+  /// Dropping the caches costs one re-rasterisation and removes the question.
+  void dropCachedSurfaces() {
+    final ui.Image? staleWell = _boardWellImage;
+    _boardWellImage = null;
+    staleWell?.dispose();
+
+    final ui.Picture? staleGems = _staticGemsPicture;
+    _staticGemsPicture = null;
+    staleGems?.dispose();
+    _cachedGemsGrid = null;
   }
 
   /// Maps a local pixel offset (within the GameWidget) to a cell, or null.
@@ -237,20 +260,20 @@ class Match3FlameGame extends FlameGame {
     super.update(dt);
     _clock += dt;
     if (_flash > 0) {
-      _flash = math.max(0, _flash - (dt * 2.6));
+      _flash = math.max(0, _flash - (dt * 2.6 / kEffectTimeScale));
     }
     if (_shake > 0) {
-      _shake = math.max(0, _shake - (dt * 3.4));
+      _shake = math.max(0, _shake - (dt * 3.4 / kEffectTimeScale));
     }
     if (_pulseText != null) {
       _pulseElapsed += dt;
-      if (_pulseElapsed > 1.0) {
+      if (_pulseElapsed > _pulseLife) {
         _pulseText = null;
       }
     }
     if (_scorePopText != null) {
       _scorePopElapsed += dt;
-      if (_scorePopElapsed > 0.9) {
+      if (_scorePopElapsed > _scorePopLife) {
         _scorePopText = null;
       }
     }
@@ -382,7 +405,12 @@ class Match3FlameGame extends FlameGame {
         _boardWellCols != _cols ||
         _boardWellRows != _rows ||
         _boardWellRatio != ratio) {
-      _boardWellImage?.dispose();
+      // Cleared before disposal, never after. Drawing a disposed ui.Image is a
+      // native crash: the zone guard, FlutterError.onError and
+      // PlatformDispatcher.onError all miss it and the app closes outright.
+      final ui.Image? staleWell = _boardWellImage;
+      _boardWellImage = null;
+      staleWell?.dispose();
       _boardWellImage = rasterizeBoardWell(
         width: boardW,
         height: boardH,
@@ -396,11 +424,15 @@ class Match3FlameGame extends FlameGame {
       _boardWellRows = _rows;
       _boardWellRatio = ratio;
     }
+    final ui.Image? wellImage = _boardWellImage;
+    if (wellImage == null) {
+      return;
+    }
     canvas.save();
     canvas.translate(ox, oy);
     drawBoardWellImage(
       canvas,
-      _boardWellImage!,
+      wellImage,
       width: boardW,
       height: boardH,
     );
@@ -459,7 +491,13 @@ class Match3FlameGame extends FlameGame {
     if (_canReuseGemsPicture(grid, igniting, cell, cols, rows)) {
       return;
     }
-    _staticGemsPicture?.dispose();
+    // Cleared before disposal, never after. There are forty lines of drawing
+    // between here and endRecording; if any of it throws, a disposed
+    // ui.Picture left in the field is replayed on the next frame, and that
+    // closes the app without a Dart exception anyone can catch.
+    final ui.Picture? staleGems = _staticGemsPicture;
+    _staticGemsPicture = null;
+    staleGems?.dispose();
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas recorderCanvas = Canvas(recorder);
 
@@ -769,7 +807,7 @@ class Match3FlameGame extends FlameGame {
     if (text == null) {
       return;
     }
-    final double t = (_scorePopElapsed / 0.9).clamp(0, 1).toDouble();
+    final double t = (_scorePopElapsed / _scorePopLife).clamp(0, 1).toDouble();
     final double opacity = (1 - t).clamp(0, 1).toDouble();
     final TextPainter painter = TextPainter(
       text: TextSpan(
@@ -805,7 +843,7 @@ class Match3FlameGame extends FlameGame {
     if (text == null) {
       return;
     }
-    final double t = (_pulseElapsed / 1.0).clamp(0, 1).toDouble();
+    final double t = (_pulseElapsed / _pulseLife).clamp(0, 1).toDouble();
     final double opacity = (1 - t).clamp(0, 1).toDouble();
     final TextPainter painter = TextPainter(
       text: TextSpan(
