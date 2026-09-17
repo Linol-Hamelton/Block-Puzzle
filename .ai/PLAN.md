@@ -22,8 +22,9 @@ docs/design/13_DEC0024_AUDIT_AND_STATE.md.** Read that before this file; it
 replaces reviews 05..12, which stay as history.
 
 - **Accepted:** 1, 1b-1j, 1j(b), 1b.5, 2, 4a, 4b, 5, 6. Audio 577,377 bytes.
-- **Open:** 1k (the unexplained floor), 3 and 4c (Claude), one missing unit
-  test, and whether DEC-0024 gets committed at all - nothing of it is in Git.
+- **Open:** 1k (the unexplained floor), 7 (the Match-3 crash, undiagnosed),
+  3 and 4c (Claude), and one missing unit test.
+- **Committed** on `dec-0024/av-polish`, eight commits, not pushed.
 - Classic runs at **26.1 ms raster / 38 fps** on a 120 Hz panel, half-filled.
 
 ## Approach
@@ -88,10 +89,13 @@ all inside the instrument's resolution, and fps went *up*, which no real cost
 does. The resolvable cost is on the UI thread: **+0.96 ms build**. Audit: doc 13
 section 5.
 
-**7. Composition rule:** one event, one hero effect. A clear now fires flash,
+**7. Composition rule:** one event, one hero effect. A clear fires flash,
 shockwave, score pop and burst, plus a combo pulse on a streak - four or five
-on one beat. No frame risk; an eyes-on call for the owner. Scope bounds:
-boosters rejected per DEC-0008; Tetris swipe controls deferred to v1.1.
+on one beat. The owner's call on device was that they run 3-5x too fast, so
+`kEffectTimeScale` now slows their clock by 3.5x. Slower effects overlap more,
+not less, so whether the beat reads as one moment is still an eyes-on
+question. Scope bounds: boosters rejected per DEC-0008; Tetris swipe controls
+deferred to v1.1.
 
 ## Who does what
 
@@ -132,11 +136,13 @@ question by assumption), and carrying on with 4-6 before the frame question
   been withdrawn - the chrome, and "the gems are free". The risk is a third.
   Mitigated by measuring inside one scene, by the additivity check, and by 1k
   carrying a falsification threshold that ends the hunt rather than extends it.
-- **Nothing of DEC-0024 is in Git.** Two days, ten steps, eight reviews, every
-  on-device measurement and 39 receipts live only in the working tree, on a
-  branch 28 commits ahead of origin. One `git clean -fd` ends it. It also means
-  no step can be isolated by diff, which both recent reviews had to work around.
-  Only the owner can authorise the commits that would mitigate this.
+- **A crash nobody has reproduced.** Match-3 closes on some combos and some
+  restarts. Crashlytics is silent, which points at a native crash rather than
+  a Dart exception, and five disposed-surface hazards were found and closed by
+  reading. That is a defence, not a diagnosis; step 7 asks for a logcat before
+  anyone calls it fixed.
+- **Effects are slower now, so they overlap more.** The frame cost is not the
+  risk - it is whether five effects stretched 3.5x still read as one beat.
 - **Effect collision.** Tetris clears (380ms, 680ms for a Tetris) and Match-3
   cascades (300/230ms with falloff) are already staged. Six effects on one beat
   is noise. Mitigated by step 7 and the one-number-per-step rule.

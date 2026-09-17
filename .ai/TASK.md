@@ -1,6 +1,6 @@
 # Current Task
 
-Status: In progress - DEC-0024 audited end to end; 1b.5 and 6 closed; 1k open
+Status: In progress - DEC-0024 on branch dec-0024/av-polish; 1k and 7 open
 Owner: RuslanFomenko
 Last update: 2026-09-17
 
@@ -35,6 +35,9 @@ gitignored, never shipped or committed.
 - [x] Step 1b.5: jank = max(build, raster); A/D pair on half board +0.34 ms.
 - [x] Step 6: shockwave + score pops; code accepted, effect under the 2 ms cap.
 - [ ] Step 1k: is the floor set by the Flame surface area? Pre-registered.
+- [ ] Step 7: reproduce the Match-3 crash with a logcat before judging it.
+- [x] Effects run 3.5x slower on a scaled clock; owner asked for 3-5x.
+- [x] Disposed-surface crash class closed across all five render caches.
 - [ ] Step 3: MusicPlaylistManager on two audioplayers, 1.2s crossfade, focus.
 - [ ] Step 4c: ducking as a multiplier over the crossfade envelope (Claude).
 - [ ] Unit test for the occupied-cells image cache (review 12, point 4.1).
@@ -61,14 +64,16 @@ smaller than that are not measurements.
 
 1. Play Console access and Blaze billing (Stage C); DEC-0018 progress-merge
    rules; DEC-0004 KPI formulas and sample sizes. All external, all unchanged.
-2. **Nothing of DEC-0024 is committed.** Last commit d5ae947 predates the whole
-   effort; 28 commits unpushed; reviews, tests, diagnostics and 39 receipt
-   screenshots are all untracked. One `git clean -fd` ends it. Owner decides.
-3. Do the 39 PNG receipts (~18 MB) belong in Git history, or elsewhere?
+2. DEC-0024 is committed on `dec-0024/av-polish`, eight commits, **not pushed**.
+   Split by area, not by step: step isolation was no longer recoverable.
+3. Do the 39 PNG receipts (~18 MB) belong in Git history, or elsewhere? They
+   are in the branch; nothing is pushed, so this is still reversible.
 4. Four soundtrack masters: assigned to Claude with step 3.
-5. Composition collision: a clear now fires flash + shockwave + score + burst,
-   and combo pulse on a streak. DEC-0024 point 7 says one hero effect per
-   event. No frame risk; an eyes-on call for the owner.
+5. Composition: the owner called the effects 3-5x too fast; they now run at
+   3.5x on a scaled clock (`kEffectTimeScale`). Slower effects overlap more,
+   so whether a clear still reads as one moment is an eyes-on call on device.
+6. The Match-3 crash is **not diagnosed**, only defended against. Step 7 asks
+   for a logcat before anyone judges it fixed.
 
 ---
 

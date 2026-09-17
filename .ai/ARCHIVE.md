@@ -1480,3 +1480,79 @@ entry, so no text was lost; this line records that the sessions existed.
 
 Four of them are tracked by Git and can be restored from `d5ae947` if the fact
 of the file itself ever matters; three were never committed.
+
+---
+
+### From .ai/worklog/claude-0789722ac9b82f43.md, archived 2026-09-17
+
+Moved to keep the journal inside its 150-line limit. Text unchanged.
+
+## 2026-09-16 - Review of step 1i, and criteria for step 1j
+
+Agent: claude-0789722ac9b82f43
+
+Action:
+- Reviewed Gemini's step 1i (`gemini-fb4abe3f81b4b68b`) against the criteria and
+  the prediction written before the step. Checked, did not redo: read the four
+  call sites, `rasterizeBoardWell`/`drawBoardWellImage`, the new tests, the
+  recorder, the benchmark stand and the Classic widget tree, then reconciled
+  1i's numbers against 1h's.
+- Wrote `docs/design/10_DEC0024_STEP1I_REVIEW.md`.
+- Appended step 1j criteria to `docs/design/04_DEC0024_ACCEPTANCE_CRITERIA.md`,
+  with predictions, an additivity check and three exit thresholds, all recorded
+  before the measurement (DEC-0025 point 4).
+- Updated `.ai/PLAN.md` and `.ai/TASK.md` under the lock. Touched no code.
+
+Result:
+- Step 1i accepted on its primary prediction: layer-4 delta +11.35 -> **-0.05 ms**
+  against a 2 ms bar. Code correct at all four sites; `toImageSync`, physical
+  pixel scale, disposal on resize and in `onRemove`; tests check the rule.
+- Three corrections to the record, all from 1i's own numbers:
+  1. "The gems are free" is withdrawn. Layer 5 was -0.01 ms in 1h and is
+     **+3.84 ms** raster (+4.3 ms build) in 1i. It measured as free only while
+     the well masked it. Classic's 25.52 ms was taken on an **empty** board, so
+     a real game is ~29 ms (~34 fps) by projection - stated as a projection.
+  2. The second, non-blocking prediction missed and was not named in the report:
+     Classic idle was to land under 22 ms and landed at 25.52 ms.
+  3. The chrome attribution is withdrawn. The rack is a Flame component inside
+     `GameWidget`, not chrome; and the estimate came from subtracting one
+     scene's p50 from another's, which drifted 12.70 -> 17.67 ms after a change
+     that touched neither scene's chrome.
+- Four `drawPicture` calls survive in the hot path - the same defect 1i proved:
+  `block_puzzle_game.dart:1231` (~30 blurred stars re-executed every frame on an
+  idle empty board), `:1482`, `:1485`, `match3_game.dart:309`. A fifth candidate
+  is the antialiased `ClipRRect` at `game_loop_screen.dart:261`. Prices unknown
+  and deliberately not guessed; 1j measures first.
+- Tool defects recorded: the jank threshold is derived correctly (8.33 ms at
+  120 Hz) but the report is labelled 16.7 ms, and the metric compares the
+  threshold against `build + raster` summed, which are pipelined stages - it
+  overstates. Percentages come from the 3600-frame ring while fps comes from the
+  whole window. Device chipset in the report is misattributed.
+- Checks run by me: `validate-protocol.ps1` exit 0, 0 warnings.
+  `test-protocol.ps1` is absent here and was not run - `protocol-manifest.json`
+  carries `role: installed`, and AGENTS.md section 7 keeps the regression suite
+  in the protocol source repository. I did not run the Flutter suite either; the
+  353/353 green result is Gemini's, recorded in their journal, and my own
+  changes are documents only.
+- `.ai/TASK.md` 79 lines, `.ai/PLAN.md` 200 lines - both at the limit.
+
+Next step:
+- Owner hands step 1j to Gemini. Criteria are in the repository, not in chat.
+- Step 3 (MusicPlaylistManager) is mine and blocked by nothing; 4c follows it.
+
+Open:
+- The additivity check in 1j can invalidate the whole decomposition. My own
+  predicted sum (3.5-11 ms) is below the observed 17.67 ms gap on purpose: if
+  the four candidates do not close it, a fifth term exists that nobody has named.
+- The jank metric fix is unassigned. It is a tool defect under DEC-0025 point 3,
+  not a 1j deliverable.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:475f3a981f31202864741f8f2a03e3a1f3b05263234a52140206519ddfe95829 over 515 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T20:39:35.060Z by claude-0789722ac9b82f43
+- entry: sha256:aab670e36b110e9fd12425b6fe5f75d0e8b39a93fa88ff0644e2fcf9f0a16387 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
