@@ -802,6 +802,241 @@ Approved by: RuslanFomenko
 
 ---
 
+### DEC-0023
+
+Status: Accepted
+Date: 2026-09-16
+
+Context:
+Physical device playtest (Redmi 2209116AG) and review of proposals (02) and
+audit (03) confirmed Stage A is closed, but audio immersion, sound juiciness,
+and gameplay UX need a final polish pass before release. Long uncompressed WAV
+audio is a release blocker due to Google Play AAB size limits (200 MB), while
+pure RNG piece generation in Classic frustrates retention.
+
+Decision:
+1. Music format: encode full-length soundtrack tracks in AAC-LC 128 kbps (.m4a).
+   Total audio asset footprint is bounded to <= 15 MB. Short SFX remain in WAV.
+2. Music playback: global continuous playlist (MusicPlaylistManager) surviving
+   screen navigation, with 1.2s equal-power crossfade between tracks.
+3. Sound design: 7 pre-rendered pentatonic combo WAVs (combo_01..07) with 2.5s
+   streak reset; hybrid placement thud (110 Hz body + 2-3 kHz click + haptics);
+   music ducking (-3 dB for 150 ms) under mega clear/Tetris.
+4. Visual juice: lightweight vector shockwave ring clipped to the board;
+   floating score numbers ascending from clear origin. Static nebula preserved
+   to protect 60 fps; no runtime fragment shaders.
+5. Classic mode fairness: Fair Bag Randomizer guarantees the first piece of a
+   new triplet is mathematically placeable on the current board; adaptive drag
+   anchor centers piece pickup.
+6. Scope bounds: boosters (Reroll/Hammer) stay rejected per DEC-0008; Tetris
+   swipe controls deferred to v1.1.
+
+Reasoning:
+Decisions chosen directly by owner RuslanFomenko after multi-agent trade-off
+analysis. AAC-LC keeps total build size well within Google Play limits while
+delivering high-fidelity Parkan-inspired ambient audio. Fair Bag prevents
+game-over RNG spikes that damage day-1 retention.
+
+Alternatives rejected:
+WAV music - exceeds AAB size limits (140-230 MB). Ogg Vorbis - lacks native iOS
+support. Per-screen music restarts - breaks atmospheric flow state. Fullscreen
+shader distortion & dynamic nebula repaints - risk dropping below 60 fps on
+low-end devices. Boosters - rejected to uphold DEC-0008 foundation rules.
+
+Consequences:
+Requires converting music masters to AAC-LC (.m4a). SFX audio budget stays
+strictly under 15 MB. Implementation proceeds in order: diagnostics timing
+counter, audio player refactor, pentatonic combo ladder, Fair Bag generator,
+vector shockwave ring, floating score popups.
+
+Approved by: RuslanFomenko
+
+---
+
+### DEC-0024
+
+Status: Accepted
+Date: 2026-09-16
+Supersedes: DEC-0023
+
+Context:
+DEC-0023 authorised the pre-release audio/visual polish. Reviewing it against
+the code turned up one item that would make the game worse if built as written,
+four engineering constraints the decision did not name and an implementer would
+hit on day one, and an open question about who executes it. The owner accepted
+all three corrections in session. DEC-0023 is restated here in full with those
+corrections, because a decision that is 95% right is still read as 100% binding
+and the log is only trustworthy when the newest block carries the whole truth.
+
+Decision:
+1. Music format: encode full-length soundtrack tracks in AAC-LC 128 kbps
+   (.m4a). Total audio asset footprint is bounded to <= 15 MB. Short SFX stay
+   uncompressed PCM WAV, converted to mono.
+2. Music playback: one global continuous playlist (MusicPlaylistManager)
+   surviving screen navigation, with a 1.2s equal-power crossfade between
+   tracks. A track changes when it ends or when the player changes it, never on
+   a screen transition.
+3. Sound design: 7 pre-rendered pentatonic combo WAVs (combo_01..07) with a
+   2.5s streak reset; hybrid placement thud (110 Hz body + 2-3 kHz click +
+   haptics); music ducking (-3 dB for 150 ms) under mega clear / Tetris.
+4. Visual juice: lightweight vector shockwave ring clipped to the board;
+   floating score numbers ascending from the clear origin. Static nebula
+   preserved to protect 60 fps; no runtime fragment shaders.
+5. Classic mode fairness and grip: Fair Bag Randomizer guarantees the first
+   piece of a new triplet is mathematically placeable on the current board.
+   **The drag anchor centres the piece horizontally on its own bounding box and
+   keeps the existing vertical lift** (`_touchDragLiftPixels = 50`). This
+   corrects DEC-0023, which said the anchor "centers piece pickup": centring in
+   both axes puts the piece under the thumb that is dragging it, and the lift
+   exists precisely so the piece stays visible. Horizontal centring is what
+   makes left/right placement predictable; the lift is what makes it visible.
+6. Scope bounds: boosters (Reroll/Hammer) stay rejected per DEC-0008; Tetris
+   swipe controls deferred to v1.1.
+7. Engineering constraints, binding on the implementation:
+   a. MusicPlaylistManager may not be built on `FlameAudio.bgm`, which is a
+      single Bgm instance and cannot cross-fade. It uses two `audioplayers`
+      players with independent volume, and `audioplayers` is declared
+      explicitly in pubspec rather than relied on transitively.
+   b. Volume has exactly one authority. The crossfade owns the envelope;
+      ducking is a multiplier applied on top of it, never a direct set. A duck
+      landing mid-crossfade must not be able to strand a track at a wrong
+      level.
+   c. Floating score numbers are one per cascade step, positioned at the
+      centroid of that step's cleared cells - not one per cleared cell. They
+      must not occupy the `_pulse` caption slot, which already owns the centre
+      of the board.
+   d. Music respects audio focus: a call or another app taking focus pauses
+      playback and resumes after, via `AudioContext`.
+8. Execution model. Gemini implements steps 1 and 2 (diagnostics frame timing,
+   audio format migration) as a calibration batch; Claude reviews. The
+   MusicPlaylistManager is written by Claude regardless of that outcome,
+   because its failure mode - leaked players, a stranded volume, a missing
+   dispose - does not fail tests, it fails on a player's phone. Claude writes
+   the acceptance criteria for each step **before** that step starts; the
+   implementer attaches a device frame measurement to each step. After the
+   calibration batch the owner decides whether the split continues for steps 3,
+   5 and 6.
+
+Reasoning:
+Chosen by owner RuslanFomenko after review. Point 5's correction is the only
+item in DEC-0023 that could regress the game: the vertical lift is not
+incidental spacing, it is what keeps the dragged piece out from under the
+finger. The four engineering constraints are all failure modes this repository
+has already been bitten by in another form - a single-instance API used as if
+it were re-entrant, two writers and no owner for a piece of state, an effect
+multiplied per cell instead of per event, and a lifecycle nobody released.
+Naming them in the decision costs nothing and saves the implementer from
+building the music manager twice. The execution split is a cost decision with a
+measurement attached rather than an assumption: review is cheaper than
+co-writing only while the work arrives mostly correct, so the cheapest and most
+objectively checkable steps run first and the defect rate they produce decides
+the rest.
+
+Alternatives rejected:
+Editing DEC-0023 in place - forbidden; the log is trustworthy because nothing
+in it is rewritten. Amending point 5 without Supersedes - leaves a reader of
+DEC-0023 with wording that regresses the game and no pointer to the correction.
+Centring the drag anchor in both axes - puts the piece under the thumb.
+Compressing SFX to AAC - adds decode latency to one-shots, where latency
+matters more than size. Handing the whole plan to one implementer without a
+checkpoint - decides a cost question by assumption instead of by measurement.
+
+Consequences:
+DEC-0023 is history; this block is the one to read. The drag anchor work is
+horizontal-only and must not touch `_touchDragLiftPixels`. `audioplayers`
+becomes a declared dependency. Acceptance criteria are a deliverable that
+precedes each step, not a report after it. The owner re-decides the split after
+steps 1 and 2.
+
+Approved by: RuslanFomenko
+
+---
+
+### DEC-0025
+
+Status: Accepted
+Date: 2026-09-16
+
+Context:
+DEC-0024 point 8 left one question open on purpose: whether the
+implementer/reviewer split continues past the calibration batch, to be decided
+on evidence rather than on assumption. Gemini delivered steps 1 and 2; Claude
+reviewed them (docs/design/05_DEC0024_STEP12_REVIEW.md). The evidence is
+specific enough to answer the question and to change one thing about how the
+split works.
+
+What the batch showed: the code was right and the measurement was not. The
+recorder reads the correct fields, computes percentiles correctly, gates itself
+off at compile time, and ships with tests; step 2 was correct in every
+particular. What failed was judgement - a baseline whose own numbers contradict
+each other by 3.9x, a jank threshold hardcoded to 60 Hz on a 120 Hz device, and
+a conclusion ("Classic holds a confident 60 fps") stated far more firmly than
+the data allowed. Those are exactly the defects a reviewer catches cheaply: one
+arithmetic check found all of them.
+
+Decision:
+1. The split continues. Gemini implements; Claude reviews against criteria
+   written before the step.
+2. **Producing and concluding are separated.** The implementer builds, measures
+   and reports raw numbers with the method and the measurement window. The
+   implementer does not write the verdict. The reviewer draws the conclusion.
+   The acceptance criteria are reworded to ask for numbers rather than for an
+   interpretation, because the previous wording invited one.
+3. **A defect class caught twice is fixed in the tool, not in the checklist.**
+   The frame panel prints frames-per-second over the measured window, so a
+   self-contradictory measurement is visible to whoever takes it rather than
+   only to whoever reviews it.
+4. **Experiments are pre-registered.** Where a measurement tests a stated
+   hypothesis, the prediction and the falsification threshold are written down
+   before the measurement is taken. This applies immediately to the
+   RepaintBoundary experiment, which tests Claude's hypothesis about Claude's
+   own change.
+5. Assignment for the remaining work:
+   - Instrument corrections and the remeasure: Gemini.
+   - RepaintBoundary experiment: Gemini, pre-registered.
+   - Step 5 (Fair Bag, horizontal drag anchor): Gemini.
+   - Step 6 (shockwave, score numbers): Gemini, but not started until the frame
+     budget question is answered.
+   - Step 3 (MusicPlaylistManager): Claude, in parallel, blocked by nothing.
+   - Step 4: split - the seven samples and the ladder to Gemini; ducking as a
+     multiplier over the crossfade envelope goes with whoever owns the music
+     layer, which is Claude.
+6. **Per step, the review records whether it checked or redid.** Checking is
+   cheap and the split pays; redoing is not and it does not. If redoing becomes
+   the pattern, the arrangement is moving work to the more expensive place
+   rather than saving it, and the owner revisits this block.
+
+Reasoning:
+Decided by owner RuslanFomenko on the calibration evidence. The split is worth
+keeping because the defects arrived in the shape review handles best - judgement
+under uncertainty, not Dart. It is worth adjusting because the reviewer produced
+more of step 1's value than the implementer did, and an arrangement where that
+repeats is not a saving. Separating production from conclusion removes the
+observed failure directly and costs neither side anything. Ordering step 6
+behind the frame-budget answer follows from the same logic that put measurement
+first in DEC-0024: decorating a game that renders at 26 fps on a 120 Hz panel
+spends a budget that does not exist.
+
+Alternatives rejected:
+Handing everything to one implementer - discards the evidence that review is
+catching real defects cheaply. Handing everything to the reviewer - discards the
+cost saving the split exists for, on one batch of evidence where the
+implementation itself was sound. Keeping the criteria as written - they asked
+for a baseline in the journal, which invited the interpretation that went wrong.
+Leaving the jank threshold to reviewer vigilance - the same class would recur.
+
+Consequences:
+docs/design/04_DEC0024_ACCEPTANCE_CRITERIA.md is rewritten to ask for raw
+numbers and to carry criteria for the instrument corrections, the remeasure, the
+pre-registered experiment and step 5. The frame panel gains a window timer and a
+refresh-rate-derived threshold. Every later step carries a measurement taken
+with the corrected instrument. Step 1 is not closed: its instrument is accepted,
+its baseline is not.
+
+Approved by: RuslanFomenko
+
+---
+
 ## Template for new decisions
 
 ### DEC-nnnn
