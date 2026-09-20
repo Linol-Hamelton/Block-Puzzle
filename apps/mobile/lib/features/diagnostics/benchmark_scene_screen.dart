@@ -69,8 +69,12 @@ class _BenchmarkSceneScreenState extends State<BenchmarkSceneScreen>
 
   @override
   Widget build(BuildContext context) {
+    final Size screenSize = MediaQuery.sizeOf(context);
+    final double classicWidth = screenSize.width - 28.0;
+    final double classicHeight = screenSize.height;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1222),
+      backgroundColor: const Color(0xFF070B14),
       appBar: AppBar(
         title: Text('Benchmark: ${_layerTitle(_layer)}'),
         backgroundColor: Colors.transparent,
@@ -82,25 +86,25 @@ class _BenchmarkSceneScreenState extends State<BenchmarkSceneScreen>
           if (_layer != BenchmarkLayer.control)
             const Positioned.fill(child: NebulaBackground()),
 
-          // Layer 3+: Empty GameWidget
+          // Layer 3+: Empty GameWidget (full Classic canvas size for 1k.1)
           if (_layer == BenchmarkLayer.withGameWidget)
             Positioned.fill(
               child: Center(
                 child: SizedBox(
-                  width: 360,
-                  height: 360,
+                  width: classicWidth,
+                  height: classicHeight,
                   child: GameWidget(game: _EmptyBenchmarkGame()),
                 ),
               ),
             ),
 
-          // Layer 4+: GameWidget with Board Well
+          // Layer 4+: GameWidget with Board Well (full Classic canvas size for 1k.1)
           if (_layer == BenchmarkLayer.withBoardWell)
             Positioned.fill(
               child: Center(
                 child: SizedBox(
-                  width: 360,
-                  height: 360,
+                  width: classicWidth,
+                  height: classicHeight,
                   child: GameWidget(game: _WellBenchmarkGame()),
                 ),
               ),
@@ -111,8 +115,8 @@ class _BenchmarkSceneScreenState extends State<BenchmarkSceneScreen>
             Positioned.fill(
               child: Center(
                 child: SizedBox(
-                  width: 360,
-                  height: 360,
+                  width: classicWidth,
+                  height: classicHeight,
                   child: GameWidget(game: _StonesBenchmarkGame()),
                 ),
               ),
@@ -183,6 +187,16 @@ class _WellComponent extends PositionComponent {
   Vector2 _lastSize = Vector2.zero();
 
   @override
+  void onGameResize(Vector2 gameSize) {
+    super.onGameResize(gameSize);
+    size = Vector2(360, 360);
+    position = Vector2(
+      (gameSize.x - 360) / 2,
+      (gameSize.y - 360) / 2,
+    );
+  }
+
+  @override
   void onMount() {
     super.onMount();
     size = Vector2(360, 360);
@@ -236,6 +250,16 @@ class _StonesComponent extends PositionComponent {
   ui.Image? _wellImage;
   double _ratio = 0;
   Vector2 _lastSize = Vector2.zero();
+
+  @override
+  void onGameResize(Vector2 gameSize) {
+    super.onGameResize(gameSize);
+    size = Vector2(360, 360);
+    position = Vector2(
+      (gameSize.x - 360) / 2,
+      (gameSize.y - 360) / 2,
+    );
+  }
 
   @override
   void onMount() {

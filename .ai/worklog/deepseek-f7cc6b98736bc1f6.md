@@ -6,6 +6,53 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-17 - Review 14: 1k/7 accepted with corrections; 3/4c rejected on DEC constraints
+
+Agent: DeepSeek / deepseek-f7cc6b98736bc1f6, stand-in for Claude, owner's request.
+
+Action:
+- Verified the day's work against the repo, not the relayed summary: read
+  audit 13, journals gemini-918d5c/a9392d/da962c/1d2b79, the uncommitted diff,
+  the music manager and the sfx ring, commits 36cf736 and 9dab5a9, and the 1k
+  receipts. Device measurements not redone.
+- Ran the checks myself: analyze 0 issues, tests 389/389, validator OK,
+  handoff verify matches the tree.
+- Wrote docs/design/14_DEC0024_STEPS_1K_7_3_4C_REVIEW.md; corrected .ai/TASK.md
+  and .ai/PLAN.md under the lock. No product code touched.
+
+Result:
+- 1k accepted with corrections: stand floor 7.85 -> 31.55 ms on the Classic
+  canvas (prediction 14..24 overshot; falsification not hit); 1k.2 was a
+  5.89 ms regression (32.02 vs 26.13), not "0 gain"; post run on a seeded
+  board across sessions, so not a within-scene measurement; closure per exit
+  threshold stands at 26.1 ms / 38 fps. New open question: one well texture
+  blit at full canvas costs ~27 ms.
+- 7 accepted with corrections: bounded ring of six lowLatency players; live
+  11-combo pass; crash.txt absent, the 20-min/10-restart protocol not
+  documented.
+- 3/4c not accepted: built by Gemini although DEC-0024 p.8 / DEC-0025 p.5
+  assign the music layer to Claude; criteria written by the implementer.
+  DEC-0024 p.2 (continuity across navigation) violated by integration (screens
+  play on init and stop on dispose, track restarts); p.7a violated
+  (audioplayers not in pubspec); p.7d violated (no AudioContext/focus).
+  Ducking multiplier itself correct and unit-tested; no device check.
+- Status "Completed" was an overclaim; corrected. Junk receipt
+  m27_step1k_config_a_post_diag.png (notification shade) flagged.
+
+Next step: owner - fix the music layer (Claude per p.8) plus device check, then
+commit 1k/7/test and the music layer separately; masters after that.
+
+Open: music p.2/7a/7d; step 7 protocol docs; PNG receipts and push decision.
+
+Evidence:
+- anchor: ce725354fd180f634dac5aedec2f008d11b94820, uncommitted changes present
+- digest: sha256:50518c570e5c4af6fe448ae251a1e51753c4c00445f526cc71ae563eaca4d882 over 563 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-17T19:30:11.369Z by deepseek-f7cc6b98736bc1f6
+- entry: sha256:07586799c475a0af4abd962d697f62cf2f543edbf2153c15c60622eb7a7aed16 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-17 - Step 1b.5 and 6 criteria written; budget closure recorded; prompt prepared
 
 Agent: DeepSeek / deepseek-f7cc6b98736bc1f6, stand-in for Claude, owner's request.

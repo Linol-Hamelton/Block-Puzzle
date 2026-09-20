@@ -1054,6 +1054,102 @@ void _drawGlassBlockCell(
   canvas.drawCircle(center, rect.width * 0.2, orbPaint);
 }
 
+final Paint _occupiedPiecesBlitPaint = Paint()..filterQuality = FilterQuality.low;
+
+/// Rasterises occupied cells and background stars of a Classic board into a [ui.Image].
+///
+/// Follows the same pattern as [rasterizeBoardWell]:
+/// Paints in logical pixels on a canvas scaled by [devicePixelRatio], producing
+/// physical pixel dimensions [ceil(width * ratio)] x [ceil(height * ratio)].
+/// The caller owns the resulting [ui.Image] and is responsible for disposing it.
+ui.Image rasterizeOccupiedCellsImage({
+  required double width,
+  required double height,
+  required double cellSize,
+  required Iterable<BoardCell> occupiedCells,
+  required double devicePixelRatio,
+  required Color occupiedColor,
+  required BlockVisualPreset visualPreset,
+  List<Offset>? starMap,
+}) {
+  final double ratio = devicePixelRatio > 0 ? devicePixelRatio : 1.0;
+  final PictureRecorder recorder = PictureRecorder();
+  final Canvas cacheCanvas = Canvas(recorder);
+  cacheCanvas.scale(ratio);
+
+  if (starMap != null && starMap.isNotEmpty) {
+    final Paint starCorePaint = Paint()..color = const Color(0x2999D3EE);
+    final Paint starAuraPaint = Paint()
+      ..color = const Color(0x1492D3F4)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.8);
+    cacheCanvas.save();
+    cacheCanvas.clipRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, width, height),
+      const Radius.circular(18),
+    ));
+    for (int i = 0; i < starMap.length; i++) {
+      if (i % 2 != 0) {
+        continue;
+      }
+      final Offset uv = starMap[i];
+      final Offset point = Offset(width * uv.dx, height * uv.dy);
+      cacheCanvas.drawCircle(point, cellSize * 0.013, starAuraPaint);
+      cacheCanvas.drawCircle(point, cellSize * 0.005, starCorePaint);
+    }
+    cacheCanvas.restore();
+  }
+
+  for (final BoardCell cell in occupiedCells) {
+    final double tone =
+        ((math.sin((cell.x * 0.92) + (cell.y * 1.17)) + 1) / 2)
+            .clamp(0, 1)
+            .toDouble();
+    final Color coolTint =
+        _mixColor(occupiedColor, const Color(0xFFA9EEFF), 0.34);
+    final Color violetTint =
+        _mixColor(occupiedColor, const Color(0xFFCAAFFF), 0.3);
+    final Color occupiedTint = _mixColor(violetTint, coolTint, tone);
+    final Rect occupiedRect = Rect.fromLTWH(
+      cell.x * cellSize + 4,
+      cell.y * cellSize + 4,
+      cellSize - 8,
+      cellSize - 8,
+    );
+    _drawGlassBlockCell(
+      cacheCanvas,
+      rect: occupiedRect,
+      tint: occupiedTint,
+      preset: visualPreset,
+      opacity: 0.88,
+      intenseGlow: true,
+    );
+  }
+
+  final ui.Picture picture = recorder.endRecording();
+  final ui.Image image = picture.toImageSync(
+    math.max(1, (width * ratio).ceil()),
+    math.max(1, (height * ratio).ceil()),
+  );
+  picture.dispose();
+  return image;
+}
+
+/// Draws an image created by [rasterizeOccupiedCellsImage] to [canvas].
+void drawOccupiedCellsImage(
+  Canvas canvas,
+  ui.Image image, {
+  required double width,
+  required double height,
+  Paint? paint,
+}) {
+  canvas.drawImageRect(
+    image,
+    Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+    Rect.fromLTWH(0, 0, width, height),
+    paint ?? _occupiedPiecesBlitPaint,
+  );
+}
+
 class BoardComponent extends PositionComponent {
   static const List<Offset> _starMap = <Offset>[
     Offset(0.1, 0.14),
@@ -1092,7 +1188,6 @@ class BoardComponent extends PositionComponent {
   ui.Image? _cachedPiecesImage;
   Vector2 _cachedPiecesSize = Vector2.zero();
   double _cachedPiecesRatio = 0;
-  static final Paint _piecesBlitPaint = Paint()..filterQuality = FilterQuality.low;
 
   void setBoardState(BoardState boardState) {
     _boardState = boardState;
@@ -1269,79 +1364,27 @@ class BoardComponent extends PositionComponent {
         _cachedPiecesRatio != ratio) {
       _cachedPiecesSize = size.clone();
       _cachedPiecesRatio = ratio;
-      final PictureRecorder recorder = PictureRecorder();
-      final Canvas cacheCanvas = Canvas(recorder);
-      cacheCanvas.scale(ratio);
-
-      // Classic keeps its own starfield inside the well - it is the mode's
-      // signature and costs one pass on a cached picture.
-      final Paint starCorePaint = Paint()..color = const Color(0x2999D3EE);
-      final Paint starAuraPaint = Paint()
-        ..color = const Color(0x1492D3F4)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.8);
-      cacheCanvas.save();
-      cacheCanvas.clipRRect(RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.x, size.y),
-        const Radius.circular(18),
-      ));
-      for (int i = 0; i < _starMap.length; i++) {
-        if (i % 2 != 0) {
-          continue;
-        }
-        final Offset uv = _starMap[i];
-        final Offset point = Offset(size.x * uv.dx, size.y * uv.dy);
-        cacheCanvas.drawCircle(point, cellSize * 0.013, starAuraPaint);
-        cacheCanvas.drawCircle(point, cellSize * 0.005, starCorePaint);
-      }
-      cacheCanvas.restore();
-
-      for (final BoardCell cell in _boardState.occupiedCells) {
-        final double tone =
-            ((math.sin((cell.x * 0.92) + (cell.y * 1.17)) + 1) / 2)
-                .clamp(0, 1)
-                .toDouble();
-        final Color coolTint =
-            _mixColor(_occupiedColor, const Color(0xFFA9EEFF), 0.34);
-        final Color violetTint =
-            _mixColor(_occupiedColor, const Color(0xFFCAAFFF), 0.3);
-        final Color occupiedTint = _mixColor(violetTint, coolTint, tone);
-        final Rect occupiedRect = Rect.fromLTWH(
-          cell.x * cellSize + 4,
-          cell.y * cellSize + 4,
-          cellSize - 8,
-          cellSize - 8,
-        );
-        _drawGlassBlockCell(
-          cacheCanvas,
-          rect: occupiedRect,
-          tint: occupiedTint,
-          preset: _visualPreset,
-          opacity: 0.88,
-          intenseGlow: true,
-        );
-      }
-      final ui.Picture picture = recorder.endRecording();
       final ui.Image? stalePieces = _cachedPiecesImage;
       _cachedPiecesImage = null;
       stalePieces?.dispose();
-      _cachedPiecesImage = picture.toImageSync(
-        math.max(1, (size.x * ratio).ceil()),
-        math.max(1, (size.y * ratio).ceil()),
+      _cachedPiecesImage = rasterizeOccupiedCellsImage(
+        width: size.x,
+        height: size.y,
+        cellSize: cellSize,
+        occupiedCells: _boardState.occupiedCells,
+        devicePixelRatio: ratio,
+        occupiedColor: _occupiedColor,
+        visualPreset: _visualPreset,
+        starMap: _starMap,
       );
-      picture.dispose();
     }
 
     if (!Step1jDecomposition.hideD && _cachedPiecesImage != null) {
-      canvas.drawImageRect(
+      drawOccupiedCellsImage(
+        canvas,
         _cachedPiecesImage!,
-        Rect.fromLTWH(
-          0,
-          0,
-          _cachedPiecesImage!.width.toDouble(),
-          _cachedPiecesImage!.height.toDouble(),
-        ),
-        Rect.fromLTWH(0, 0, size.x, size.y),
-        _piecesBlitPaint,
+        width: size.x,
+        height: size.y,
       );
     }
 

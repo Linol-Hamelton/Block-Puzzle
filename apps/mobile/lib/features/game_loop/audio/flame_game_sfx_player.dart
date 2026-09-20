@@ -60,16 +60,14 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   bool _initialized = false;
   Future<void>? _preloadFuture;
   Future<void>? _sessionRefreshFuture;
-  Future<void>? _recoverFuture;
-  int _consecutivePlaybackFailures = 0;
-  final Map<String, AudioPool> _pools = <String, AudioPool>{};
+  final _BoundedSfxRing _ring = _BoundedSfxRing(size: 6);
 
   @override
   bool isEnabled = true;
 
   @override
   Future<void> preload() async {
-    if (_initialized && _pools.isNotEmpty) {
+    if (_initialized) {
       return;
     }
 
@@ -114,12 +112,12 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
         ],
       );
 
-      await _rebuildPools();
+      await _ring.init(FlameAudio.audioCache);
       _initialized = true;
-      _logger.info('SFX loaded: flame_audio pools');
+      _logger.info('SFX loaded: bounded low-latency ring');
     } catch (error) {
       _initialized = false;
-      await _disposePools();
+      await _ring.dispose();
       _logger.warn('SFX preload failed: $error');
     } finally {
       _preloadFuture = null;
@@ -128,29 +126,11 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
 
   Future<void> _refreshAudioSession() async {
     try {
-      if (!_initialized || _pools.isEmpty) {
-        await preload();
-        return;
-      }
       FlameAudio.updatePrefix(_audioPrefix);
-      await FlameAudio.audioCache.loadAll(
-        <String>[
-          _piecePlaced,
-          _invalidMove,
-          _lineClear,
-          _combo,
-          ..._comboSteps,
-          _gameOver,
-          _rotate,
-          _hold,
-          _hardDrop,
-        ],
-      );
-      _consecutivePlaybackFailures = 0;
+      await _ring.init(FlameAudio.audioCache);
       _logger.info('SFX audio session refreshed');
     } catch (error) {
       _logger.warn('SFX session refresh failed: $error');
-      await _recoverPools();
     } finally {
       _sessionRefreshFuture = null;
     }
@@ -207,137 +187,68 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
       if (!_initialized) {
         return;
       }
-
-      final AudioPool? pool = _pools[fileName];
-      if (pool == null) {
-        _logger.warn('SFX pool missing for $fileName');
-        final bool fallbackPlayed =
-            await _playFallback(fileName, normalizedVolume);
-        if (!fallbackPlayed) {
-          unawaited(_recoverPools());
-        }
-        return;
-      }
-
-      await pool.start(volume: normalizedVolume);
-      _consecutivePlaybackFailures = 0;
+      await _ring.play(fileName, normalizedVolume);
     } catch (error) {
-      _consecutivePlaybackFailures += 1;
-      _logger
-          .warn('SFX play failed for $fileName: $error; attempting fallback');
-      final bool fallbackPlayed = await _playFallback(
-        fileName,
-        normalizedVolume,
-      );
-      if (!fallbackPlayed || _consecutivePlaybackFailures >= 3) {
-        unawaited(_recoverPools());
-      }
+      _logger.warn('SFX play failed for $fileName: $error');
     }
   }
+}
 
-  Future<bool> _playFallback(
-    String fileName,
-    double volume,
-  ) async {
-    try {
-      await FlameAudio.play(fileName, volume: volume);
-      return true;
-    } catch (fallbackError) {
-      _logger.warn('SFX fallback failed for $fileName: $fallbackError');
-      return false;
-    }
-  }
+/// A strictly bounded, non-allocating ring of [AudioPlayer] instances.
+///
+/// Uses [PlayerMode.lowLatency] (SoundPool on Android) to avoid heavy MediaPlayer
+/// overhead and prevent AudioFlinger track exhaustion (max 32 tracks on Android).
+///
+/// When all players in the ring are currently playing, new sounds steal the
+/// oldest player in round-robin sequence without allocating new instances.
+class _BoundedSfxRing {
+  _BoundedSfxRing({this.size = 6});
 
-  Future<void> _recoverPools() async {
-    final Future<void>? inFlight = _recoverFuture;
-    if (inFlight != null) {
-      await inFlight;
+  final int size;
+  final List<AudioPlayer> _players = <AudioPlayer>[];
+  int _cursor = 0;
+  bool _initialized = false;
+
+  Future<void> init(AudioCache cache) async {
+    if (_initialized && _players.length == size) {
       return;
     }
-
-    final Future<void> recoverTask = _recoverPoolsInternal();
-    _recoverFuture = recoverTask;
-    await recoverTask;
-  }
-
-  Future<void> _recoverPoolsInternal() async {
-    try {
-      _initialized = false;
-      await _disposePools();
-      await preload();
-      _consecutivePlaybackFailures = 0;
-      _logger.info('SFX pools recovered');
-    } catch (error) {
-      _logger.warn('SFX recovery failed: $error');
-    } finally {
-      _recoverFuture = null;
+    await dispose();
+    for (int i = 0; i < size; i++) {
+      final AudioPlayer player = AudioPlayer()..audioCache = cache;
+      await player.setReleaseMode(ReleaseMode.stop);
+      _players.add(player);
     }
+    _initialized = true;
   }
 
-  Future<void> _rebuildPools() async {
-    await _disposePools();
-
-    _pools[_piecePlaced] = await FlameAudio.createPool(
-      _piecePlaced,
-      minPlayers: 3,
-      maxPlayers: 12,
-    );
-    _pools[_invalidMove] = await FlameAudio.createPool(
-      _invalidMove,
-      minPlayers: 1,
-      maxPlayers: 4,
-    );
-    _pools[_lineClear] = await FlameAudio.createPool(
-      _lineClear,
-      minPlayers: 2,
-      maxPlayers: 6,
-    );
-    _pools[_combo] = await FlameAudio.createPool(
-      _combo,
-      minPlayers: 2,
-      maxPlayers: 6,
-    );
-    for (final String stepFile in _comboSteps) {
-      _pools[stepFile] = await FlameAudio.createPool(
-        stepFile,
-        minPlayers: 2,
-        maxPlayers: 6,
-      );
-    }
-    _pools[_gameOver] = await FlameAudio.createPool(
-      _gameOver,
-      minPlayers: 1,
-      maxPlayers: 2,
-    );
-    _pools[_rotate] = await FlameAudio.createPool(
-      _rotate,
-      minPlayers: 2,
-      maxPlayers: 8,
-    );
-    _pools[_hold] = await FlameAudio.createPool(
-      _hold,
-      minPlayers: 1,
-      maxPlayers: 3,
-    );
-    _pools[_hardDrop] = await FlameAudio.createPool(
-      _hardDrop,
-      minPlayers: 2,
-      maxPlayers: 6,
-    );
-  }
-
-  Future<void> _disposePools() async {
-    if (_pools.isEmpty) {
+  Future<void> play(String file, double volume) async {
+    if (!_initialized || _players.isEmpty) {
       return;
     }
-    final List<Future<void>> disposeTasks = _pools.values
-        .map((AudioPool pool) => pool.dispose())
-        .toList(growable: false);
-    _pools.clear();
+    final AudioPlayer player = _players[_cursor];
+    _cursor = (_cursor + 1) % size;
     try {
-      await Future.wait(disposeTasks);
-    } catch (error) {
-      _logger.warn('SFX pool dispose failed: $error');
+      await player.stop();
+      await player.setVolume(volume);
+      await player.play(
+        AssetSource(file),
+        volume: volume,
+        mode: PlayerMode.lowLatency,
+      );
+    } catch (_) {
+      // Non-fatal: drop audio frame cleanly if platform audio is transiently unavailable
+    }
+  }
+
+  Future<void> dispose() async {
+    _initialized = false;
+    final List<AudioPlayer> toDispose = List<AudioPlayer>.from(_players);
+    _players.clear();
+    for (final AudioPlayer p in toDispose) {
+      try {
+        await p.dispose();
+      } catch (_) {}
     }
   }
 }

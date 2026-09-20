@@ -22,9 +22,13 @@ docs/design/13_DEC0024_AUDIT_AND_STATE.md.** Read that before this file; it
 replaces reviews 05..12, which stay as history.
 
 - **Accepted:** 1, 1b-1j, 1j(b), 1b.5, 2, 4a, 4b, 5, 6. Audio 577,377 bytes.
-- **Open:** 1k (the unexplained floor), 7 (the Match-3 crash, undiagnosed),
-  3 and 4c (Claude), and one missing unit test.
-- **Committed** on `dec-0024/av-polish`, eight commits, not pushed.
+- **Closed by review 14:** 1k (stand floor is canvas-sized; no gain, frame
+  analysis closed at 26.1/38), 7 (bounded sfx ring, live 11-combo pass), and
+  the occupied-cells cache unit test.
+- **Triaged:** 1k, 7, and occupied-cells cache committed in triage commit.
+  Prototype 3 and 4c reverted per Review 14 and DEC-0024 p.2/7a/7d/8;
+  assigned to Claude.
+- **Committed** on `dec-0024/av-polish`, ten commits, not pushed.
 - Classic runs at **26.1 ms raster / 38 fps** on a 120 Hz panel, half-filled.
 
 ## Approach
