@@ -1760,3 +1760,51 @@ Evidence:
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-21 from .ai/worklog/deepseek-99fe1db1ec0c6d5e.md (5)
+
+## 2026-09-21 - Full-prompt rerun with Gemini: 2 adversarial + 2 approval rounds
+
+Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, owner's request.
+
+Action:
+- Owner corrected the earlier compressed delivery. Sent the complete owner
+  prompt verbatim (60,681 chars) via agy stdin (PowerShell argument passing
+  breaks on embedded quotes; stdin with UTF-8 works), fresh conversation
+  `3fbf8df3-7b4a-4f6f-bae4-62d16f013d16`.
+- Rerun rounds 1-2: same nine theses and attacks. Consensus in substance
+  identical to the first session, with sharper attacks and three new findings.
+  Verified: `keepScreenOn` absent (`AndroidManifest.xml`, `pubspec.yaml`) - real
+  new product item; `android-release.yml:49-63` has no early secret validation -
+  folded into D1; `kEffectTimeScale = 3.5` is the owner's intended product value
+  (`TASK.md:38`, `effect_timing_test.dart:18-19`), no reset needed, only the
+  eyes-on gate.
+- Corrected the rerun's "sabotage" framing of audit 07 (it predates the owner's
+  moratorium); Gemini accepted.
+- Updated plan 15 to edition 3 (DEC-0026 basis; keepScreenOn; CI fail-fast; push
+  in W2 after W1; step 7 protocol note; W4 gate); approval round 1 "одобряю с
+  правками" (three applied), round 2 "ОДОБРЯЮ". No product code touched; work
+  not started.
+
+Result:
+- Outcome unchanged in substance: D2 withdrawn; no monetization now (ad-free,
+  Stage C frozen); frame experiments not sanctioned (docs to 38-40 fps); music
+  by Gemini (DEC-0026); direct signed APK first; D1/C5/C6/C7/C8/D3 as planned.
+- New since the first run: keepScreenOn, CI secret fail-fast, explicit
+  kEffectTimeScale clarification.
+- Gemini requires from the owner: an explicit start command and the W1 reviewer
+  assignment (Claude or DeepSeek).
+
+Next step: owner's start command for W1 and reviewer confirmation; W2 merge+push.
+
+Open: owner start/reviewer; W3 execution; doc sync.
+
+Evidence:
+- anchor: 5ada2b9e08cc6175453e2a948486e11b5fa3dc4b, uncommitted changes present
+- digest: sha256:6e0680b5300351bc2450fa753921bd4170170c6b2be208ffcb9935fb0ec867d1 over 565 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-20T23:30:13.092Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:8915309e2a271468e1f7d53c2c3adf6a9cf441da54b369535f130bbfa27d21e1 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
