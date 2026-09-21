@@ -1556,3 +1556,207 @@ Evidence:
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-21 from .ai/worklog/deepseek-99fe1db1ec0c6d5e.md
+
+## 2026-09-20 - Full repo audit: DEC-0024 closure, Stage C boundaries, repo risks
+
+Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, owner's request.
+
+Action:
+- Audited the whole repository at 5ada2b9 (branch dec-0024/av-polish): code,
+  tests, CI, config, docs, .ai protocol, git state. Device, Play Console,
+  Firebase console and release builds not re-run (DEC-0025 p.6).
+- Ran the checks myself: flutter analyze --fatal-infos --fatal-warnings (0
+  issues, exit 0), flutter test (380/380, exit 0), validate-protocol.ps1
+  (Protocol OK, 0 warnings, protocol 1.9.0).
+- Read review 14, audit 13, DEC-0001..0025, PLAN, plan 14, audits 04/05; read
+  the music controller/integration, DI lifetimes, billing catalog, bundled RC
+  defaults, CI workflows, build.gradle, manifest, firestore.rules, analytics
+  schema and Classic/Tetris/Match-3 event payloads.
+- Wrote docs/audit/06_FULL_REPO_AUDIT_2026-09-20.md; added the pointer and the
+  Stage C boundary list to .ai/TASK.md under the lock. No product code touched.
+
+Result:
+- Green tree confirmed; no TODO/FIXME; secrets and saplesmusic untracked.
+- DEC-0024: only step 3 + 4c remain (music layer reverted; screens restart the
+  track on navigation; audioplayers absent from pubspec; no AudioContext), plus
+  the four masters, the missing step-7 crash.txt/20-min protocol, and the
+  eyes-on effect composition.
+- Stage C boundaries found: Google Sign-In linking absent (DEC-0018);
+  verifyPurchase has no explicit serviceAccount (index.js:34); utility_tools_pass
+  (non-cosmetic) still sold and set as the engaged-segment primary SKU
+  (defaults:19,29; billing:90) contrary to DEC-0008; Classic emits mode:'classic'
+  without game_id (game_loop_controller.dart:338,1175); ABExperiment/Onboarding/
+  Progression still lazySingleton (DEC-0016); widget_test.dart:7 is expect(true);
+  7 Cyrillic strings remain in store_controller.
+- Repo risk: 38 commits local-only (main 28 ahead of origin/main plus 10 on the
+  branch); 18 MB of PNG receipts already in history; docs README, 05 and
+  DOCS_CHANGELOG stale since June; operations/17:233 still assigns stage A to
+  Codex. Frame budget stays closed at 26.1 ms / 38 fps.
+
+Next step: owner - push decision; Claude - steps 3/4c per review 14 then
+masters; owner - utility_tools_pass decision and effect composition eyes-on;
+then C1-C5 to unblock the commercial scenario (see audit 06 section 6).
+
+Open: C1-C8 from audit 06 section 4; step 7 evidence gap; doc sync; 38 unpushed
+commits; the ~27 ms single well-blit mystery is unowned but closed for now.
+
+Evidence:
+- anchor: 5ada2b9e08cc6175453e2a948486e11b5fa3dc4b, uncommitted changes present
+- digest: sha256:e8363bbb1f11326e48b2ee147aac07f6fffe4dad4abd47138caf179e5f711734 over 561 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-20T19:21:09.420Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:9a9b023242f611f16414ba27d83faca50f53befe5ae76d51e9e47d6ac9899832 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-21 from .ai/worklog/deepseek-99fe1db1ec0c6d5e.md (2)
+
+## 2026-09-21 - Adversarial review of audits 06/07/08; next-stage plan; Gemini live channel failed
+
+Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, owner's request.
+
+Action:
+- Owner asked: add the next-stage order to the plan (do not start), run two
+  adversarial rounds with Gemini over audits 06/07/08 and their proposals, then
+  compose the final plan and run two approval rounds with Gemini.
+- Attempted the live Gemini channel: Agent Manager created a local session and a
+  worktree session (Gemini 3.1 Pro Preview) and accepted prompts; both stayed
+  `activity: idle` with zero messages in `.kilo/agent-manager.json` and wrote no
+  files over ~15 minutes; both were stopped. No Gemini CLI exists in the
+  environment (only claude/codex). The worktree `gemini-debate` remains for the
+  owner to remove in the Agent Manager UI; `agent-manager.json` was not edited.
+- Ran the rounds against the published audit 08 as Gemini's position and marked
+  the limitation: docs/audit/09_ADVERSARIAL_REVIEW_06_07_08_2026-09-21.md
+  (nine attacks, Gemini's textual replies, arbitration, forks F1-F7). Verified
+  independently: Flutter enables R8 + shrinkResources by default
+  (`FlutterPlugin.kt:214-217`, `FlutterPluginUtils.kt:209-213`), so D2 in audits
+  07 and 08 is a false defect; D1 confirmed (`build.gradle:57-59`,
+  `android-release.yml:14-17` `use_signing` default false); C5, DEC-0008 and
+  DEC-0012 conflicts confirmed.
+- Wrote docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md; added a pointer section
+  to `.ai/PLAN.md` (198 lines) and audit/plan pointers plus the F3 conflict to
+  `.ai/TASK.md` (78 lines) under the cooperative lock. No product code touched.
+- Created `.ai/runtime/debate/` prompt files for a live Gemini run
+  (round1, round2, plan-review).
+
+Result:
+- Consensus of all three audits: push the 38 commits; D1 fail-fast signing;
+  first signed build to 10-20 testers precedes Stage C; C5 `game_id`; music per
+  review 14; step 7 evidence closure; docs sync. D2 withdrawn as an error.
+- Forks with no consensus, for the owner: F1 frame-rate experiments vs doc
+  alignment; F2 monetization model/channel; F3 music executor (owner directive
+  says Gemini, DEC-0024 p.8 says Claude); F4 localization scope; F5 distribution
+  path; F6 empty feature dirs; F7 RU Google Play payments check.
+- Plan 15 status: proposed, NOT started, not live-verified by Gemini; the two
+  approval rounds were not executed.
+
+Next step: owner - confirm F3 and F2/F7, approve plan 15, decide push; then the
+music layer per review 14.
+
+Open: F1-F7; live Gemini channel; step 7 evidence; doc sync.
+
+Evidence:
+- anchor: 5ada2b9e08cc6175453e2a948486e11b5fa3dc4b, uncommitted changes present
+- digest: sha256:ded858141f3fadea03d6f0f0261103d92bdbea9c00c6ed1e484c7f1198c806c1 over 565 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-20T22:47:37.511Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:c94187fb28d655ea6cbc223b456299e5b0c6fde663f2d4131419c4d261c19575 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-21 from .ai/worklog/deepseek-99fe1db1ec0c6d5e.md (3)
+
+## 2026-09-21 - Live Gemini channel (agy): 2 adversarial rounds + 2 plan approval rounds; plan approved
+
+Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, owner's request.
+
+Action:
+- Owner opened the channel: `C:\Users\Dmitry\AppData\Local\agy\bin\agy.exe`,
+  `--model gemini-3.8-flash-high`, print mode + `--conversation` resume
+  (conversation `f2d5d9b2-af8a-40e2-8e14-85704f0bed18`).
+- Round 1: nine theses plus a request to attack audits 06/07. Gemini conceded D2
+  as a factual error in 07 and 08, withdrew its "Б or В" monetization
+  recommendation to the owner fork, accepted the frame-experiment fork, the
+  music-executor fork, D1, C5, D3 (annotate), C6/C8; questioned RuStore as the
+  first-test path; added three findings (test DI harness needed, widget_test
+  comment; cold-kill/resume risk, no such test exists while
+  roadmap/05:57 claims green; Play App Signing SHA checklist).
+- Round 2: arbitration with three corrections (music causality was reversed -
+  Claude followed DEC-0024/0025, the owner's Gemini directive came later; Play
+  App Signing is already in DEC-0018 Consequences, not a missed discovery;
+  citation paths must be exact). Gemini accepted all three, confirmed the
+  consolidated list, the direct signed APK as the base path, and listed the W1
+  acceptance prerequisites.
+- Updated `docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md` to edition 2.
+  Approval round 1: "одобряю с правками" (reviewer for W1, test_di.dart path,
+  Crashlytics mapping/symbols check) - applied. Approval round 2: "ОДОБРЯЮ",
+  no comments.
+- Updated `docs/audit/09` with a postscript, `.ai/PLAN.md` (198 lines) and
+  `.ai/TASK.md` (78 lines) under the lock. No product code touched.
+- Transcripts: `.ai/runtime/debate/round1-gemini.md`, `round2-gemini.md`,
+  `plan-review-1-gemini.md`, `plan-review-2-gemini.md` (prompts prompt1..4).
+
+Result:
+- Consensus: push 38 commits; D1 fail-fast signing; D2 withdrawn; C5 game_id;
+  D3 annotate; C6 + RU-only l10n before distribution; C7 with a test DI module;
+  cold-kill device check; step 7 evidence closure; docs sync; first external
+  test (direct signed APK) before Stage C.
+- Forks for the owner: F3 (music executor, blocks W1), F2 (monetization, blocks
+  W5), F7 (RU Google Play payments, blocks W5), F1 (frame experiments), F5
+  (distribution path). F4 (RU-only) and F6 (annotate) resolved.
+- Plan 15 approved by Gemini in two rounds; owner approval pending; no work
+  started.
+
+Next step: owner - confirm F3, decide F2/F7 and the push, approve plan 15; then
+W1 (music per review 14).
+
+Open: F1, F2, F3, F5, F7; owner approval of plan 15.
+
+Evidence:
+- anchor: 5ada2b9e08cc6175453e2a948486e11b5fa3dc4b, uncommitted changes present
+- digest: sha256:a9d146d47abf57934f5fab0b9540918fc300c052d87b22a005b10c115c7dec10 over 565 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-20T23:12:30.682Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:b7dee1ff4609c7bfb1d182378a4fc54f829d4231d3136beab2818a768ea2bee8 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-21 from .ai/worklog/deepseek-99fe1db1ec0c6d5e.md (4)
+
+## 2026-09-21 - Owner decisions recorded in DEC-0026; plan 15 approved
+
+Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, owner's request.
+
+Action:
+- Owner answered all forks: F3 executor Gemini; F2 ad-free confirmed, no
+  monetization in the first release (Stage C frozen); F7 deferred; W2 merge
+  dec-0024/av-polish into main, then push; F1 KPI docs to 38-40 fps; F5 direct
+  signed APK.
+- Appended DEC-0026 (owner-approved): supersedes DEC-0024 p.8 for the music
+  executor; no monetization now; utility_tools_pass not sold, removed from
+  catalog/RC when the store surface is next touched; merge then push; KPI 38-40;
+  RU-only l10n; annotate feature dirs.
+- Updated docs/roadmap/15, .ai/PLAN.md, .ai/TASK.md under the lock. No product
+  code touched; no work started.
+
+Result: all forks closed; plan approved by Gemini (2 rounds) and the owner;
+TASK status = Planned.
+
+Next step: owner's go, then W1 (music, Gemini) and W2 (merge+push).
+
+Open: W3 execution; step 7 evidence; docs sync (F1 KPI edits).
+
+Evidence:
+- anchor: 5ada2b9e08cc6175453e2a948486e11b5fa3dc4b, uncommitted changes present
+- digest: sha256:76e9c63c6b004600d25059bd3ca3274fe659e7dec93e2f0831e92915e88941a4 over 565 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-20T23:20:08.458Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:8aa6489e245df0ba7a16452c1d3c26bc306bbb245f65b1e782a3c3031e0ac343 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify

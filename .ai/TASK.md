@@ -1,8 +1,8 @@
 # Current Task
 
-Status: In progress - 1k/7/cache triaged & committed; 3/4c reverted for Claude (review 14)
+Status: In progress - W1 code + device continuity done (design/15); audible/call, F2, masters pending
 Owner: RuslanFomenko
-Last update: 2026-09-20
+Last update: 2026-09-21
 
 ---
 
@@ -37,8 +37,8 @@ gitignored, never shipped or committed.
 - [x] Step 7: bounded sfx ring; live 11-combo pass. crash.txt and 20-min protocol not attached.
 - [x] Effects run 3.5x slower on a scaled clock; owner asked for 3-5x.
 - [x] Disposed-surface crash class closed across all five render caches.
-- [ ] Step 3: MusicPlaylistManager (Claude, DEC-0024 p.8; prototype reverted per review 14).
-- [ ] Step 4c: ducking multiplier over crossfade envelope (Claude, with music layer).
+- [ ] Step 3: MusicPlaylistManager (Gemini, DEC-0026; prototype reverted per review 14).
+- [ ] Step 4c: ducking multiplier over crossfade envelope (Gemini, with music layer).
 - [x] Unit test for the occupied-cells image cache (review 12, point 4.1).
 - [x] Frame rate held on 2209116AG, measured rather than asserted.
 
@@ -46,24 +46,32 @@ gitignored, never shipped or committed.
 
 **Start here: docs/design/13_DEC0024_AUDIT_AND_STATE.md** (audit) and
 **docs/design/14_DEC0024_STEPS_1K_7_3_4C_REVIEW.md** (review 14).
+Full repo audits: docs/audit/06 (DeepSeek), 07 (Claude; dissents on the
+frame-rate gate, adds D1-D6), 08 (Gemini), 09 (adversarial review; forks F1-F7).
+Next stage started: W1 review docs/design/15 (PASS WITH CONDITIONS); plan ed.3, DEC-0026/0027.
 Live plan: .ai/PLAN.md. Criteria per step: docs/design/04.
-Triage verified: analyze 0 issues, 380/380 tests, validator OK.
+Verified: analyze 0 issues, 392/392 tests, validator OK (review design/15).
 
 ## Active agent
 
-- Implementer: Gemini - 1b.5, 6, 1k, 7; triage session 2026-09-20.
+- Implementer: Gemini - W1 steps 3/4c implemented; reviewed by DeepSeek (design/15).
+- Reviewer: DeepSeek (owner-approved 2026-09-21, DEC-0027) - criteria, code review.
 - Reviewer: Claude - audit 13; DeepSeek - review 14 (1k, 7, 3, 4c, status).
 - Started: 2026-09-16
 
 ## Open questions
 
-1. Play Console access and Blaze billing (Stage C); DEC-0018 progress-merge
-   rules; DEC-0004 KPI formulas and sample sizes. All external, all unchanged.
+1. Stage C frozen by DEC-0026 (ad-free, no monetization for now); DEC-0018
+   progress-merge rules; DEC-0004 KPI formulas and sample sizes remain open.
 2. `dec-0024/av-polish`: ten commits, **not pushed**; 1k/7/cache committed in triage.
-3. Steps 3 and 4c (music layer compliance & ducking) assigned to Claude (DEC-0024 p.8).
-4. Four soundtrack masters: assigned to Claude with step 3.
+3. Steps 3/4c: code PASS WITH CONDITIONS (docs/design/15); device continuity
+   verified; open: owner audible/call check, F2 focus-loss sync, masters.
+4. Four soundtrack masters: with Gemini; not delivered yet (W1 open item).
 5. Composition: slower effects overlap more, so whether a clear still reads
    as one moment is an eyes-on call on device.
+6. Stage C boundaries (audit 06, section 4): Google Sign-In linking (DEC-0018),
+   verifyPurchase service account, utility_tools_pass vs DEC-0008, Classic
+   game_id, scoped services (DEC-0016), widget tests, localization.
 
 ---
 

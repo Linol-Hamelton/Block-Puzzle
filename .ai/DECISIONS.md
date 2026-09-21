@@ -1037,6 +1037,127 @@ Approved by: RuslanFomenko
 
 ---
 
+### DEC-0026
+
+Status: Accepted
+Date: 2026-09-21
+Supersedes: DEC-0024 point 8 (executor of the music layer only). All other
+points of DEC-0024 and DEC-0025 remain in force.
+
+Context:
+DEC-0024 point 8 assigned the MusicPlaylistManager to Claude because its
+failure mode fails on a player's phone rather than in tests. On 2026-09-20 the
+owner directed that Gemini completes steps 3 and 4c instead. The full-repository
+review (audits 06, 07, 08 and the two adversarial rounds recorded in
+docs/audit/09) put seven forks to the owner; the owner answered all of them in
+session on 2026-09-21, and plan docs/roadmap/15 records the resulting order.
+A decision record is needed because the executor change contradicts a binding
+block and because three of the answers change project scope.
+
+Decision:
+1. The music layer (DEC-0024 steps 3 and 4c) is implemented by Gemini, not by
+   Claude. Every other DEC-0024/DEC-0025 requirement stands unchanged: criteria
+   are written before the code, and the implementer does not accept its own
+   work.
+2. Monetization: the ad-free model is confirmed. The first external test ships
+   with no monetization of any kind; Stage C (IAP, Google Sign-In linking, the
+   verifyPurchase service account, Blaze and the Play Console work) is deferred
+   until the owner revisits it. The DEC-0008 norm stands: cosmetic
+   non-consumables are the only commerce surface. `utility_tools_pass` has no
+   authorizing decision and is not to be offered for sale; it is removed from
+   the catalog and Remote Config when the store surface is next touched.
+3. First external test distribution: a direct release-signed APK to 10-20
+   testers. Google Play internal testing and RuStore closed testing are not part
+   of this step; DEC-0012 stands and RuStore remains out of scope until a Play
+   closed-test report exists.
+4. Repository: `dec-0024/av-polish` is merged into `main`, and `main` is then
+   pushed to the private remote. The PNG measurement receipts already in
+   history stay; the push decision is recorded here rather than assumed.
+5. Frame rate: the frame-rate investigation is not reopened. Instead of the
+   unattained 55-60 fps target, the product documents are aligned with the
+   measured release figure of 38-40 fps on the 120 Hz test device.
+6. Localization before the first external test is RU-only: the seven Cyrillic
+   strings in the store controller move to l10n. Full RU/EN waits for the
+   cohort data.
+7. The ten empty feature directories are annotated, not deleted.
+
+Reasoning:
+The owner answered the forks the adversarial review surfaced. Keeping the
+frame-rate experiments unauthorised and aligning the documents removes a
+contradiction that has been carried since step 1k. Deferring all monetization
+means the first external test measures the game, not the payment plumbing, and
+removes C1/C2/C3 from the critical path. Merging before pushing puts the whole
+history, including the measurement receipts, on the remote in one operation.
+
+Alternatives rejected:
+Reopening the frame investigation (forbidden by the owner; the exit threshold of
+step 1k was met). Legalizing utility_tools_pass with a new decision (no data
+justifies it, and the owner chose no monetization). RuStore-first or ads
+(contradicts DEC-0012 and the confirmed ad-free model). Pushing
+`dec-0024/av-polish` directly without merging (leaves `main` behind and keeps
+the divergence). Full RU/EN before the first test (untargeted scope).
+
+Consequences:
+The music layer review and every later acceptance cannot invoke DEC-0024 point 8
+to bar Gemini's work; the criteria written for steps 3/4c remain the standard.
+Stage C work is blocked until a later owner decision; the billing code stays in
+the tree but is not shipped as an offer, and the utility SKU removal becomes a
+small pre-release task. `main` becomes the single line and is pushed. The KPI
+documents change their fps target, which must be reported wherever the earlier
+target was quoted. RU-only localization means the first build is not suitable
+for non-Russian testers.
+
+Approved by: RuslanFomenko
+
+---
+
+### DEC-0027
+
+Status: Accepted
+Date: 2026-09-21
+Supersedes: nothing (declares the start DEC-0026 deferred)
+
+Context:
+DEC-0026 approved plan docs/roadmap/15 and stated that work does not start until
+the owner says so. DEC-0025 requires production and conclusions to be separated:
+the implementer does not write its own acceptance criteria and does not accept
+its own work. The plan named the reviewer as Claude or DeepSeek, subject to the
+owner's confirmation, and the owner has now (2026-09-21) authorised the start
+and named the reviewer.
+
+Decision:
+1. The next stage starts: plan docs/roadmap/15 (edition 3), workstreams W0-W4,
+   with Stage C frozen by DEC-0026.
+2. The reviewer for this cycle is DeepSeek; the implementer is Gemini. The
+   implementer does not write the acceptance criteria under itself and does not
+   accept its own work.
+3. At the end of the cycle, before the owner accepts the result, a Mandatory
+   Adversarial Review is held with a consortium of independent models, using
+   docs/audit/10_MANDATORY_ADVERSARIAL_REVIEW_PROMPT.md. Its unresolved
+   disagreements and vetoes go to the owner.
+
+Reasoning:
+The start command and the reviewer appointment existed only in chat; a decision
+block makes them binding and puts the reviewer in place before any code is
+written, as DEC-0025 requires. The consortium review is required because the
+whole cycle would otherwise be produced and accepted within one pairing.
+
+Alternatives rejected:
+Leaving the start and reviewer in chat (not a decision under AGENTS.md).
+Nominating the implementer's own session as reviewer (violates DEC-0025).
+Deferring the consortium review until after distribution (too late to catch a
+systematic defect in the cycle).
+
+Consequences:
+Any deliverable of W1-W4 must carry a reviewer verdict by DeepSeek and, before
+owner acceptance, survive the consortium review. The implementer cannot close
+its own items. The MAR prompt and its launch commands live in docs/audit/10;
+its verdicts do not replace owner approval.
+
+Approved by: RuslanFomenko
+
+---
+
 ## Template for new decisions
 
 ### DEC-nnnn

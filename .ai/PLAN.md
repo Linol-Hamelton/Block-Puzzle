@@ -187,3 +187,12 @@ implemented and is excluded. Steps 1-2 were reviewed against criteria written
 before them, which is what made the impossible baseline visible in one pass.
 
 Read the full file before changing architecture or contracts.
+
+## Next stage (owner-approved 2026-09-21, DEC-0026) - NOT started
+
+Plan: docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md; debate: docs/audit/09.
+Order: music per review 14 (executor: Gemini, DEC-0026); merge into main and
+push; then Classic game_id; before distribution - widget tests, DEC-0016,
+RU-only localization, signed APK. No monetization now; Stage C frozen; frame
+investigation stays closed (KPI docs to 38-40 fps); no new modes/models.
+Gemini approved plan 15 ed.3 (full-prompt rerun); owner approved in DEC-0026.
