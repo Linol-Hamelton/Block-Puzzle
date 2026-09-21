@@ -40,14 +40,20 @@ MAR consortium at the end of the cycle.
 
 Open: owner audible/call; WAV masters storage; F3 minor crossfade jump; W3-W4.
 
+Addendum 2026-09-21: found FFmpeg 7.1 bundled in `imageio_ffmpeg`
+(`C:\Users\Dmitry\AppData\Roaming\Python\Python314\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe`)
+and re-measured the four masters: I -16.01/-16.01/-16.03/-16.01 LUFS,
+TP -6.29/-4.42/-4.49/-1.09 dBTP, LRA 0.5-1.4 - matches the producer report.
+Review 15 updated: the own-measurement gap for loudness is closed.
+
 Evidence:
-- anchor: a483823bf191f68bea50b8d744bf3b9c91d7a38c, uncommitted changes present
-- digest: sha256:e903f92dd7f96cd553792ae7e4d672e435f537b29ae19edb79a1126ce0266e60 over 576 tracked and untracked files
+- anchor: ba7fc12f48f465d26caf9d38c0cbc72e835afa44, uncommitted changes present
+- digest: sha256:1e7e79399c7aef2e80b156ef2277c82cae64237e20a9616c9ed966b9d250c0d2 over 576 tracked and untracked files
 - digest format: 4
-- recorded: 2026-09-21T01:28:06.194Z by deepseek-99fe1db1ec0c6d5e
-- entry: sha256:4abe2cb3c1117ee9da68eeffcc542873da572a21575275d4d8e710418356d12e of this entry without this block
+- recorded: 2026-09-21T02:11:14.222Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:9c9fe3aaf47d3c7cc90439fbfe666b4d7da5568a3f79ab959df4f42a7b103245 of this entry without this block
 - scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
+- validate-protocol.ps1: exit 0 in 3s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-21 - W2 push, F2 investigation and risk acceptance, F2 commit
 
