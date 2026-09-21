@@ -1,6 +1,6 @@
 # Current Task
 
-Status: In progress - W1 code + device + F2 risk accepted (design/15); audible/call, masters pending
+Status: In progress - W1 masters integrated & reviewed; owner audible/call pending
 Owner: RuslanFomenko
 Last update: 2026-09-21
 
@@ -66,7 +66,7 @@ Verified: analyze 0 issues, 395/395 tests, validator OK (review design/15).
 2. W2 done 2026-09-21: merged to main, pushed origin/main at 0400582 (PNG stay).
 3. Steps 3/4c: code PASS WITH CONDITIONS (docs/design/15); device continuity
    verified; F2 = accepted risk, plugin sends no focus event; owner audible/call.
-4. Four soundtrack masters: spec + checklist delivered by Gemini; assets pending.
+4. Masters: integrated & reviewed PASS (design/15); WAV masters out of git pending owner.
 5. Composition: slower effects overlap more, so whether a clear still reads
    as one moment is an eyes-on call on device.
 6. Stage C boundaries (audit 06, section 4): Google Sign-In linking (DEC-0018),

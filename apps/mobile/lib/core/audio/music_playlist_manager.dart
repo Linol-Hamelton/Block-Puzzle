@@ -28,7 +28,12 @@ class MusicPlaylistManager {
   })  : _logger = logger,
         _playlist = playlist != null && playlist.isNotEmpty
             ? List<String>.from(playlist)
-            : const <String>['music_loop.m4a'],
+            : const <String>[
+                'music_menu.m4a',
+                'music_classic.m4a',
+                'music_tetris.m4a',
+                'music_match3.m4a',
+              ],
         _baseVolume = baseVolume,
         _crossfadeDuration = crossfadeDuration,
         _playerA = playerA ?? AudioPlayer(),
