@@ -6,6 +6,49 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-21 - Masters delivered (Antigravity), reviewed and shipped
+
+Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, reviewer for the cycle (DEC-0027).
+
+Action:
+- Antigravity's Gemini session (`gemini-c29c585fe42c0a84`) synthesised four
+  original tracks (A minor pentatonic, 90/94/100/96 BPM) with FFmpeg two-pass
+  EBU R128 mastering and AAC-LC CBR, placed them in `assets/audio/`, updated the
+  default playlist and deleted the `music_loop.m4a` placeholder.
+- Reviewed independently: exact names and no leftover references; total
+  13,265,032 B = 12.65 MB <= 15 MB; durations and bitrates re-measured from the
+  MP4 headers (170.67/163.40/172.80/170.00 s; 153.1-159.5 kbps; `mp4a` present);
+  analyze 0; `flutter test` 395/395; validator OK.
+- Device check on the Redmi: app starts `music_menu.m4a`; in an untouched run a
+  single new focus request appears at +170.9 s, matching the track duration -
+  the playlist crossfade fires; no errors. The earlier focus burst was traced
+  to the SFX ring (six audioplayers slots) during gameplay, not to music.
+- Wrote the masters section into `docs/design/15` (PASS), updated TASK, committed
+  `a483823` and pushed. WAV masters (27.5-29.1 MB each) stay untracked pending
+  the owner's storage decision.
+
+Result:
+- Step 3/4c conditions narrowed to the owner's audible check and a real incoming
+  call; masters are shipped and reviewed.
+- Not independently verified by the reviewer: LUFS/true peak/edge cleanliness
+  (no ffmpeg in this environment); producer values documented in journal
+  `gemini-c29c585fe42c0a84`.
+
+Next step: owner - listen on device and place a call; then W1 closes and W3
+(widget tests, D1, DEC-0016, l10n, game_id, cold start, signed APK) proceeds;
+MAR consortium at the end of the cycle.
+
+Open: owner audible/call; WAV masters storage; F3 minor crossfade jump; W3-W4.
+
+Evidence:
+- anchor: a483823bf191f68bea50b8d744bf3b9c91d7a38c, uncommitted changes present
+- digest: sha256:e903f92dd7f96cd553792ae7e4d672e435f537b29ae19edb79a1126ce0266e60 over 576 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-21T01:28:06.194Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:4abe2cb3c1117ee9da68eeffcc542873da572a21575275d4d8e710418356d12e of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-21 - W2 push, F2 investigation and risk acceptance, F2 commit
 
 Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, reviewer for the cycle (DEC-0027).
@@ -77,54 +120,6 @@ Evidence:
 - digest format: 4
 - recorded: 2026-09-21T00:42:27.949Z by deepseek-99fe1db1ec0c6d5e
 - entry: sha256:026eebb29e93734af6f1a33bb94bffcbd34c2b2b0fd283de38ddfe2c06780449 of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-21 - Start W1: DEC-0027, criteria, MAR prompt, Gemini implementation, review
-
-Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, reviewer for the cycle (DEC-0027).
-
-Action:
-- Owner authorised the start and named DeepSeek reviewer; recorded as DEC-0027
-  (start of plan ed.3 W0-W4, implementer Gemini, MAR consortium before owner
-  acceptance). Updated `.ai/TASK.md` status/agents and plan 15 status.
-- Wrote the reviewer's acceptance criteria for steps 3/4c into
-  `docs/design/04_DEC0024_ACCEPTANCE_CRITERIA.md` before any code (DEC-0025
-  p.1-2), and the Mandatory Adversarial Review prompt with launch commands in
-  `docs/audit/10_MANDATORY_ADVERSARIAL_REVIEW_PROMPT.md`.
-- Started Gemini (`gemini-3.8-flash-high`, new agy conversation) as W1
-  implementer; it delivered the music layer: `audioplayers` dependency,
-  `MusicPlaylistManager` (two players, 1.2 s equal-power crossfade, cyclic
-  playlist, explicit AudioContext, ducking), rewritten app-scope
-  `MusicController`, screens decoupled, SFX duck triggers, DI + bootstrap
-  wiring, 12 new tests, journal with evidence.
-- Reviewed independently: read every diff and test; ran `flutter analyze
-  --fatal-infos --fatal-warnings` (0 issues), `flutter test` (392/392),
-  `validate-protocol.ps1` (OK); checked scope (no out-of-scope edits),
-  `kEffectTimeScale` untouched, no `FlameAudio.bgm` usage left, criteria not
-  edited by the implementer.
-- Wrote `docs/design/15_DEC0024_STEPS_3_4C_REVIEW.md`: **PASS WITH
-  CONDITIONS**. Findings: F1 device check of continuity/focus still open (no
-  adb device); F2 permanent audio-focus loss leaves Dart state desynced
-  (plugin pauses natively, `play()` then no-ops); F3 minor jump when a new
-  crossfade interrupts one in flight; F4 note on player-A asymmetry.
-
-Result:
-- Code accepted for review; step 3/4c closes after the owner's device check,
-  F2 decision, and the four masters.
-- 392/392 tests and clean analyze confirmed by the reviewer, not only claimed.
-
-Next step: owner - device check on Redmi (transitions, Home, call); Gemini -
-F2 decision/fix and the four masters; then W2 merge into main and push.
-
-Open: F1 device, F2 focus-loss state, F3 minor, masters.
-
-Evidence:
-- anchor: 5ada2b9e08cc6175453e2a948486e11b5fa3dc4b, uncommitted changes present
-- digest: sha256:b317fe8e200491ca120af2a454f438e1e9d39732792cd81fa25cfecc8c248c89 over 569 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-20T23:52:54.710Z by deepseek-99fe1db1ec0c6d5e
-- entry: sha256:b728bda6e8df769d663b1a41457840b22e692d221aad0e98bc21a172f49598ee of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
