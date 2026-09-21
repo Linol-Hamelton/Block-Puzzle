@@ -6,6 +6,51 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-21 - W2 push, F2 investigation and risk acceptance, F2 commit
+
+Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, reviewer for the cycle (DEC-0027).
+
+Action:
+- Owner authorised commits and push. Committed W1 in two checkpoints: product
+  (`298ec01` audio layer) and records (`0400582` audits 06-10, plan 15, review
+  15, protocol files), merged `dec-0024/av-polish` into `main` (fast-forward)
+  and pushed `origin/main` 50e008a..0400582 - 38 commits now off the single
+  disk.
+- Delegated F2 and the four masters to Gemini (its own agy conversation).
+  Gemini investigated `audioplayers_android: 5.2.0` and `audioplayers-6.4.0`,
+  found that no native pause/focus event reaches Dart, added a state-sync
+  listener plus a `play()` pre-check, and delivered a composer spec + checklist
+  for the masters (cannot produce audio itself).
+- Reviewed adversarially: confirmed in the Dart source that `state` changes
+  only through Dart calls, so both F2 mechanisms are inert on device; the three
+  new tests prove the sync logic, not the recovery. Accepted the risk and wrote
+  it into review 15 with consequences and workarounds; kept the code as
+  forward-compatible. Verified: analyze 0, tests 395/395, validator OK.
+- Committed the F2 record (`f782b56`) and pushed; corrected TASK (F2 = accepted
+  risk, 395/395, W2 done).
+
+Result:
+- W2 closed: `origin/main` = f782b56; bus factor resolved.
+- F2: open risk accepted with evidence and user-visible limits; F1 reduced to
+  the owner's audible check and a real incoming call; masters spec awaits a
+  composer/owner assets.
+
+Next step: owner - listen on device and place a call; composer/owner - deliver
+masters per spec; then integration, review, and the MAR consortium before
+acceptance.
+
+Open: owner audible/call; masters assets; F3 minor crossfade jump (with
+masters); W3-W4 workstreams.
+
+Evidence:
+- anchor: f782b56959a1b52ffa863c81ae01b7124d6ff4ac, uncommitted changes present
+- digest: sha256:98d597b058359aa7da677731f7c8c9d875683a86a72faf9120fe268c5762ee37 over 569 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-21T00:56:33.764Z by deepseek-99fe1db1ec0c6d5e
+- entry: sha256:d2ffa0f37426c4d3e7756fe35c5d916ae7d548b5bd55d0038c040793e20610f0 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-21 - W1 device check on 2209116AG: continuity verified, F2 attempt failed
 
 Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, reviewer for the cycle (DEC-0027).
@@ -80,51 +125,6 @@ Evidence:
 - digest format: 4
 - recorded: 2026-09-20T23:52:54.710Z by deepseek-99fe1db1ec0c6d5e
 - entry: sha256:b728bda6e8df769d663b1a41457840b22e692d221aad0e98bc21a172f49598ee of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-21 - Full-prompt rerun with Gemini: 2 adversarial + 2 approval rounds
-
-Agent: DeepSeek / deepseek-99fe1db1ec0c6d5e, owner's request.
-
-Action:
-- Owner corrected the earlier compressed delivery. Sent the complete owner
-  prompt verbatim (60,681 chars) via agy stdin (PowerShell argument passing
-  breaks on embedded quotes; stdin with UTF-8 works), fresh conversation
-  `3fbf8df3-7b4a-4f6f-bae4-62d16f013d16`.
-- Rerun rounds 1-2: same nine theses and attacks. Consensus in substance
-  identical to the first session, with sharper attacks and three new findings.
-  Verified: `keepScreenOn` absent (`AndroidManifest.xml`, `pubspec.yaml`) - real
-  new product item; `android-release.yml:49-63` has no early secret validation -
-  folded into D1; `kEffectTimeScale = 3.5` is the owner's intended product value
-  (`TASK.md:38`, `effect_timing_test.dart:18-19`), no reset needed, only the
-  eyes-on gate.
-- Corrected the rerun's "sabotage" framing of audit 07 (it predates the owner's
-  moratorium); Gemini accepted.
-- Updated plan 15 to edition 3 (DEC-0026 basis; keepScreenOn; CI fail-fast; push
-  in W2 after W1; step 7 protocol note; W4 gate); approval round 1 "одобряю с
-  правками" (three applied), round 2 "ОДОБРЯЮ". No product code touched; work
-  not started.
-
-Result:
-- Outcome unchanged in substance: D2 withdrawn; no monetization now (ad-free,
-  Stage C frozen); frame experiments not sanctioned (docs to 38-40 fps); music
-  by Gemini (DEC-0026); direct signed APK first; D1/C5/C6/C7/C8/D3 as planned.
-- New since the first run: keepScreenOn, CI secret fail-fast, explicit
-  kEffectTimeScale clarification.
-- Gemini requires from the owner: an explicit start command and the W1 reviewer
-  assignment (Claude or DeepSeek).
-
-Next step: owner's start command for W1 and reviewer confirmation; W2 merge+push.
-
-Open: owner start/reviewer; W3 execution; doc sync.
-
-Evidence:
-- anchor: 5ada2b9e08cc6175453e2a948486e11b5fa3dc4b, uncommitted changes present
-- digest: sha256:6e0680b5300351bc2450fa753921bd4170170c6b2be208ffcb9935fb0ec867d1 over 565 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-20T23:30:13.092Z by deepseek-99fe1db1ec0c6d5e
-- entry: sha256:8915309e2a271468e1f7d53c2c3adf6a9cf441da54b369535f130bbfa27d21e1 of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
