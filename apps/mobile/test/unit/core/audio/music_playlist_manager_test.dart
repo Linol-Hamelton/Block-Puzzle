@@ -27,6 +27,8 @@ class FakeAudioPlayer extends AudioPlayer {
 
   final StreamController<void> completeController =
       StreamController<void>.broadcast();
+  final StreamController<PlayerState> stateController =
+      StreamController<PlayerState>.broadcast();
 
   double currentVolume = 1.0;
   ReleaseMode? configuredReleaseMode;
@@ -37,9 +39,21 @@ class FakeAudioPlayer extends AudioPlayer {
   bool isPlayerStopped = true;
   bool isPlayerDisposed = false;
   int playCallCount = 0;
+  PlayerState _fakeState = PlayerState.stopped;
+
+  @override
+  PlayerState get state => _fakeState;
+
+  @override
+  Stream<PlayerState> get onPlayerStateChanged => stateController.stream;
 
   @override
   Stream<void> get onPlayerComplete => completeController.stream;
+
+  void emitPlayerState(PlayerState newState) {
+    _fakeState = newState;
+    stateController.add(newState);
+  }
 
   @override
   Future<void> setVolume(double volume) async {
@@ -72,6 +86,7 @@ class FakeAudioPlayer extends AudioPlayer {
     isPlayerPlaying = true;
     isPlayerPaused = false;
     isPlayerStopped = false;
+    _fakeState = PlayerState.playing;
     playCallCount++;
   }
 
@@ -79,12 +94,14 @@ class FakeAudioPlayer extends AudioPlayer {
   Future<void> pause() async {
     isPlayerPlaying = false;
     isPlayerPaused = true;
+    _fakeState = PlayerState.paused;
   }
 
   @override
   Future<void> resume() async {
     isPlayerPlaying = true;
     isPlayerPaused = false;
+    _fakeState = PlayerState.playing;
     playCallCount++;
   }
 
@@ -93,13 +110,16 @@ class FakeAudioPlayer extends AudioPlayer {
     isPlayerPlaying = false;
     isPlayerPaused = false;
     isPlayerStopped = true;
+    _fakeState = PlayerState.stopped;
   }
 
   @override
   Future<void> dispose() async {
     isPlayerDisposed = true;
     isPlayerPlaying = false;
+    _fakeState = PlayerState.disposed;
     await completeController.close();
+    await stateController.close();
   }
 
   void completeTrack() {
@@ -438,6 +458,95 @@ void main() {
       expect(controller.isPlaying, isTrue);
 
       await controller.dispose();
+    });
+  });
+
+  group('MusicPlaylistManager - F2 AudioFocus External Pause Recovery', () {
+    test('recovers from external pause event (AudioFocus loss) via state synchronization', () async {
+      final FakeAudioPlayer playerA = FakeAudioPlayer();
+      final FakeAudioPlayer playerB = FakeAudioPlayer();
+      final MusicPlaylistManager manager = MusicPlaylistManager(
+        logger: _SilentLogger(),
+        playlist: const <String>['track1.m4a', 'track2.m4a'],
+        playerA: playerA,
+        playerB: playerB,
+      );
+
+      await manager.initialize();
+      await manager.play();
+
+      expect(manager.isPlaying, isTrue);
+      expect(manager.isPaused, isFalse);
+      expect(playerA.playCallCount, 1);
+
+      // External pause emitted on active player (e.g. permanent audio focus loss)
+      playerA.emitPlayerState(PlayerState.paused);
+      await Future<void>.delayed(Duration.zero);
+
+      // Dart state reflects reality
+      expect(manager.isPaused, isTrue);
+      expect(manager.isPlaying, isTrue);
+
+      // Calling play() must not be a no-op; it resumes playback
+      await manager.play();
+
+      expect(manager.isPaused, isFalse);
+      expect(manager.isPlaying, isTrue);
+      expect(playerA.isPlayerPlaying, isTrue);
+      expect(playerA.playCallCount, 2);
+
+      await manager.dispose();
+    });
+
+    test('recovers from external resume event and direct resume call', () async {
+      final FakeAudioPlayer playerA = FakeAudioPlayer();
+      final FakeAudioPlayer playerB = FakeAudioPlayer();
+      final MusicPlaylistManager manager = MusicPlaylistManager(
+        logger: _SilentLogger(),
+        playlist: const <String>['track1.m4a'],
+        playerA: playerA,
+        playerB: playerB,
+      );
+
+      await manager.initialize();
+      await manager.play();
+
+      playerA.emitPlayerState(PlayerState.paused);
+      await Future<void>.delayed(Duration.zero);
+      expect(manager.isPaused, isTrue);
+
+      // External resume event
+      playerA.emitPlayerState(PlayerState.playing);
+      await Future<void>.delayed(Duration.zero);
+      expect(manager.isPaused, isFalse);
+
+      await manager.dispose();
+    });
+
+    test('play() detects underlying paused player state and resumes', () async {
+      final FakeAudioPlayer playerA = FakeAudioPlayer();
+      final FakeAudioPlayer playerB = FakeAudioPlayer();
+      final MusicPlaylistManager manager = MusicPlaylistManager(
+        logger: _SilentLogger(),
+        playlist: const <String>['track1.m4a'],
+        playerA: playerA,
+        playerB: playerB,
+      );
+
+      await manager.initialize();
+      await manager.play();
+      expect(playerA.playCallCount, 1);
+
+      // Simulate native silent pause where player.state changed without stream event
+      await playerA.pause();
+      expect(playerA.state, PlayerState.paused);
+
+      // Calling play() must detect underlying paused state and resume
+      await manager.play();
+      expect(manager.isPaused, isFalse);
+      expect(playerA.playCallCount, 2);
+
+      await manager.dispose();
     });
   });
 }

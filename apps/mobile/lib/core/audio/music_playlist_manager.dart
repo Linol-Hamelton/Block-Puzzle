@@ -60,6 +60,8 @@ class MusicPlaylistManager {
   Timer? _duckTimer;
   StreamSubscription<void>? _completeSubA;
   StreamSubscription<void>? _completeSubB;
+  StreamSubscription<PlayerState>? _stateSubA;
+  StreamSubscription<PlayerState>? _stateSubB;
 
   /// Default explicit AudioContext for Android and iOS per DEC-0024 p.7d.
   static final AudioContext defaultAudioContext = AudioContext(
@@ -136,6 +138,16 @@ class MusicPlaylistManager {
       _completeSubB = _playerB.onPlayerComplete.listen((_) {
         unawaited(_onActiveTrackComplete(1));
       });
+
+      await _stateSubA?.cancel();
+      _stateSubA = _playerA.onPlayerStateChanged.listen((PlayerState state) {
+        _onPlayerStateChanged(0, state);
+      });
+
+      await _stateSubB?.cancel();
+      _stateSubB = _playerB.onPlayerStateChanged.listen((PlayerState state) {
+        _onPlayerStateChanged(1, state);
+      });
     } catch (error) {
       _logger.warn('MusicPlaylistManager initialize error: $error');
     }
@@ -168,6 +180,11 @@ class MusicPlaylistManager {
       try {
         await standbyPlayer.stop();
       } catch (_) {}
+    }
+
+    // Synchronize pause state with active player if underlying player was paused externally (F2)
+    if (_playing && !_isPaused && activePlayer.state == PlayerState.paused) {
+      _isPaused = true;
     }
 
     // Continuity across screen navigation: if already playing and no track switch requested
@@ -294,6 +311,29 @@ class MusicPlaylistManager {
     }
   }
 
+  void _onPlayerStateChanged(int playerIndex, PlayerState state) {
+    if (_isDisposed) {
+      return;
+    }
+    final bool isTrackedPlayer = playerIndex == _activePlayerIndex ||
+        (_isCrossfading && playerIndex == (_activePlayerIndex == 0 ? 1 : 0));
+    if (!isTrackedPlayer) {
+      return;
+    }
+
+    if (state == PlayerState.paused) {
+      if (_playing && !_isPaused) {
+        _isPaused = true;
+        _logger.info('Player $playerIndex externally paused, synchronized _isPaused = true');
+      }
+    } else if (state == PlayerState.playing) {
+      if (_playing && _isPaused) {
+        _isPaused = false;
+        _logger.info('Player $playerIndex externally resumed, synchronizing _isPaused = false');
+      }
+    }
+  }
+
   /// Ducking per DEC-0024 Step 4c: reduces music volume by [factor] (-3 dB default)
   /// for [duration] (150 ms default) without overriding crossfade envelope gains.
   ///
@@ -393,6 +433,10 @@ class MusicPlaylistManager {
     _completeSubA = null;
     await _completeSubB?.cancel();
     _completeSubB = null;
+    await _stateSubA?.cancel();
+    _stateSubA = null;
+    await _stateSubB?.cancel();
+    _stateSubB = null;
     await stop();
     try {
       await _playerA.dispose();

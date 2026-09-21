@@ -1,6 +1,6 @@
 # Current Task
 
-Status: In progress - W1 code + device continuity done (design/15); audible/call, F2, masters pending
+Status: In progress - W1 code + device + F2 risk accepted (design/15); audible/call, masters pending
 Owner: RuslanFomenko
 Last update: 2026-09-21
 
@@ -50,7 +50,7 @@ Full repo audits: docs/audit/06 (DeepSeek), 07 (Claude; dissents on the
 frame-rate gate, adds D1-D6), 08 (Gemini), 09 (adversarial review; forks F1-F7).
 Next stage started: W1 review docs/design/15 (PASS WITH CONDITIONS); plan ed.3, DEC-0026/0027.
 Live plan: .ai/PLAN.md. Criteria per step: docs/design/04.
-Verified: analyze 0 issues, 392/392 tests, validator OK (review design/15).
+Verified: analyze 0 issues, 395/395 tests, validator OK (review design/15).
 
 ## Active agent
 
@@ -63,10 +63,10 @@ Verified: analyze 0 issues, 392/392 tests, validator OK (review design/15).
 
 1. Stage C frozen by DEC-0026 (ad-free, no monetization for now); DEC-0018
    progress-merge rules; DEC-0004 KPI formulas and sample sizes remain open.
-2. `dec-0024/av-polish`: ten commits, **not pushed**; 1k/7/cache committed in triage.
+2. W2 done 2026-09-21: merged to main, pushed origin/main at 0400582 (PNG stay).
 3. Steps 3/4c: code PASS WITH CONDITIONS (docs/design/15); device continuity
-   verified; open: owner audible/call check, F2 focus-loss sync, masters.
-4. Four soundtrack masters: with Gemini; not delivered yet (W1 open item).
+   verified; F2 = accepted risk, plugin sends no focus event; owner audible/call.
+4. Four soundtrack masters: spec + checklist delivered by Gemini; assets pending.
 5. Composition: slower effects overlap more, so whether a clear still reads
    as one moment is an eyes-on call on device.
 6. Stage C boundaries (audit 06, section 4): Google Sign-In linking (DEC-0018),

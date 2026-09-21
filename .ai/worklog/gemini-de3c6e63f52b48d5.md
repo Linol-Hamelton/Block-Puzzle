@@ -6,6 +6,37 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-21 - W1 finding F2 fix: AudioPlayer state synchronization and masters specification
+
+Agent: Gemini (gemini-de3c6e63f52b48d5), implementer for W1 (DEC-0026/DEC-0027).
+
+Action:
+- Addressed Review 15 finding F2: subscribed MusicPlaylistManager to onPlayerStateChanged on both players, synchronizing _isPaused with external pause/resume events.
+- Added proactive check in play() to synchronize _isPaused if activePlayer.state == PlayerState.paused, eliminating the silent no-op when external audio focus loss pauses playback.
+- Analyzed pub-cache source code for audioplayers_android (v5.2.0) FocusManager.kt and WrappedPlayer.kt, proving the native plugin does not dispatch an event to Dart on permanent AUDIOFOCUS_LOSS (documented formal risk acceptance for v1.0).
+- Extended FakeAudioPlayer with onPlayerStateChanged and state properties; added 3 unit tests verifying external pause recovery, external resume, and play() unblocking.
+- Produced exhaustive technical specification and integration checklist for 4 soundtrack masters (AAC-LC, 2.5-4 min, pentatonic, LUFS normalization, seamless loop).
+- Verified flutter analyze (0 issues), flutter test (395/395 passed, +3 tests), validate-protocol.ps1 (0 warnings).
+
+Result:
+- F2 resolved in Dart layer and proven with unit tests; 395/395 tests passing.
+- Masters specification and integration checklist prepared for owner/composer without placeholder files.
+
+Next step:
+- Review by DeepSeek (DEC-0027) on F2 resolution and masters specification; owner hardware audible check.
+
+Open:
+- Four soundtrack audio master files production by composer/owner per specification.
+
+Evidence:
+- anchor: 040058269fad45dc84c7c351a241a14b9890fc06, uncommitted changes present
+- digest: sha256:d3f7d51f0d406bd3fbee5fd291eaf9455714509afa527bb668b36a3329536969 over 569 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-21T00:53:59.732Z by gemini-de3c6e63f52b48d5
+- entry: sha256:e7c1c2c23ea1d2b7f82da0a65a6d65e5e5873d3ec73646db3123963994f4c800 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-21 - W1 music layer: continuous playlist, AudioContext focus, and ducking
 
 Agent: Gemini (gemini-de3c6e63f52b48d5), implementer for W1 (DEC-0024 Steps 3 & 4c).
