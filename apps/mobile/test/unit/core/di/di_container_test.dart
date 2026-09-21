@@ -1,3 +1,5 @@
+import 'package:block_puzzle_mobile/core/audio/music_controller.dart';
+import 'package:block_puzzle_mobile/core/audio/music_playlist_manager.dart';
 import 'package:block_puzzle_mobile/core/config/app_config.dart';
 import 'package:block_puzzle_mobile/core/config/app_environment.dart';
 import 'package:block_puzzle_mobile/core/di/di_container.dart';
@@ -79,8 +81,10 @@ void main() {
       expect(iapService, isNot(isA<DebugIapStoreService>()));
       expect(iapService, isNot(isA<LocalCatalogIapStoreService>()));
 
-      // Mode availability must be registered
+      // Mode availability and audio must be registered
       expect(sl.isRegistered<GameModeAvailability>(), isTrue);
+      expect(sl.isRegistered<MusicPlaylistManager>(), isTrue);
+      expect(sl.isRegistered<MusicController>(), isTrue);
     });
 
     test('stage release wires LocalCatalogIapStoreService and production CrashReporter', () async {

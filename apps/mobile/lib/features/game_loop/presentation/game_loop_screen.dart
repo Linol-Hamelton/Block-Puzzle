@@ -5,7 +5,6 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/audio/music_controller.dart';
 import '../../../core/device/haptics_controller.dart';
 import '../../../core/di/di_container.dart';
 import '../../../ui/layout/game_layout_profile.dart';
@@ -41,7 +40,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
   late final GameLoopController _controller;
   late final GameSfxPlayer _sfxPlayer;
   late final HapticsController _haptics;
-  late final MusicController _music;
   late final BlockPuzzleGame _game;
   final List<_ComboToastData> _comboToasts = <_ComboToastData>[];
   int _comboToastSeq = 0;
@@ -55,7 +53,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     _controller = sl<GameLoopController>();
     _sfxPlayer = sl<GameSfxPlayer>();
     _haptics = sl<HapticsController>();
-    _music = sl<MusicController>();
     _game = BlockPuzzleGame(
       controller: _controller,
       sfxPlayer: _sfxPlayer,
@@ -63,15 +60,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
       isDailyChallenge: widget.isDailyChallenge,
     );
     _controller.stateListenable.addListener(_onControllerStateChanged);
-    unawaited(_initMusic());
-  }
-
-  Future<void> _initMusic() async {
-    await _music.loadPreference();
-    if (!mounted) {
-      return;
-    }
-    await _music.play();
   }
 
   @override
@@ -79,7 +67,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _controller.stateListenable.removeListener(_onControllerStateChanged);
-    unawaited(_music.stop());
     _game.shutdown();
     _controller.dispose();
     super.dispose();
@@ -100,7 +87,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
         _controller.resumeGame();
         _game.resumeEngine();
         unawaited(_sfxPlayer.onAppResumed());
-        unawaited(_music.resume());
         return;
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
@@ -108,7 +94,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
       case AppLifecycleState.detached:
         _controller.pauseGame();
         _game.pauseEngine();
-        unawaited(_music.pause());
         return;
     }
   }

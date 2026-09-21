@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/audio/music_controller.dart';
 import '../../../core/device/haptics_controller.dart';
 import '../../../core/di/di_container.dart';
 import '../../../data/analytics/analytics_tracker.dart';
@@ -26,7 +25,6 @@ class _Match3ScreenState extends State<Match3Screen>
     with WidgetsBindingObserver {
   late final GameSfxPlayer _sfx;
   late final HapticsController _haptics;
-  late final MusicController _music;
   late final Match3Controller _controller;
   late final Match3FlameGame _game;
   bool _isDisposed = false;
@@ -42,7 +40,6 @@ class _Match3ScreenState extends State<Match3Screen>
     WidgetsBinding.instance.addObserver(this);
     _sfx = sl<GameSfxPlayer>();
     _haptics = sl<HapticsController>();
-    _music = sl<MusicController>();
     _controller = Match3Controller(
       sfx: _sfx,
       haptics: _haptics,
@@ -52,15 +49,6 @@ class _Match3ScreenState extends State<Match3Screen>
     _game = Match3FlameGame(controller: _controller);
     unawaited(_sfx.preload());
     unawaited(_controller.initialize());
-    unawaited(_initMusic());
-  }
-
-  Future<void> _initMusic() async {
-    await _music.loadPreference();
-    if (!mounted) {
-      return;
-    }
-    await _music.play();
   }
 
   @override
@@ -68,7 +56,6 @@ class _Match3ScreenState extends State<Match3Screen>
     _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _game.pauseEngine();
-    unawaited(_music.stop());
     _controller.dispose();
     super.dispose();
   }
@@ -87,7 +74,6 @@ class _Match3ScreenState extends State<Match3Screen>
         _game.dropCachedSurfaces();
         _game.resumeEngine();
         unawaited(_sfx.onAppResumed());
-        unawaited(_music.resume());
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
@@ -95,7 +81,6 @@ class _Match3ScreenState extends State<Match3Screen>
       case AppLifecycleState.detached:
         _controller.saveActiveGame();
         _game.pauseEngine();
-        unawaited(_music.pause());
         break;
     }
   }

@@ -1,4 +1,8 @@
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:block_puzzle_mobile/core/audio/music_controller.dart';
+import 'package:block_puzzle_mobile/core/audio/music_playlist_manager.dart';
 import 'package:block_puzzle_mobile/core/logging/app_logger.dart';
 import 'package:block_puzzle_mobile/features/game_loop/audio/flame_game_sfx_player.dart';
 
@@ -11,7 +15,61 @@ class _SilentLogger implements AppLogger {
   void error(String message, [Object? error, StackTrace? stackTrace]) {}
 }
 
+class _FakeAudioPlayer extends AudioPlayer {
+  _FakeAudioPlayer();
+
+  @override
+  Future<void> setVolume(double volume) async {}
+
+  @override
+  Future<void> setReleaseMode(ReleaseMode mode) async {}
+
+  @override
+  Future<void> setAudioContext(AudioContext context) async {}
+}
+
+class _SpyMusicController extends MusicController {
+  _SpyMusicController()
+      : super(
+          logger: _SilentLogger(),
+          playlistManager: MusicPlaylistManager(
+            logger: _SilentLogger(),
+            playerA: _FakeAudioPlayer(),
+            playerB: _FakeAudioPlayer(),
+          ),
+        );
+
+  int duckCallCount = 0;
+  Duration? lastDuckDuration;
+  double? lastDuckFactor;
+
+  @override
+  void duck({
+    Duration duration = MusicPlaylistManager.kDefaultDuckDuration,
+    double factor = MusicPlaylistManager.kDuckFactorMinus3dB,
+  }) {
+    duckCallCount++;
+    lastDuckDuration = duration;
+    lastDuckFactor = factor;
+  }
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('xyz.luan/audioplayers'),
+      (MethodCall methodCall) async => 1,
+    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('xyz.luan/audioplayers.global'),
+      (MethodCall methodCall) async => 1,
+    );
+  });
+
   group('FlameGameSfxPlayer - Step 4a Combo Ladder & Reset', () {
     late DateTime currentTime;
     late FlameGameSfxPlayer player;
@@ -96,6 +154,50 @@ void main() {
       currentTime = currentTime.add(const Duration(milliseconds: 2500));
       await player.playCombo(comboStreak: 3);
       expect(player.lastComboStep, 1);
+    });
+  });
+
+  group('FlameGameSfxPlayer - Step 4c Music Ducking Triggers', () {
+    late _SpyMusicController musicSpy;
+    late FlameGameSfxPlayer player;
+
+    setUp(() {
+      musicSpy = _SpyMusicController();
+      player = FlameGameSfxPlayer(
+        logger: _SilentLogger(),
+        musicController: musicSpy,
+      );
+      player.isEnabled = false; // Headless test without audio pool
+    });
+
+    test('line clear ducks music only on 2 or more cleared lines', () async {
+      await player.playLineClear(clearedLines: 1);
+      expect(musicSpy.duckCallCount, 0, reason: 'Single line clear should not duck music');
+
+      await player.playLineClear(clearedLines: 2);
+      expect(musicSpy.duckCallCount, 1);
+      expect(musicSpy.lastDuckDuration, const Duration(milliseconds: 150));
+
+      await player.playLineClear(clearedLines: 4);
+      expect(musicSpy.duckCallCount, 2);
+    });
+
+    test('combo ducks music only on streak >= 2', () async {
+      await player.playCombo(comboStreak: 1);
+      expect(musicSpy.duckCallCount, 0, reason: 'Combo streak 1 should not duck music');
+
+      await player.playCombo(comboStreak: 2);
+      expect(musicSpy.duckCallCount, 1);
+      expect(musicSpy.lastDuckDuration, const Duration(milliseconds: 150));
+
+      await player.playCombo(comboStreak: 5);
+      expect(musicSpy.duckCallCount, 2);
+    });
+
+    test('game over ducks music for 500 ms', () async {
+      await player.playGameOver();
+      expect(musicSpy.duckCallCount, 1);
+      expect(musicSpy.lastDuckDuration, const Duration(milliseconds: 500));
     });
   });
 }

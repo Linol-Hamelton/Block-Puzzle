@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../firebase_options.dart';
+import '../core/audio/music_controller.dart';
 import '../core/di/di_container.dart';
 import '../core/logging/app_logger.dart';
 import '../data/analytics/analytics_tracker.dart';
@@ -46,6 +47,10 @@ Future<void> bootstrap() async {
   );
   await configureDependencies();
   _configureGlobalErrorHandlers();
+
+  if (sl.isRegistered<MusicController>()) {
+    unawaited(sl<MusicController>().initialize());
+  }
 
   if (kDiagnosticsEnabled) {
     SchedulerBinding.instance.addTimingsCallback((List<FrameTiming> timings) {

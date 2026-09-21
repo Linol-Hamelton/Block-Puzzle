@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flame_audio/flame_audio.dart';
 
+import '../../../core/audio/music_controller.dart';
 import '../../../core/logging/app_logger.dart';
 import 'game_sfx_player.dart';
 
@@ -9,11 +10,14 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   FlameGameSfxPlayer({
     required AppLogger logger,
     DateTime Function()? nowUtcProvider,
+    MusicController? musicController,
   })  : _logger = logger,
-        _nowUtc = nowUtcProvider ?? (() => DateTime.now().toUtc());
+        _nowUtc = nowUtcProvider ?? (() => DateTime.now().toUtc()),
+        _musicController = musicController;
 
   final AppLogger _logger;
   final DateTime Function() _nowUtc;
+  final MusicController? _musicController;
 
   static const String _piecePlaced = 'piece_placed.wav';
   static const String _invalidMove = 'invalid_move.wav';
@@ -146,6 +150,9 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   Future<void> playLineClear({
     required int clearedLines,
   }) async {
+    if (clearedLines >= 2) {
+      _musicController?.duck();
+    }
     await _play(_lineClear, volume: clearedLines > 1 ? 0.9 : 0.72);
   }
 
@@ -153,6 +160,9 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   Future<void> playCombo({
     required int comboStreak,
   }) async {
+    if (comboStreak >= 2) {
+      _musicController?.duck();
+    }
     final DateTime now = _nowUtc();
     final int step = resolveComboStep(comboStreak: comboStreak, now: now);
     final String fileName = _comboSteps[step - 1];
@@ -170,7 +180,10 @@ class FlameGameSfxPlayer implements GameSfxPlayer {
   Future<void> playHardDrop() async => _play(_hardDrop, volume: 0.7);
 
   @override
-  Future<void> playGameOver() async => _play(_gameOver, volume: 0.85);
+  Future<void> playGameOver() async {
+    _musicController?.duck(duration: const Duration(milliseconds: 500));
+    await _play(_gameOver, volume: 0.85);
+  }
 
   Future<void> _play(
     String fileName, {

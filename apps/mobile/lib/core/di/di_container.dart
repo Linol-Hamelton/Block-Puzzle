@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 import '../../features/diagnostics/diagnostics_screen.dart';
 import '../../features/diagnostics/frame_timing_recorder.dart';
 import '../../core/audio/music_controller.dart';
+import '../../core/audio/music_playlist_manager.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/config/remote_config_reader.dart';
 import '../../core/device/haptics_controller.dart';
@@ -111,14 +112,22 @@ Future<void> configureDependencies({
   );
   sl.registerSingleton<AppLogger>(logger);
   sl.registerSingleton<HapticsController>(HapticsController());
+  sl.registerLazySingleton<MusicPlaylistManager>(
+    () => MusicPlaylistManager(logger: sl()),
+    dispose: (MusicPlaylistManager manager) => manager.dispose(),
+  );
   sl.registerLazySingleton<MusicController>(
-    () => MusicController(logger: sl()),
+    () => MusicController(logger: sl(), playlistManager: sl()),
+    dispose: (MusicController controller) => controller.dispose(),
   );
   sl.registerLazySingleton<CrashReporter>(
     () => useDebugAdapters ? const NoopCrashReporter() : const FirebaseCrashReporter(),
   );
   sl.registerLazySingleton<GameSfxPlayer>(
-    () => FlameGameSfxPlayer(logger: sl()),
+    () => FlameGameSfxPlayer(
+      logger: sl(),
+      musicController: sl<MusicController>(),
+    ),
   );
   sl.registerLazySingleton<AdService>(
     () => useDebugAdapters
