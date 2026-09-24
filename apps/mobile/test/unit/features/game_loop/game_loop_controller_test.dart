@@ -515,6 +515,68 @@ void main() {
       );
     });
 
+    test(
+        'free undo works with 0 credits, resets combo streak to 0, and second undo requires credits',
+        () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository:
+            const _NoCreditsHintUndoRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      expect(controller.state.hasUsedFreeUndo, isFalse);
+
+      final Move? move1 = _firstValidMove(controller);
+      expect(move1, isNotNull);
+      await controller.processMove(move1!);
+      expect(controller.state.movesPlayed, 1);
+
+      // First undo: should be free despite 0 credits
+      final RewardedUndoResult freeUndo = await controller.useRewardedUndo();
+      expect(freeUndo.isSuccess, isTrue);
+      expect(controller.state.hasUsedFreeUndo, isTrue);
+      expect(controller.state.movesPlayed, 0);
+      expect(controller.state.scoreState.comboStreak, 0);
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'undo_used' &&
+              event.params['is_free'] == true &&
+              event.params['moves_after'] == 0,
+        ),
+        isTrue,
+      );
+
+      // Make another move
+      final Move? move2 = _firstValidMove(controller);
+      expect(move2, isNotNull);
+      await controller.processMove(move2!);
+      expect(controller.state.movesPlayed, 1);
+
+      // Second undo: should fail due to insufficient credits
+      final RewardedUndoResult secondUndo = await controller.useRewardedUndo();
+      expect(secondUndo.isSuccess, isFalse);
+      expect(secondUndo.failureReason, 'insufficient_tools_credits');
+    });
+
     test('uses rewarded hint via iap unlimited access without spending credits',
         () async {
       final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
@@ -660,7 +722,181 @@ void main() {
         isTrue,
       );
     });
+
+    test('tracks danger_pulse_shown when board fill exceeds 75%', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _SingleCellPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _InMemoryRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+
+      // Pre-fill board with exactly 48 cells (48/64 = 0.75, not yet > 0.75).
+      // Using cyclic shift (x + y) % 8 guarantees exactly 6 cells per row and 6 cells per column,
+      // so zero lines are completed or cleared.
+      final Set<BoardCell> cells = <BoardCell>{};
+      for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 6; x++) {
+          cells.add(BoardCell(x: (x + y) % 8, y: y));
+        }
+      }
+      expect(cells.length, 48);
+      controller.debugSetBoardState(BoardState(size: 8, occupiedCells: cells));
+
+      // In row 0, columns 6 and 7 are empty.
+      // Placing single-cell piece at (6, 0) makes row 0 have 7 cells and col 6 have 7 cells.
+      // Board fill becomes 49/64 = 0.765625 (> 0.75), with 0 lines cleared!
+      final Piece singlePiece = controller.state.rackPieces.first;
+      await controller.processMove(Move(piece: singlePiece, anchorX: 6, anchorY: 0));
+
+      expect(
+        analytics.trackedEvents.any(
+          (event) =>
+              event.name == 'danger_pulse_shown' &&
+              event.params['fill_ratio'] != null,
+        ),
+        isTrue,
+      );
+    });
+
+    test('emits game_id classic in game_start, line_clear, and game_end events (C5)', () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final GameLoopController controller = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _GameOverTestPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _InMemoryRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+      expect(
+        analytics.trackedEvents.any(
+          (event) => event.name == 'game_start' && event.params['game_id'] == 'classic',
+        ),
+        isTrue,
+      );
+
+      // Pre-fill row 0 with 7 cells (x: 0..6)
+      final Set<BoardCell> cells = <BoardCell>{
+        for (int x = 0; x < 7; x++) BoardCell(x: x, y: 0),
+      };
+      controller.debugSetBoardState(BoardState(size: 8, occupiedCells: cells));
+
+      // Place single piece at (7, 0) to clear row 0
+      final Piece singlePiece = controller.state.rackPieces.first;
+      await controller.processMove(Move(piece: singlePiece, anchorX: 7, anchorY: 0));
+      expect(
+        analytics.trackedEvents.any(
+          (event) => event.name == 'line_clear' && event.params['game_id'] == 'classic',
+        ),
+        isTrue,
+      );
+
+      // Setup a checkerboard pattern where no 3x3 piece can possibly fit:
+      // (x + y) % 2 == 0 is occupied.
+      final Set<BoardCell> checkerboard = <BoardCell>{
+        for (int y = 0; y < 8; y++)
+          for (int x = 0; x < 8; x++)
+            if ((x + y) % 2 == 0 && !(x == 1 && y == 1)) BoardCell(x: x, y: y),
+      };
+      controller.debugSetBoardState(BoardState(size: 8, occupiedCells: checkerboard));
+
+      // Second game with same controller to get the next rack with 3x3 pieces
+      final GameLoopController overController = GameLoopController(
+        placePieceUseCase: const PlacePieceUseCase(
+          moveValidator: BasicMoveValidator(),
+        ),
+        clearLinesUseCase: const ClearLinesUseCase(
+          lineClearService: BasicLineClearService(),
+        ),
+        computeScoreUseCase: const ComputeScoreUseCase(
+          scoreService: BasicScoreService(),
+        ),
+        pieceGenerationService: _GameOverTestPieceGenerationService(),
+        difficultyTuner: const _DefaultDifficultyTuner(),
+        remoteConfigRepository: const _InMemoryRemoteConfigRepository(),
+        analyticsTracker: analytics,
+        adService: const _NoopAdService(),
+        adGuardrailPolicy: const _AllowAllAdGuardrailPolicy(),
+        iapStoreService: DebugIapStoreService(),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+      await overController.initialize();
+      overController.debugSetBoardState(BoardState(size: 8, occupiedCells: checkerboard));
+
+      // Place the 1x1 piece at (1, 1). Move succeeds!
+      final Piece single = overController.state.rackPieces.first;
+      await overController.processMove(Move(piece: single, anchorX: 1, anchorY: 1));
+
+      // Remaining rack pieces are 3x3 blocks, which cannot fit on a checkerboard.
+      expect(overController.state.isGameOver, isTrue);
+      expect(
+        analytics.trackedEvents.any(
+          (event) => event.name == 'game_end' && event.params['game_id'] == 'classic',
+        ),
+        isTrue,
+      );
+    });
   });
+}
+
+class _GameOverTestPieceGenerationService implements PieceGenerationService {
+  @override
+  void setSeed(int? seed) {}
+
+  @override
+  PieceTriplet nextTriplet({
+    required BoardState boardState,
+    required DifficultyProfile profile,
+  }) {
+    return PieceTriplet(
+      pieces: const <Piece>[
+        Piece(id: 'single_1', cells: <PieceCellOffset>[PieceCellOffset(dx: 0, dy: 0)]),
+        Piece(id: 'heavy_1', cells: <PieceCellOffset>[
+          PieceCellOffset(dx: 0, dy: 0), PieceCellOffset(dx: 1, dy: 0), PieceCellOffset(dx: 2, dy: 0),
+          PieceCellOffset(dx: 0, dy: 1), PieceCellOffset(dx: 1, dy: 1), PieceCellOffset(dx: 2, dy: 1),
+          PieceCellOffset(dx: 0, dy: 2), PieceCellOffset(dx: 1, dy: 2), PieceCellOffset(dx: 2, dy: 2),
+        ]),
+        Piece(id: 'heavy_2', cells: <PieceCellOffset>[
+          PieceCellOffset(dx: 0, dy: 0), PieceCellOffset(dx: 1, dy: 0), PieceCellOffset(dx: 2, dy: 0),
+          PieceCellOffset(dx: 0, dy: 1), PieceCellOffset(dx: 1, dy: 1), PieceCellOffset(dx: 2, dy: 1),
+          PieceCellOffset(dx: 0, dy: 2), PieceCellOffset(dx: 1, dy: 2), PieceCellOffset(dx: 2, dy: 2),
+        ]),
+      ],
+    );
+  }
 }
 
 Move? _firstValidMove(GameLoopController controller) {

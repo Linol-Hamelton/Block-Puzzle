@@ -74,13 +74,25 @@ class LocalCatalogIapStoreService implements IapStoreService {
   Future<List<IapProduct>> loadCatalog() async {
     final Map<String, Object?> remoteConfig =
         await _remoteConfigRepository.getCached();
+    final bool isStoreEnabled = _readBool(
+      remoteConfig['iap.store_enabled'],
+      fallback: false,
+    ) || _readBool(
+      remoteConfig['feature_store_enabled'],
+      fallback: false,
+    );
+    if (!isStoreEnabled) {
+      _logger.info('LocalCatalogIapStoreService: store disabled in v1.0 (DEC-0026/DEC-0028).');
+      return const <IapProduct>[];
+    }
+
     final bool includeBundle = _readBool(
       remoteConfig['iap.bundle_enabled'],
       fallback: false,
     );
     final bool includeUtilityPass = _readBool(
       remoteConfig['iap.rewarded_tools_unlimited_enabled'],
-      fallback: true,
+      fallback: false,
     );
     _rolloutStrategy = _readString(
       remoteConfig['iap.rollout_strategy'],
@@ -109,6 +121,23 @@ class LocalCatalogIapStoreService implements IapStoreService {
   Future<IapPurchaseResult> purchase({
     required IapProduct product,
   }) async {
+    final Map<String, Object?> remoteConfig =
+        await _remoteConfigRepository.getCached();
+    final bool isStoreEnabled = _readBool(
+      remoteConfig['iap.store_enabled'],
+      fallback: false,
+    ) || _readBool(
+      remoteConfig['feature_store_enabled'],
+      fallback: false,
+    );
+    if (!isStoreEnabled) {
+      _logger.warn('Purchase attempted while store is disabled for ${product.id}');
+      return IapPurchaseResult.failed(
+        errorCode: 'store_disabled',
+        message: 'store_disabled',
+      );
+    }
+
     if (!allowLocalPurchases) {
       _logger.warn('Local purchase disabled for ${product.id}');
       return IapPurchaseResult.failed(

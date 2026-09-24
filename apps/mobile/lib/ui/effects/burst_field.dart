@@ -23,8 +23,11 @@ class BurstField {
   /// rather than the lifetime keeps the arc: the same throw, played slower.
   final double timeScale;
   final List<_BurstParticle> _particles = <_BurstParticle>[];
+  final List<_BurstParticle> _pool = <_BurstParticle>[];
 
   bool get isEmpty => _particles.isEmpty;
+  int get pooledCount => _pool.length;
+  int get activeCount => _particles.length;
 
   /// Spawns [count] particles flying outward (and slightly up) from (x, y).
   void spawnBurst({
@@ -40,20 +43,45 @@ class BurstField {
     for (int i = 0; i < count; i++) {
       final double angle = _rng.nextDouble() * math.pi * 2;
       final double speed = speedMin + (_rng.nextDouble() * speedJitter);
-      _particles.add(
-        _BurstParticle(
+      final double maxLife = 0.5 + (_rng.nextDouble() * 0.35);
+      final double size = sizeBase + (_rng.nextDouble() * sizeJitter);
+      final double vx = math.cos(angle) * speed;
+      final double vy = (math.sin(angle) * speed) - 45;
+
+      if (_pool.isNotEmpty) {
+        final _BurstParticle p = _pool.removeLast();
+        p.reset(
           x: x,
           y: y,
-          vx: math.cos(angle) * speed,
-          vy: (math.sin(angle) * speed) - 45,
+          vx: vx,
+          vy: vy,
           color: color,
-          maxLife: 0.5 + (_rng.nextDouble() * 0.35),
-          size: sizeBase + (_rng.nextDouble() * sizeJitter),
-        ),
-      );
+          maxLife: maxLife,
+          size: size,
+        );
+        _particles.add(p);
+      } else {
+        _particles.add(
+          _BurstParticle(
+            x: x,
+            y: y,
+            vx: vx,
+            vy: vy,
+            color: color,
+            maxLife: maxLife,
+            size: size,
+          ),
+        );
+      }
     }
     if (_particles.length > maxParticles) {
-      _particles.removeRange(0, _particles.length - maxParticles);
+      final int excess = _particles.length - maxParticles;
+      for (int i = 0; i < excess; i++) {
+        if (_pool.length < maxParticles) {
+          _pool.add(_particles[i]);
+        }
+      }
+      _particles.removeRange(0, excess);
     }
   }
 
@@ -62,13 +90,19 @@ class BurstField {
       return;
     }
     final double scaled = dt / timeScale;
-    for (final _BurstParticle p in _particles) {
+    for (int i = _particles.length - 1; i >= 0; i--) {
+      final _BurstParticle p = _particles[i];
       p.x += p.vx * scaled;
       p.y += p.vy * scaled;
       p.vy += gravity * scaled;
       p.life -= scaled;
+      if (p.life <= 0) {
+        _particles.removeAt(i);
+        if (_pool.length < maxParticles) {
+          _pool.add(p);
+        }
+      }
     }
-    _particles.removeWhere((_BurstParticle p) => p.life <= 0);
   }
 
   void render(Canvas canvas) {
@@ -101,7 +135,26 @@ class _BurstParticle {
   double vx;
   double vy;
   double life;
-  final double maxLife;
-  final Color color;
-  final double size;
+  double maxLife;
+  Color color;
+  double size;
+
+  void reset({
+    required double x,
+    required double y,
+    required double vx,
+    required double vy,
+    required Color color,
+    required double maxLife,
+    required double size,
+  }) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.color = color;
+    this.maxLife = maxLife;
+    life = maxLife;
+    this.size = size;
+  }
 }

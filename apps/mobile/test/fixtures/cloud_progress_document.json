@@ -16,7 +16,11 @@
     "settings": {
       "sound_enabled": true,
       "haptics_enabled": true,
-      "selected_blocks_preset": "soft"
+      "selected_blocks_preset": "soft",
+      "selected_theme": "pastel",
+      "music_volume": 0.5,
+      "sound_volume": 1.0,
+      "reduced_motion": false
     },
     "last_seen_utc": "2026-09-15T00:00:00.000Z",
     "economy_state": {

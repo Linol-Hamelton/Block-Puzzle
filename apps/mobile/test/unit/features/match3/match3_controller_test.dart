@@ -139,6 +139,9 @@ class _NoopSfx implements GameSfxPlayer {
   bool isEnabled = true;
 
   @override
+  double volume = 1.0;
+
+  @override
   Future<void> preload() async {}
   @override
   Future<void> onAppResumed() async {}
@@ -158,6 +161,8 @@ class _NoopSfx implements GameSfxPlayer {
   Future<void> playHardDrop() async {}
   @override
   Future<void> playGameOver() async {}
+  @override
+  Future<void> dispose() async {}
 }
 
 class _MemoryAnalytics implements AnalyticsTracker {

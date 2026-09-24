@@ -9,6 +9,7 @@ import 'package:block_puzzle_mobile/data/analytics/firebase_analytics_tracker.da
 import 'package:block_puzzle_mobile/data/analytics/validated_analytics_tracker.dart';
 import 'package:block_puzzle_mobile/data/remote_config/in_memory_remote_config_repository.dart';
 import 'package:block_puzzle_mobile/features/game_modes/game_mode_availability.dart';
+import 'package:block_puzzle_mobile/features/store/application/store_availability.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_service.dart';
 import 'package:block_puzzle_mobile/features/monetization/debug_ad_service.dart';
 import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
@@ -19,6 +20,9 @@ import 'package:block_puzzle_mobile/infra/billing/google_play_billing_service.da
 import 'package:block_puzzle_mobile/infra/monitoring/crash_reporter.dart';
 import 'package:block_puzzle_mobile/infra/monitoring/firebase_crash_reporter.dart';
 import 'package:block_puzzle_mobile/infra/monitoring/noop_crash_reporter.dart';
+import 'package:block_puzzle_mobile/features/game_loop/application/services/ab_experiment_service.dart';
+import 'package:block_puzzle_mobile/features/game_loop/application/services/onboarding_flow_controller.dart';
+import 'package:block_puzzle_mobile/features/game_loop/application/services/progression_sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Explicit verification test required by DEC-0007.
@@ -81,8 +85,9 @@ void main() {
       expect(iapService, isNot(isA<DebugIapStoreService>()));
       expect(iapService, isNot(isA<LocalCatalogIapStoreService>()));
 
-      // Mode availability and audio must be registered
+      // Mode and store availability and audio must be registered
       expect(sl.isRegistered<GameModeAvailability>(), isTrue);
+      expect(sl.isRegistered<StoreAvailability>(), isTrue);
       expect(sl.isRegistered<MusicPlaylistManager>(), isTrue);
       expect(sl.isRegistered<MusicController>(), isTrue);
     });
@@ -118,6 +123,29 @@ void main() {
       expect(sl<AdService>(), isA<DebugAdService>());
       expect(sl<AnalyticsTracker>(), isA<DebugAnalyticsTracker>());
       expect(sl<IapStoreService>(), isA<DebugIapStoreService>());
+    });
+
+    test('DEC-0016: ABExperimentService, OnboardingFlowController, ProgressionSyncService resolve as fresh factory instances', () async {
+      final AppConfig devConfig = makeConfig(AppEnvironment.dev, BuildFlavor.debug);
+      final InMemoryRemoteConfigRepository stubRemoteConfig =
+          InMemoryRemoteConfigRepository(appConfig: devConfig);
+
+      await configureDependencies(
+        overrideAppConfig: devConfig,
+        overrideRemoteConfigRepository: stubRemoteConfig,
+      );
+
+      final ABExperimentService exp1 = sl<ABExperimentService>();
+      final ABExperimentService exp2 = sl<ABExperimentService>();
+      expect(identical(exp1, exp2), isFalse);
+
+      final OnboardingFlowController onb1 = sl<OnboardingFlowController>();
+      final OnboardingFlowController onb2 = sl<OnboardingFlowController>();
+      expect(identical(onb1, onb2), isFalse);
+
+      final ProgressionSyncService prog1 = sl<ProgressionSyncService>();
+      final ProgressionSyncService prog2 = sl<ProgressionSyncService>();
+      expect(identical(prog1, prog2), isFalse);
     });
   });
 }

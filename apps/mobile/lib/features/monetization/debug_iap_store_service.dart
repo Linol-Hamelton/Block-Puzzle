@@ -8,10 +8,12 @@ class DebugIapStoreService implements IapStoreService {
   DebugIapStoreService({
     this.includeBundle = false,
     this.includeUtilityPass = true,
+    this.storeEnabled = true,
   });
 
   final bool includeBundle;
   final bool includeUtilityPass;
+  final bool storeEnabled;
   final Set<String> _ownedProductIds = <String>{};
 
   static const List<IapProduct> _cosmeticsCatalog = <IapProduct>[
@@ -63,6 +65,9 @@ class DebugIapStoreService implements IapStoreService {
       includeBundle ? 'cosmetics_bundle' : 'cosmetics_first';
 
   List<IapProduct> get _catalog {
+    if (!storeEnabled) {
+      return const <IapProduct>[];
+    }
     final List<IapProduct> catalog = <IapProduct>[
       ..._cosmeticsCatalog,
     ];
@@ -92,6 +97,12 @@ class DebugIapStoreService implements IapStoreService {
     required IapProduct product,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 240));
+    if (!storeEnabled) {
+      return IapPurchaseResult.failed(
+        errorCode: 'store_disabled',
+        message: 'store_disabled',
+      );
+    }
     if (_ownedProductIds.contains(product.id)) {
       return IapPurchaseResult.cancelled('already_owned');
     }

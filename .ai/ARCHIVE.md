@@ -1859,3 +1859,169 @@ Evidence:
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## 2026-09-21 - Gameplay research cycle with Gemini: 2 research + 2 discussion + 2 solution + 2 critique rounds; top-20 report
+
+Agent: DeepSeek / deepseek-71c5c0b3bece591d, owner's request (research outside the DEC-0024 cycle).
+
+Action:
+- Ran the owner-requested full cycle with Gemini via agy CLI
+  (`gemini-3.8-flash-high`, conversation c89cd708-18a9-4552-acab-d985056dab2b):
+  two independent Gemini studies (R1-P positive, R1-N negative, fresh sessions),
+  two independent DeepSeek studies (24 negative sources with direct quotes/RSS
+  feeds/MWM; ~30 positive sources incl. App Store pages, WorldsApps, APKPure,
+  Playgama, mobilegamer.biz), a code inventory with file:line facts, then
+  D1/D2 discussions (Gemini self-retracted unsupported citations and the
+  "Tetris/Match-3 blocked" error), S1/S2 solution rounds (30 -> merged top-20),
+  plan ed.1, hostile C1 (3 P0: benchmark-after-VFX inversion, generator
+  sequencing blindness, Undo snapshot exploit) and plan ed.2, then C2 = ACCEPT.
+- Verified Gemini's code claims independently (diagonal shake :656-666,
+  count:3 particles :683, audioFocus.gain, baseVolume 0.32, "that is fair"
+  :259, missing hasUsedFreeUndo in GameSnapshot) and corrected three factual
+  errors (all modes reachable; headless simulation harness exists at
+  test/internal_playtest; maxParticles=320 already in burst_field.dart:14).
+- Wrote `docs/research/01_GAMEPLAY_TOP20_2026-09-21.md` (20 proposals in the
+  owner's format + infra gates + 10 owner decisions); work artifacts under
+  `.ai/runtime/lumina-research/`. No product code touched; TASK/PLAN/DECISIONS
+  intentionally not edited (not this session's task).
+- One operational incident: agy auth expired mid-cycle; rerun after
+  `applyAuthResult` (consumer) succeeded; all rounds captured to files.
+
+Result: plan accepted by the hostile reviewer (C2 ACCEPT); top-20 list, gates
+and owner decisions are recorded in the research doc; unverifiable Gemini
+citation fractions are marked as expert estimates, DeepSeek counts are
+source-based.
+
+Next step: owner decisions 1-10; if approved - Wave 0 (Step 6+ benchmark,
+telemetry, audio rebalance/sliders, track wiring, ducking/SFX guard, shake,
+popup timings, honest New Best, free Undo + snapshot flag, AudioFocus).
+
+Open: no live player telemetry; Reddit/TouchArcade/Google Play unreachable
+(403) from this environment; agy may request owner login again; Gemini
+citation quality varies (self-downgraded in D1).
+
+Evidence:
+- anchor: e5c9382f48705f339250e4df928ffcf89f5df39f, uncommitted changes present
+- digest: sha256:ffaf41593f4f5a45a8fb6c15388efadee95b0cfe8eba6dcd9a8135d3fc0a433f over 577 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-21T05:34:22.693Z by deepseek-71c5c0b3bece591d
+- entry: sha256:16ea09e313428c1a41505811b4fbf19792c2cc349c833a56070e7a154491a06f of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## 2026-09-21 - Owner votes recorded: DEC-0028 (10 gameplay decisions); G1 sprint prompt prepared
+
+Agent: DeepSeek / deepseek-71c5c0b3bece591d.
+
+Action:
+- Owner voted all 10 forks (timings split; All Clear celebration-only; free undo
+  with streak reset; three palettes free in v1.0; anti-chunking; soft Danger Pulse;
+  hide monetization SKUs; technical directives; first-game-over tip;
+  prerequisites-first order).
+- Acquired the shared-document lock and appended `DEC-0028` to `.ai/DECISIONS.md`
+  (Approved by: RuslanFomenko, owner vote 2026-09-21), then released the lock.
+- Wrote `docs/research/04_OWNER_DECISIONS_2026-09-21.md` (vote table, G1 sprint
+  scope A/B/C, acceptance gates, process) and drafted the implementation prompt
+  `.ai/runtime/lumina-research/impl-sprint-prompt.md` for Gemini via agy.
+
+Result: decisions are binding in the repo; sprint prompt ready; implementation not
+started (waits for the owner's explicit start command per DEC-0027 p.1).
+
+Next step: on the owner's go - create a dedicated worktree, launch agy with the
+sprint prompt, then run the separate DeepSeek review sprint.
+
+Open: no product code touched in G1 yet; no commits made.
+
+Evidence:
+- anchor: e5c9382f48705f339250e4df928ffcf89f5df39f, uncommitted changes present
+- digest: sha256:87f060fa21867c1ceb6d38579eb5fc7eccd320a04c6bc3b30000b8bd8d13140f over 580 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-21T10:36:52.433Z by deepseek-71c5c0b3bece591d
+- entry: sha256:9b73c040f1c495e86a3d4813405302d6c7a1704fce11e5d64728e91843723a4f of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## 2026-09-21 - Round R3: three-report review (Claude 02 + external opinion-2), verification pass, consolidated v3
+
+Agent: DeepSeek / deepseek-71c5c0b3bece591d (owner request; research task).
+
+Action:
+- Read Claude's independent report `docs/research/02_GAMEPLAY_INDEPENDENT_EVALUATION.md`
+  and saved the external opinion-2 verbatim to `.ai/runtime/lumina-research/opinion-2.md`.
+- Verified contested claims against code: `piece_placed` volume 0.75 confirmed
+  (`flame_game_sfx_player.dart:190`); `duck()` is idempotent in depth but restarts
+  the 150 ms timer and spams `setVolume` (`music_playlist_manager.dart:347-366`) —
+  Claude's "double -3 dB" corrected; Undo blocked by `insufficient_tools_credits`
+  confirmed (`game_loop_controller.dart:722`); Claude's GameSnapshot path is wrong
+  (actual `lib/domain/session/game_snapshot.dart`).
+- Ran Gemini round R3 (delta of reports 01/02/opinion-2, accepted/rejected items,
+  verification table for retracted claims); output `g-r3.md`.
+- Wrote `docs/research/03_CONSOLIDATED_V3_2026-09-21.md`: 5 accepted improvements
+  (drop volume 0.35, ducking coalescing, haptic thresholds, danger-pulse params,
+  party-protection split), rejections from opinion-2 (percentage stats, difficulty
+  ramp, new modes, social, currency, fever), verification table for unsupported claims.
+
+Result: consolidated v3 saved; deltas agreed with Gemini; no product code touched;
+TASK/PLAN/DECISIONS untouched.
+
+Next step: owner decisions (UI timings, All Clear bonus, Undo combo reset, palettes,
+anti-chunking boundary, Danger Pulse, SKU hygiene, tech directives).
+
+Open: external report percentages unverifiable; R3's "scissor-clip <=0.3 ms" and
+"maxRadius x3.8" stay unverified until Step 6+ runs; agy auth may need owner login.
+
+Evidence:
+- anchor: e5c9382f48705f339250e4df928ffcf89f5df39f, uncommitted changes present
+- digest: sha256:dab324023cb4c44ad91702ce6d6a1eb043a2c1ed69ad1f7ad2eaea07a5dd46a2 over 579 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-21T06:51:34.349Z by deepseek-71c5c0b3bece591d
+- entry: sha256:a6137922db41ea6ec9eee315fdcff2b9b8d6af7f23e960ba9bce6ffb58f1e1b0 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## 2026-09-21 - G1 review: independent verification, ACCEPT with conditions, mini-patch launched
+
+Agent: DeepSeek / deepseek-71c5c0b3bece591d (reviewer per DEC-0025/DEC-0027).
+
+Action:
+- Verified G1 independently in D:\Block-Puzzle-g1: `flutter analyze` 0 issues,
+  `flutter test` All tests passed (419), `validate-protocol.ps1` PASS 0 warnings,
+  `protocol-handoff.cjs verify` matches the tree; anti-chunking simulation ran
+  ("5,000 deals ... max 1 heavy piece and 0 instant deadlocks").
+- Audited all 22 DEC-0028 items in code (audio volumes/pitch, duck coalescing
+  110 ms + floor 0.70, timings 0.85 s, snapshot flag, free undo, AudioFocus,
+  reduced motion, danger pulse, palettes/SKU, anti-chunking) and reproduced the
+  test evidence.
+- Defects: P2 diagonal All Clear shake (`block_puzzle_game.dart:896-902`);
+  P2 generated windows files noise from pub get; P1-process palette contrast
+  audit missing; device gates (Step 6+ numbers, audio/MIUI, screen wake, haptics)
+  still open. Wrote `docs/research/05_G1_REVIEW_2026-09-21.md`.
+- Launched mini-patch G1.1 to Gemini (isotropic All Clear shake, revert generated
+  files, contrast audit doc) via agy; prompt in
+  `.ai/runtime/lumina-research/impl-patch-prompt.md`.
+
+Result: code-level ACCEPT with conditions; owner device acceptance and commit
+decision outstanding; no commits made anywhere.
+
+Next step: read G1.1 result, confirm the three fixes, then hand to the owner for
+device/audio acceptance and the commit decision.
+
+Open: agy status=ERROR quirk on completion (content intact); docs/research copied
+into the G1 worktree (untracked) - owner decides.
+
+Evidence:
+- anchor: e5c9382f48705f339250e4df928ffcf89f5df39f, uncommitted changes present
+- digest: sha256:3af36f7c5941fd9e12d852b784ccf2e44b126ebc27a124b820077c66b7441316 over 581 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-21T12:05:51.777Z by deepseek-71c5c0b3bece591d
+- entry: sha256:42341b5f33c3b8e24561d2721f15ca6bb6b56f6acb1c191f88173e38cb7901ed of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+
+
+

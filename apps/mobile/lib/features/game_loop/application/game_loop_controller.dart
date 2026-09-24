@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -137,12 +138,18 @@ class GameLoopController {
   bool _shareFlowEnabled = true;
   Set<String> _ownedIapProductIds = <String>{};
   final List<_UndoSnapshot> _undoHistory = <_UndoSnapshot>[];
+  bool _hasUsedFreeUndo = false;
+  bool _nearRecordTracked = false;
+  bool _dangerPulseActive = false;
+  static bool hasSeenFirstGameOverTip = false;
+  int _sessionStartBestScore = 0;
 
   PlayerProgressState get _playerProgressState => progressionSyncService.state;
 
   ValueListenable<GameLoopViewState> get stateListenable => _stateNotifier;
   GameLoopViewState get state => _stateNotifier.value;
   String get blocksVisualPreset => _resolveBlocksVisualPreset();
+  String get selectedTheme => _playerProgressState.settings.selectedTheme;
 
   Future<void> initialize({bool isDailyChallenge = false}) async {
     if (_initialized) {
@@ -255,6 +262,12 @@ class GameLoopController {
     _rewardedReviveUsedInCurrentGame = false;
     _gameEndEmitted = false;
     _undoHistory.clear();
+    _hasUsedFreeUndo = snapshot?.hasUsedFreeUndo ?? false;
+    _nearRecordTracked = false;
+    _dangerPulseActive = false;
+    _sessionStartBestScore = dailyMode
+        ? _playerProgressState.dailyChallengeHighScoreDay
+        : _playerProgressState.bestScore;
     final int nextGamesPlayed = snapshot != null ? snapshot.gamesPlayed : state.gamesPlayed + 1;
     final bool shouldShowOnboarding =
         onboardingFlowController.shouldShowForGame(nextGamesPlayed) && snapshot == null;
@@ -301,7 +314,12 @@ class GameLoopController {
       isOnboardingVisible: shouldShowOnboarding,
       dailyGoals: progressionSyncService.buildDailyGoalsSnapshot(),
       streak: progressionSyncService.buildStreakSnapshot(),
-      bestScore: dailyMode ? _playerProgressState.dailyChallengeHighScoreDay : _playerProgressState.bestScore,
+      bestScore: _sessionStartBestScore,
+      sessionStartBestScore: _sessionStartBestScore,
+      linesCleared: 0,
+      maxCombo: 0,
+      hasUsedFreeUndo: _hasUsedFreeUndo,
+      isFirstGameOver: false,
       onboardingStepId: shouldShowOnboarding ? onboardingFlowController.initialStepId : null,
       onboardingTitle: shouldShowOnboarding ? onboardingFlowController.initialTitle : null,
       onboardingDescription: shouldShowOnboarding
@@ -337,6 +355,7 @@ class GameLoopController {
     await analyticsTracker.track(
       'game_start',
       params: <String, Object?>{
+        'game_id': 'classic',
         'round_id': _currentGameNumber,
         'mode': 'classic',
         'config_version': _remoteConfigVersion,
@@ -438,6 +457,13 @@ class GameLoopController {
     final int nextColorThemeIndex = _resolveColorThemeIndex(nextLevel);
     final double boardFillPct = lineResult.boardState.occupiedCells.length /
         (lineResult.boardState.size * lineResult.boardState.size);
+    final int nextLinesCleared = state.linesCleared + lineResult.clearedTotal;
+    final int nextMaxCombo = math.max(state.maxCombo, nextScore.comboStreak);
+    bool isFirstGameOver = false;
+    if (isGameOver && !hasSeenFirstGameOverTip) {
+      hasSeenFirstGameOverTip = true;
+      isFirstGameOver = true;
+    }
 
     final DailyGoalsSnapshot dailyGoalsBefore =
         progressionSyncService.buildDailyGoalsSnapshot();
@@ -479,6 +505,11 @@ class GameLoopController {
       dailyGoals: dailyGoalsAfter,
       streak: progressionSyncService.buildStreakSnapshot(),
       bestScore: nextBestScore,
+      sessionStartBestScore: _sessionStartBestScore,
+      linesCleared: nextLinesCleared,
+      maxCombo: nextMaxCombo,
+      hasUsedFreeUndo: _hasUsedFreeUndo,
+      isFirstGameOver: isFirstGameOver,
       movesPlayed: nextMovesPlayed,
       gameOverReason: isGameOver ? 'no_valid_moves' : null,
       resetHintSuggestion: true,
@@ -502,6 +533,70 @@ class GameLoopController {
         'board_fill_pct': boardFillPct,
       },
     );
+
+    if (lineResult.clearedTotal > 0) {
+      await analyticsTracker.track(
+        'clear_size',
+        params: <String, Object?>{
+          'round_id': _currentGameNumber,
+          'size': lineResult.clearedTotal,
+        },
+      );
+    }
+
+    if (isAllClear) {
+      await analyticsTracker.track(
+        'all_clear',
+        params: <String, Object?>{
+          'round_id': _currentGameNumber,
+          'board_size': lineResult.boardState.size,
+        },
+      );
+    }
+
+    if (_sessionStartBestScore > 0 &&
+        nextScore.totalScore < _sessionStartBestScore &&
+        nextScore.totalScore >= (_sessionStartBestScore * 0.95).floor()) {
+      if (!_nearRecordTracked) {
+        _nearRecordTracked = true;
+        await analyticsTracker.track(
+          'near_record',
+          params: <String, Object?>{
+            'round_id': _currentGameNumber,
+            'score': nextScore.totalScore,
+            'best_score': _sessionStartBestScore,
+            'difference': _sessionStartBestScore - nextScore.totalScore,
+          },
+        );
+      }
+    }
+
+    if (isGameOver) {
+      await analyticsTracker.track(
+        'game_over_fill_ratio',
+        params: <String, Object?>{
+          'round_id': _currentGameNumber,
+          'fill_ratio': boardFillPct,
+          'total_cells': lineResult.boardState.size * lineResult.boardState.size,
+          'occupied_cells': lineResult.boardState.occupiedCells.length,
+        },
+      );
+    } else {
+      if (boardFillPct > 0.75) {
+        if (!_dangerPulseActive) {
+          _dangerPulseActive = true;
+          await analyticsTracker.track(
+            'danger_pulse_shown',
+            params: <String, Object?>{
+              'round_id': _currentGameNumber,
+              'fill_ratio': boardFillPct,
+            },
+          );
+        }
+      } else {
+        _dangerPulseActive = false;
+      }
+    }
 
     final OnboardingUpdate? onboardingUpdate =
         await onboardingFlowController.handleAfterMove(
@@ -549,6 +644,7 @@ class GameLoopController {
       await analyticsTracker.track(
         'line_clear',
         params: <String, Object?>{
+          'game_id': 'classic',
           'round_id': _currentGameNumber,
           'count': lineResult.clearedTotal,
           'score_total': nextScore.totalScore,
@@ -718,25 +814,34 @@ class GameLoopController {
     if (_undoHistory.isEmpty) {
       return RewardedUndoResult.failure('undo_not_available');
     }
-    if (!_hasRewardedToolsForCost(_rewardedToolsUndoCost)) {
+    final bool isFree = !_hasUsedFreeUndo;
+    if (!isFree && !_hasRewardedToolsForCost(_rewardedToolsUndoCost)) {
       return RewardedUndoResult.failure('insufficient_tools_credits');
     }
 
     final _UndoSnapshot snapshot = _undoHistory.removeLast();
-    final String source = await progressionSyncService.consumeCredits(
-      cost: _rewardedToolsUndoCost,
-      hasUnlimitedAccess: _hasUnlimitedRewardedToolsAccess,
-    );
+    String source;
+    if (isFree) {
+      _hasUsedFreeUndo = true;
+      source = 'free';
+    } else {
+      source = await progressionSyncService.consumeCredits(
+        cost: _rewardedToolsUndoCost,
+        hasUnlimitedAccess: _hasUnlimitedRewardedToolsAccess,
+      );
+    }
+
+    final ScoreState revertedScoreState = snapshot.scoreState.copyWith(comboStreak: 0);
 
     _sessionState = SessionState(
       roundsPlayed: state.gamesPlayed,
-      currentScore: snapshot.scoreState.totalScore,
+      currentScore: revertedScoreState.totalScore,
       movesPlayed: snapshot.movesPlayed,
     );
 
     _stateNotifier.value = state.copyWith(
       boardState: snapshot.boardState,
-      scoreState: snapshot.scoreState,
+      scoreState: revertedScoreState,
       rackPieces: snapshot.rackPieces,
       level: snapshot.level,
       colorThemeIndex: snapshot.colorThemeIndex,
@@ -750,6 +855,7 @@ class GameLoopController {
       canUseRewardedUndo: _canUseRewardedUndoForState(),
       rewardedToolsCredits: _playerProgressState.rewardedToolsCredits,
       hasUnlimitedRewardedTools: _hasUnlimitedRewardedToolsAccess,
+      hasUsedFreeUndo: _hasUsedFreeUndo,
       movesPlayed: snapshot.movesPlayed,
       gameOverReason: null,
       resetHintSuggestion: true,
@@ -760,9 +866,18 @@ class GameLoopController {
       'rewarded_undo_used',
       params: <String, Object?>{
         'round_id': _currentGameNumber,
-        'cost': _rewardedToolsUndoCost,
+        'cost': isFree ? 0 : _rewardedToolsUndoCost,
         'source': source,
         'credits_after': _playerProgressState.rewardedToolsCredits,
+        'moves_after': snapshot.movesPlayed,
+      },
+    );
+
+    await analyticsTracker.track(
+      'undo_used',
+      params: <String, Object?>{
+        'round_id': _currentGameNumber,
+        'is_free': isFree,
         'moves_after': snapshot.movesPlayed,
       },
     );
@@ -812,6 +927,8 @@ class GameLoopController {
         level: state.level,
         movesPlayed: state.movesPlayed,
         gamesPlayed: state.gamesPlayed,
+        isDailyChallenge: state.isDailyChallenge,
+        hasUsedFreeUndo: _hasUsedFreeUndo,
       );
       gameSessionRepository.saveSnapshot(snapshot);
       logger.info('Game paused: saved snapshot');
@@ -1035,10 +1152,13 @@ class GameLoopController {
   }
 
   bool _canUseRewardedUndoForState() {
-    if (!_hasRewardedToolsForCost(_rewardedToolsUndoCost)) {
+    if (_undoHistory.isEmpty) {
       return false;
     }
-    return _undoHistory.isNotEmpty;
+    if (!_hasUsedFreeUndo) {
+      return true;
+    }
+    return _hasRewardedToolsForCost(_rewardedToolsUndoCost);
   }
 
   Future<void> _refreshOwnedIapProducts() async {
@@ -1174,6 +1294,7 @@ class GameLoopController {
     await analyticsTracker.track(
       'game_end',
       params: <String, Object?>{
+        'game_id': 'classic',
         'round_id': _currentGameNumber,
         'end_reason': reason,
         'score': score,

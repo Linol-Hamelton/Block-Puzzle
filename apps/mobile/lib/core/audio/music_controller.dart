@@ -149,10 +149,37 @@ class MusicController with WidgetsBindingObserver {
     await _manager.resume();
   }
 
-  /// Applies temporary ducking (-3 dB for 150 ms default) over the current volume.
+  /// Current base volume of background music.
+  double get baseVolume => _manager.baseVolume;
+
+  /// Sets base volume (0.0 to 1.0).
+  void setBaseVolume(double volume) {
+    _manager.setBaseVolume(volume);
+  }
+
+  /// Plays or crossfades to [trackIndex] if not already on that track.
+  Future<void> switchToTrack(int trackIndex) async {
+    if (!_enabled || _isDisposed) {
+      return;
+    }
+    if (_manager.isPlaying) {
+      if (_manager.currentTrackIndex != trackIndex) {
+        await _manager.crossfadeTo(trackIndex);
+      }
+    } else {
+      await _manager.play(trackIndex: trackIndex);
+    }
+  }
+
+  Future<void> playMenuTrack() => switchToTrack(MusicPlaylistManager.kTrackMenu);
+  Future<void> playClassicTrack() => switchToTrack(MusicPlaylistManager.kTrackClassic);
+  Future<void> playTetrisTrack() => switchToTrack(MusicPlaylistManager.kTrackTetris);
+  Future<void> playMatch3Track() => switchToTrack(MusicPlaylistManager.kTrackMatch3);
+
+  /// Applies temporary ducking (-1.5 dB for 150 ms default) over the current volume.
   void duck({
     Duration duration = MusicPlaylistManager.kDefaultDuckDuration,
-    double factor = MusicPlaylistManager.kDuckFactorMinus3dB,
+    double factor = MusicPlaylistManager.kDuckFactorMinus1_5dB,
   }) {
     if (!_enabled || _isDisposed) {
       return;

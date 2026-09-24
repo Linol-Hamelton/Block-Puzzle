@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/audio/music_controller.dart';
 import '../../../core/device/haptics_controller.dart';
 import '../../../core/di/di_container.dart';
 import '../../../data/analytics/analytics_tracker.dart';
@@ -49,6 +50,9 @@ class _Match3ScreenState extends State<Match3Screen>
     _game = Match3FlameGame(controller: _controller);
     unawaited(_sfx.preload());
     unawaited(_controller.initialize());
+    if (sl.isRegistered<MusicController>()) {
+      unawaited(sl<MusicController>().playMatch3Track());
+    }
   }
 
   @override
@@ -57,6 +61,9 @@ class _Match3ScreenState extends State<Match3Screen>
     WidgetsBinding.instance.removeObserver(this);
     _game.pauseEngine();
     _controller.dispose();
+    if (sl.isRegistered<MusicController>()) {
+      unawaited(sl<MusicController>().playMenuTrack());
+    }
     super.dispose();
   }
 

@@ -118,5 +118,41 @@ void main() {
       expect(merged.economyState.ownedProductIds, contains('skin_pack_neon'));
       expect(merged.cosmeticsState.unlockedSkinIds, contains('skin_pack_neon'));
     });
+
+    test('PlayerSettings serialization roundtrip and backward compatibility migration', () {
+      // 1. Backward compatibility: old JSON without music_volume, sound_volume, reduced_motion
+      final Map<String, Object?> legacyJson = <String, Object?>{
+        'sound_enabled': true,
+        'haptics_enabled': false,
+        'selected_blocks_preset': 'soft',
+      };
+      final PlayerSettings migrated = PlayerSettings.fromJson(legacyJson);
+      expect(migrated.soundEnabled, isTrue);
+      expect(migrated.hapticsEnabled, isFalse);
+      expect(migrated.selectedBlocksPreset, 'soft');
+      expect(migrated.musicVolume, 0.50);
+      expect(migrated.soundVolume, 1.0);
+      expect(migrated.reducedMotion, isFalse);
+      expect(migrated.selectedTheme, 'pastel');
+
+      // 2. Roundtrip with new fields
+      const PlayerSettings custom = PlayerSettings(
+        soundEnabled: false,
+        hapticsEnabled: true,
+        selectedBlocksPreset: 'soft',
+        selectedTheme: 'neon',
+        musicVolume: 0.35,
+        soundVolume: 0.80,
+        reducedMotion: true,
+      );
+      final Map<String, Object?> json = custom.toJson();
+      final PlayerSettings restored = PlayerSettings.fromJson(json);
+      expect(restored.soundEnabled, isFalse);
+      expect(restored.hapticsEnabled, isTrue);
+      expect(restored.selectedTheme, 'neon');
+      expect(restored.musicVolume, closeTo(0.35, 1e-4));
+      expect(restored.soundVolume, closeTo(0.80, 1e-4));
+      expect(restored.reducedMotion, isTrue);
+    });
   });
 }

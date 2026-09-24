@@ -12,6 +12,9 @@ class DebugGameSfxPlayer implements GameSfxPlayer {
   bool isEnabled = true;
 
   @override
+  double volume = 0.35;
+
+  @override
   Future<void> preload() async {
     _logger.info('SFX hook: preload');
   }
@@ -63,5 +66,10 @@ class DebugGameSfxPlayer implements GameSfxPlayer {
   @override
   Future<void> playGameOver() async {
     _logger.info('SFX hook: game_over');
+  }
+
+  @override
+  Future<void> dispose() async {
+    _logger.info('SFX hook: dispose');
   }
 }

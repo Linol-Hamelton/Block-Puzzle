@@ -55,6 +55,7 @@ import '../../features/monetization/debug_iap_store_service.dart';
 import '../../features/monetization/debug_ad_service.dart';
 import '../../features/monetization/iap_store_service.dart';
 import '../../features/monetization/local_catalog_iap_store_service.dart';
+import '../../features/store/application/store_availability.dart';
 import '../../features/store/application/store_controller.dart';
 import '../../features/match3/application/match3_session_store.dart';
 import '../../features/tetris/application/tetris_session_store.dart';
@@ -101,10 +102,14 @@ Future<void> configureDependencies({
       await bootstrapRemoteConfigRepository.getCached();
   final RemoteConfigReader bootstrapConfigReader =
       RemoteConfigReader(bootstrapRemoteConfig);
+  final bool isStoreEnabled = bootstrapConfigReader.readBool(
+    'iap.store_enabled',
+    fallback: false,
+  );
   final bool includeBundle = _resolveIapBundleEnabled(bootstrapRemoteConfig);
   final bool includeUtilityPass = bootstrapConfigReader.readBool(
     'iap.rewarded_tools_unlimited_enabled',
-    fallback: true,
+    fallback: false,
   );
 
   sl.registerSingleton<AppConfig>(
@@ -128,6 +133,7 @@ Future<void> configureDependencies({
       logger: sl(),
       musicController: sl<MusicController>(),
     ),
+    dispose: (GameSfxPlayer player) => player.dispose(),
   );
   sl.registerLazySingleton<AdService>(
     () => useDebugAdapters
@@ -152,6 +158,7 @@ Future<void> configureDependencies({
         return DebugIapStoreService(
           includeBundle: includeBundle,
           includeUtilityPass: includeUtilityPass,
+          storeEnabled: isStoreEnabled,
         );
       }
       // Real Google Play Billing + server-side receipt validation in
@@ -177,6 +184,10 @@ Future<void> configureDependencies({
   // remotely is closed from the first frame rather than after a later fetch.
   sl.registerSingleton<GameModeAvailability>(
     GameModeAvailability(bootstrapConfigReader),
+  );
+  // DEC-0026 / DEC-0028: Store and monetization surfaces availability gate.
+  sl.registerSingleton<StoreAvailability>(
+    StoreAvailability(bootstrapConfigReader),
   );
 
   sl.registerLazySingleton<AdGuardrailPolicy>(
@@ -209,7 +220,7 @@ Future<void> configureDependencies({
     () => ComputeScoreUseCase(scoreService: sl()),
   );
 
-  sl.registerLazySingleton<ABExperimentService>(
+  sl.registerFactory<ABExperimentService>(
     () => ABExperimentService(
       analyticsTracker: sl(),
       logger: sl(),
@@ -227,7 +238,7 @@ Future<void> configureDependencies({
       ),
     ),
   );
-  sl.registerLazySingleton<OnboardingFlowController>(
+  sl.registerFactory<OnboardingFlowController>(
     () => OnboardingFlowController(
       playerProgressRepository: sl(),
       analyticsTracker: sl(),
@@ -235,7 +246,7 @@ Future<void> configureDependencies({
     ),
   );
 
-  sl.registerLazySingleton<ProgressionSyncService>(
+  sl.registerFactory<ProgressionSyncService>(
     () => ProgressionSyncService(
       playerProgressRepository: sl(),
       analyticsTracker: sl(),

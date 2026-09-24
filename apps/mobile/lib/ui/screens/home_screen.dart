@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../core/audio/music_controller.dart';
 import '../../features/game_loop/presentation/game_loop_screen.dart';
 import '../../core/di/di_container.dart';
 import '../../features/diagnostics/diagnostics_screen.dart';
@@ -7,6 +10,8 @@ import '../../features/game_modes/game_mode_availability.dart';
 import '../../features/game_modes/mode_gate.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/match3/presentation/match3_screen.dart';
+import '../../features/store/application/store_availability.dart';
+import '../../features/store/presentation/store_gate.dart';
 import '../../features/store/presentation/store_screen.dart';
 import '../../features/tetris/presentation/tetris_screen.dart';
 import '../theme/app_theme.dart';
@@ -20,6 +25,9 @@ class HomeScreen extends StatelessWidget {
     // flags were published and then read by nothing, so the switches existed
     // and did nothing; this is where they take effect.
     final GameModeAvailability modes = sl<GameModeAvailability>();
+    final bool isStoreEnabled = sl.isRegistered<StoreAvailability>()
+        ? sl<StoreAvailability>().isEnabled
+        : false;
 
     return Scaffold(
       appBar: AppBar(
@@ -85,13 +93,15 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -147,7 +157,11 @@ class HomeScreen extends StatelessWidget {
                                   child: GameLoopScreen(),
                                 ),
                               ),
-                            );
+                            ).then((_) {
+                              if (sl.isRegistered<MusicController>()) {
+                                unawaited(sl<MusicController>().playMenuTrack());
+                              }
+                            });
                           },
                           icon: const Icon(Icons.play_arrow_rounded),
                           label: const Text('Start Classic'),
@@ -171,7 +185,11 @@ class HomeScreen extends StatelessWidget {
                                   child: TetrisScreen(),
                                 ),
                               ),
-                            );
+                            ).then((_) {
+                              if (sl.isRegistered<MusicController>()) {
+                                unawaited(sl<MusicController>().playMenuTrack());
+                              }
+                            });
                           },
                           icon: const Icon(Icons.grid_view_rounded),
                           label: const Text('Play Tetris'),
@@ -195,7 +213,11 @@ class HomeScreen extends StatelessWidget {
                                   child: Match3Screen(),
                                 ),
                               ),
-                            );
+                            ).then((_) {
+                              if (sl.isRegistered<MusicController>()) {
+                                unawaited(sl<MusicController>().playMenuTrack());
+                              }
+                            });
                           },
                           icon: const Icon(Icons.diamond_rounded),
                           label: const Text('Play Match 3'),
@@ -212,33 +234,46 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                    const SizedBox(height: 18),
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: LuminaPalette.panelBorder,
-                    ),
-                    const SizedBox(height: 18),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const StoreScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.shopping_bag_outlined),
-                        label: const Text('Open Premium Store'),
+                    // The three games come first and are grouped together; the
+                    // store and the daily variant sit below a divider so the
+                    // primary choice - which game to play - is not competing
+                    // with commerce for the same visual weight.
+                    // DEC-0026 / DEC-0028 item 7: store entry is hidden until Stage C.
+                    if (isStoreEnabled || modes.isEnabled(GameMode.classic)) ...<Widget>[
+                      const SizedBox(height: 18),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: LuminaPalette.panelBorder,
                       ),
-                    ),
+                      const SizedBox(height: 18),
+                    ],
+
+                    if (isStoreEnabled) ...<Widget>[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const StoreGate(
+                                  child: StoreScreen(),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.shopping_bag_outlined),
+                          label: const Text('Open Premium Store'),
+                        ),
+                      ),
+                      if (modes.isEnabled(GameMode.classic))
+                        const SizedBox(height: 10),
+                    ],
+
                     // Daily Challenge is the Classic loop with a fixed seed, so
                     // disabling Classic has to disable it too - otherwise the
                     // kill switch leaves a second door into the same code.
                     if (modes.isEnabled(GameMode.classic)) ...<Widget>[
-                      const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
@@ -267,7 +302,8 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-        ],
+        ),
+      ],
       ),
     );
   }

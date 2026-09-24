@@ -107,13 +107,25 @@ class GooglePlayBillingService implements IapStoreService {
 
     final Map<String, Object?> remoteConfig =
         await _remoteConfigRepository.getCached();
+    final bool isStoreEnabled = _readBool(
+      remoteConfig['iap.store_enabled'],
+      fallback: false,
+    ) || _readBool(
+      remoteConfig['feature_store_enabled'],
+      fallback: false,
+    );
+    if (!isStoreEnabled) {
+      _logger.info('GooglePlayBillingService: store disabled in v1.0 (DEC-0026/DEC-0028).');
+      return const <IapProduct>[];
+    }
+
     final bool includeBundle = _readBool(
       remoteConfig['iap.bundle_enabled'],
       fallback: false,
     );
     final bool includeUtilityPass = _readBool(
       remoteConfig['iap.rewarded_tools_unlimited_enabled'],
-      fallback: true,
+      fallback: false,
     );
     _rolloutStrategy = _readString(
       remoteConfig['iap.rollout_strategy'],
@@ -171,6 +183,22 @@ class GooglePlayBillingService implements IapStoreService {
   Future<IapPurchaseResult> purchase({
     required IapProduct product,
   }) async {
+    final Map<String, Object?> remoteConfig =
+        await _remoteConfigRepository.getCached();
+    final bool isStoreEnabled = _readBool(
+      remoteConfig['iap.store_enabled'],
+      fallback: false,
+    ) || _readBool(
+      remoteConfig['feature_store_enabled'],
+      fallback: false,
+    );
+    if (!isStoreEnabled) {
+      return IapPurchaseResult.failed(
+        errorCode: 'store_disabled',
+        message: 'Store is disabled in this release.',
+      );
+    }
+
     await _ensureInitialized();
     if (!_available) {
       return IapPurchaseResult.failed(

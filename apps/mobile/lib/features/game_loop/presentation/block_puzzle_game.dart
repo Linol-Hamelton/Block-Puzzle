@@ -14,6 +14,7 @@ import '../../../core/device/haptics_controller.dart';
 import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
+import '../../../l10n/verbal_tiers.dart';
 import '../../../ui/effects/burst_field.dart';
 import '../../../ui/effects/effect_timing.dart';
 import '../../../ui/effects/glass_board.dart';
@@ -44,7 +45,7 @@ class BlockPuzzleGame extends FlameGame {
   final BoardComponent _boardComponent = BoardComponent();
   final BurstField _burst = BurstField();
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
-  VoidCallback? _stateListener;
+  void Function()? _stateListener;
   String _rackSignature = '';
   bool _isShuttingDown = false;
 
@@ -65,6 +66,21 @@ class BlockPuzzleGame extends FlameGame {
   double _rackReservedHeight = 108;
   bool _pendingRackRebuild = false;
   BlockVisualPreset _visualPreset = BlockVisualPreset.soft;
+
+  static const _BoardPalette _neonPalette = _BoardPalette(
+    boardBackground: Color(0xFF070B14),
+    occupiedColor: Color(0xFF00E5FF),
+    rackColor: Color(0xFF00B0FF),
+    rackDragColor: Color(0xFF80D8FF),
+  );
+
+  static const _BoardPalette _monoPalette = _BoardPalette(
+    boardBackground: Color(0xFF16181D),
+    occupiedColor: Color(0xFFE8ECEF),
+    rackColor: Color(0xFFCFD8DC),
+    rackDragColor: Color(0xFFFFFFFF),
+  );
+
   static const List<_BoardPalette> _palettes = <_BoardPalette>[
     _BoardPalette(
       boardBackground: Color(0xFF0C1B37),
@@ -340,7 +356,13 @@ class BlockPuzzleGame extends FlameGame {
 
     if (result.clearedLines > 0) {
       unawaited(sfxPlayer.playLineClear(clearedLines: result.clearedLines));
-      unawaited(haptics.heavyImpact());
+      if (result.comboStreak >= 6) {
+        unawaited(haptics.heavyImpact());
+      } else if (result.comboStreak >= 3) {
+        unawaited(haptics.mediumImpact());
+      } else {
+        unawaited(haptics.lightImpact());
+      }
       _playLineClearAnimation(
         strength: result.clearedLines,
         clearedCells: result.clearedCells,
@@ -353,6 +375,7 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     if (result.isAllClear) {
+      unawaited(haptics.doubleHeavyImpact());
       _playPerfectClear();
     }
 
@@ -628,6 +651,12 @@ class BlockPuzzleGame extends FlameGame {
   }
 
   _BoardPalette get _currentPalette {
+    final String theme = controller.selectedTheme;
+    if (theme == 'neon') {
+      return _neonPalette;
+    } else if (theme == 'mono' || theme == 'monochrome') {
+      return _monoPalette;
+    }
     final _BoardPalette from = _palettes[_previousPaletteIndex];
     final _BoardPalette to = _palettes[_activePaletteIndex];
     return _BoardPalette.lerp(from, to, _paletteTransition);
@@ -649,21 +678,27 @@ class BlockPuzzleGame extends FlameGame {
     }
   }
 
+  void _playScreenShake({double amplitude = 2.0}) {
+    if (Step6Benchmark.reducedMotion.value) {
+      return;
+    }
+    final double s = amplitude.clamp(2.0, 4.0);
+    camera.viewfinder.add(
+      SequenceEffect(<Effect>[
+        MoveEffect.by(Vector2(s, -s * 0.5), EffectController(duration: 0.02)),
+        MoveEffect.by(Vector2(-s * 1.6, s), EffectController(duration: 0.02)),
+        MoveEffect.by(Vector2(s * 0.8, -s * 0.7), EffectController(duration: 0.02)),
+        MoveEffect.by(Vector2(-s * 0.2, s * 0.2), EffectController(duration: 0.02)),
+      ]),
+    );
+  }
+
   void _playLineClearAnimation({
     required int strength,
     required Set<BoardCell> clearedCells,
   }) {
-    final double shakeAmount = strength * 3.0;
-    camera.viewfinder.add(
-      MoveEffect.by(
-        Vector2(shakeAmount, shakeAmount),
-        EffectController(
-          duration: 0.05,
-          alternate: true,
-          repeatCount: 4,
-        ),
-      ),
-    );
+    final double s = (2.0 + (strength - 1) * 0.6).clamp(2.0, 4.0);
+    _playScreenShake(amplitude: s);
 
     add(
       LineClearFlashComponent(
@@ -680,7 +715,7 @@ class BlockPuzzleGame extends FlameGame {
         x: _boardOrigin.x + (cell.x * cellSize) + (cellSize / 2),
         y: _boardOrigin.y + (cell.y * cellSize) + (cellSize / 2),
         color: burstColor,
-        count: 3,
+        count: 6,
         sizeBase: cellSize * 0.12,
         sizeJitter: cellSize * 0.1,
       );
@@ -690,11 +725,19 @@ class BlockPuzzleGame extends FlameGame {
   void _playComboAnimation({
     required int comboStreak,
   }) {
+    final existing = children.whereType<ComboPulseComponent>().toList(growable: false);
+    for (final c in existing) {
+      c.removeFromParent();
+    }
+    final String tier = VerbalTiers.resolve(comboStreak: comboStreak);
+    final String text = tier.isNotEmpty ? '$tier\nCombo x$comboStreak' : 'Combo x$comboStreak';
     add(
       ComboPulseComponent(
-        text: 'Combo x$comboStreak',
+        text: text,
         startPosition: Vector2(
-            _boardOrigin.x + (_boardCellSize * 2.4), _boardOrigin.y - 4),
+          _boardOrigin.x + (_boardCellSize * 4),
+          _boardOrigin.y - 12,
+        ),
       ),
     );
   }
@@ -719,6 +762,10 @@ class BlockPuzzleGame extends FlameGame {
   void _playShockwave(Set<BoardCell> cells) {
     if (cells.isEmpty) {
       return;
+    }
+    final existing = children.whereType<ShockwaveRingComponent>().toList(growable: false);
+    for (final s in existing) {
+      s.removeFromParent();
     }
     final Vector2 centroid = computeClearedCentroid(
       cells: cells,
@@ -756,34 +803,95 @@ class BlockPuzzleGame extends FlameGame {
     if (!kDiagnosticsEnabled || !Step6Benchmark.effectsEnabled.value) {
       return;
     }
-    final BoardCell cell =
-        Step6Benchmark.benchCentroids[index % Step6Benchmark.benchCentroids.length];
-    final double cx = _boardOrigin.x + (cell.x + 0.5) * _boardCellSize;
-    final double cy = _boardOrigin.y + (cell.y + 0.5) * _boardCellSize;
+    final bool isReducedMotion = Step6Benchmark.reducedMotion.value;
+    final bool isTriple =
+        Step6Benchmark.scenario.value == Step6BenchmarkScenario.tripleClear;
+
     final Rect boardRect = Rect.fromLTWH(
       _boardOrigin.x,
       _boardOrigin.y,
       _boardCellSize * 8,
       _boardCellSize * 8,
     );
-    add(
-      ShockwaveRingComponent(
-        center: Vector2(cx, cy),
-        boardRect: boardRect,
-        color: _currentPalette.occupiedColor,
-      ),
-    );
-    add(
-      ScorePopComponent(
-        text: '+${(index + 1) * 10}',
-        startPosition: Vector2(cx, cy),
-      ),
-    );
+    final double cellSize = _boardCellSize;
+    final Color burstColor = _currentPalette.occupiedColor;
+
+    if (isTriple) {
+      final Set<BoardCell> cells = Step6Benchmark.tripleClear24Cells;
+      final Vector2 centroid = computeClearedCentroid(
+        cells: cells,
+        boardOrigin: _boardOrigin,
+        cellSize: cellSize,
+      );
+
+      add(
+        ShockwaveRingComponent(
+          center: centroid,
+          boardRect: boardRect,
+          color: burstColor,
+        ),
+      );
+
+      for (final BoardCell cell in cells) {
+        _burst.spawnBurst(
+          x: _boardOrigin.x + (cell.x * cellSize) + (cellSize / 2),
+          y: _boardOrigin.y + (cell.y * cellSize) + (cellSize / 2),
+          color: burstColor,
+          count: 3,
+          sizeBase: cellSize * 0.12,
+          sizeJitter: cellSize * 0.1,
+        );
+      }
+
+      if (!isReducedMotion) {
+        add(
+          LineClearFlashComponent(
+            boardOrigin: _boardOrigin.clone(),
+            boardSize: Vector2.all(_boardCellSize * 8),
+            strength: 3,
+          ),
+        );
+      }
+
+      add(
+        ScorePopComponent(
+          text: '+300',
+          startPosition: centroid,
+        ),
+      );
+    } else {
+      final BoardCell cell =
+          Step6Benchmark.benchCentroids[index % Step6Benchmark.benchCentroids.length];
+      final double cx = _boardOrigin.x + (cell.x + 0.5) * _boardCellSize;
+      final double cy = _boardOrigin.y + (cell.y + 0.5) * _boardCellSize;
+
+      add(
+        ShockwaveRingComponent(
+          center: Vector2(cx, cy),
+          boardRect: boardRect,
+          color: burstColor,
+        ),
+      );
+      _burst.spawnBurst(
+        x: cx,
+        y: cy,
+        color: burstColor,
+        count: 3,
+        sizeBase: cellSize * 0.12,
+        sizeJitter: cellSize * 0.1,
+      );
+      add(
+        ScorePopComponent(
+          text: '+${(index + 1) * 10}',
+          startPosition: Vector2(cx, cy),
+        ),
+      );
+    }
   }
 
   void _playPerfectClear() {
-    unawaited(sfxPlayer.playCombo(comboStreak: 4));
-    unawaited(haptics.heavyImpact());
+    unawaited(sfxPlayer.playCombo(comboStreak: 6));
+    unawaited(haptics.doubleHeavyImpact());
     add(
       LineClearFlashComponent(
         boardOrigin: _boardOrigin.clone(),
@@ -791,17 +899,33 @@ class BlockPuzzleGame extends FlameGame {
         strength: 5,
       ),
     );
-    camera.viewfinder.add(
-      MoveEffect.by(
-        Vector2(6, 6),
-        EffectController(duration: 0.06, alternate: true, repeatCount: 5),
+    _playScreenShake(amplitude: 4.0);
+    // DEC-0028 Item 18: Golden ripple / wave
+    add(
+      ShockwaveRingComponent(
+        center: Vector2(
+          _boardOrigin.x + (_boardCellSize * 4),
+          _boardOrigin.y + (_boardCellSize * 4),
+        ),
+        boardRect: Rect.fromLTWH(
+          _boardOrigin.x,
+          _boardOrigin.y,
+          _boardCellSize * 8,
+          _boardCellSize * 8,
+        ),
+        color: const Color(0xFFFFD700),
+        maxRadius: _boardCellSize * 5.5,
       ),
     );
+    final existing = children.whereType<ComboPulseComponent>().toList(growable: false);
+    for (final c in existing) {
+      c.removeFromParent();
+    }
     add(
       ComboPulseComponent(
-        text: 'PERFECT!',
+        text: 'ALL CLEAR!',
         startPosition: Vector2(
-          _boardOrigin.x + (_boardCellSize * 2.2),
+          _boardOrigin.x + (_boardCellSize * 4),
           _boardOrigin.y + (_boardCellSize * 3.5),
         ),
       ),
@@ -1177,6 +1301,19 @@ class BoardComponent extends PositionComponent {
   Color _boardBackgroundColor = const Color(0xFF0C1B36);
   Color _occupiedColor = const Color(0xFF55CEFF);
   BlockVisualPreset _visualPreset = BlockVisualPreset.soft;
+  double _dangerPulseTime = 0;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final double fillRatio =
+        _boardState.occupiedCells.length / (_boardState.size * _boardState.size);
+    if (fillRatio > 0.75 && !Step6Benchmark.reducedMotion.value) {
+      _dangerPulseTime += dt;
+    } else {
+      _dangerPulseTime = 0;
+    }
+  }
 
   ui.Image? _boardWellImage;
   Vector2 _boardWellSize = Vector2.zero();
@@ -1470,6 +1607,31 @@ class BoardComponent extends PositionComponent {
           intenseGlow: preview.valid,
         );
       }
+    }
+
+    final double fillRatio =
+        _boardState.occupiedCells.length / (_boardState.size * _boardState.size);
+    if (fillRatio > 0.75 && !Step6Benchmark.reducedMotion.value) {
+      // DEC-0028 Item 17: Danger Edge Pulse (fill > 75%, alpha 0.15–0.25, 1.5s period)
+      final double cycle = (_dangerPulseTime % 1.5) / 1.5;
+      final double sineVal = (math.sin(cycle * 2 * math.pi) + 1.0) / 2.0;
+      final double pulseAlpha = 0.15 + (0.25 - 0.15) * sineVal;
+
+      final Rect borderRect = Rect.fromLTWH(1.5, 1.5, size.x - 3.0, size.y - 3.0);
+      final RRect borderRRect = RRect.fromRectAndRadius(borderRect, const Radius.circular(18));
+
+      final Paint pulseGlow = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6.0
+        ..color = const Color(0xFFFF3D00).withValues(alpha: pulseAlpha * 0.7)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      canvas.drawRRect(borderRRect, pulseGlow);
+
+      final Paint pulseBorder = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0
+        ..color = const Color(0xFFFF5252).withValues(alpha: pulseAlpha);
+      canvas.drawRRect(borderRRect, pulseBorder);
     }
   }
 }
@@ -1867,9 +2029,11 @@ class LineClearFlashComponent extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
     final double t = (_elapsed / _duration).clamp(0, 1);
-    final double alpha = (1 - t) * (0.22 + (strength * 0.07));
+    final double baseAlpha = (1 - t) * (0.22 + (strength * 0.07));
+    final double motionFactor = Step6Benchmark.reducedMotion.value ? 0.25 : 1.0;
+    final double alpha = (baseAlpha * motionFactor).clamp(0, 0.6);
     final Paint paint = Paint()
-      ..color = Color.fromRGBO(92, 210, 255, alpha.clamp(0, 0.6));
+      ..color = Color.fromRGBO(92, 210, 255, alpha);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(
@@ -1895,7 +2059,7 @@ class ComboPulseComponent extends PositionComponent {
 
   final String text;
   final Vector2 startPosition;
-  static const double _duration = 0.75 * kEffectTimeScale;
+  static const double _duration = 0.85;
   double _elapsed = 0;
 
   @override
@@ -1911,7 +2075,14 @@ class ComboPulseComponent extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
     final double t = (_elapsed / _duration).clamp(0, 1);
-    final double opacity = (1 - t).clamp(0, 1);
+    final double opacity;
+    if (t < 0.12) {
+      opacity = (t / 0.12).clamp(0.0, 1.0);
+    } else if (t < 0.76) {
+      opacity = 1.0;
+    } else {
+      opacity = ((1.0 - t) / 0.24).clamp(0.0, 1.0);
+    }
     final double yOffset = t * 26;
     final TextPaint textPaint = TextPaint(
       style: TextStyle(
@@ -1930,6 +2101,7 @@ class ComboPulseComponent extends PositionComponent {
       canvas,
       text,
       Vector2(startPosition.x, startPosition.y - yOffset),
+      anchor: Anchor.center,
     );
   }
 }
@@ -1938,27 +2110,15 @@ class ScorePopComponent extends PositionComponent {
   ScorePopComponent({
     required this.text,
     required this.startPosition,
-    this.duration = 0.8 * kEffectTimeScale,
+    this.duration = 0.85,
   }) {
     priority = 212;
-    _painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-          fontSize: 20.0,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFFD6FFE0),
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
   }
 
   final String text;
   final Vector2 startPosition;
   final double duration;
   double _elapsed = 0;
-  late final TextPainter _painter;
 
   bool get isFinished => _elapsed >= duration;
 
@@ -1975,12 +2135,37 @@ class ScorePopComponent extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
     final double t = (_elapsed / duration).clamp(0.0, 1.0);
+    final double opacity;
+    if (t < 0.12) {
+      opacity = (t / 0.12).clamp(0.0, 1.0);
+    } else if (t < 0.76) {
+      opacity = 1.0;
+    } else {
+      opacity = ((1.0 - t) / 0.24).clamp(0.0, 1.0);
+    }
     final double yOffset = t * 36.0;
-    _painter.paint(
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontSize: 20.0,
+          fontWeight: FontWeight.w800,
+          color: Color.fromRGBO(214, 255, 224, opacity),
+          shadows: <Shadow>[
+            Shadow(
+              color: Color.fromRGBO(76, 217, 100, opacity * 0.8),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
       canvas,
       Offset(
-        startPosition.x - (_painter.width / 2),
-        startPosition.y - yOffset - (_painter.height / 2),
+        startPosition.x - (painter.width / 2),
+        startPosition.y - yOffset - (painter.height / 2),
       ),
     );
   }
@@ -2094,6 +2279,16 @@ class _Step6BenchRunnerComponent extends Component {
   void update(double dt) {
     super.update(dt);
     if (!kDiagnosticsEnabled || !Step6Benchmark.benchActive.value) {
+      return;
+    }
+    if (Step6Benchmark.scenario.value == Step6BenchmarkScenario.tripleClear) {
+      _eventTimers[0] += dt;
+      if (_eventTimers[0] >= 0.4) {
+        _eventTimers[0] -= 0.4;
+        if (Step6Benchmark.effectsEnabled.value) {
+          game.triggerStep6BenchEvent(0);
+        }
+      }
       return;
     }
     for (int i = 0; i < 8; i++) {

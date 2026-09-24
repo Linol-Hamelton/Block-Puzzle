@@ -2,6 +2,9 @@ abstract interface class GameSfxPlayer {
   bool get isEnabled;
   set isEnabled(bool value);
 
+  double get volume;
+  set volume(double value);
+
   Future<void> preload();
 
   Future<void> onAppResumed();
@@ -25,4 +28,6 @@ abstract interface class GameSfxPlayer {
   Future<void> playHardDrop();
 
   Future<void> playGameOver();
+
+  Future<void> dispose();
 }

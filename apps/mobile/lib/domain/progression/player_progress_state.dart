@@ -389,21 +389,37 @@ class PlayerSettings {
     this.soundEnabled = true,
     this.hapticsEnabled = true,
     this.selectedBlocksPreset = 'soft',
+    this.selectedTheme = 'pastel',
+    this.musicVolume = 0.50,
+    this.soundVolume = 1.0,
+    this.reducedMotion = false,
   });
 
   final bool soundEnabled;
   final bool hapticsEnabled;
   final String selectedBlocksPreset;
+  final String selectedTheme;
+  final double musicVolume;
+  final double soundVolume;
+  final bool reducedMotion;
 
   PlayerSettings copyWith({
     bool? soundEnabled,
     bool? hapticsEnabled,
     String? selectedBlocksPreset,
+    String? selectedTheme,
+    double? musicVolume,
+    double? soundVolume,
+    bool? reducedMotion,
   }) {
     return PlayerSettings(
       soundEnabled: soundEnabled ?? this.soundEnabled,
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
       selectedBlocksPreset: selectedBlocksPreset ?? this.selectedBlocksPreset,
+      selectedTheme: selectedTheme ?? this.selectedTheme,
+      musicVolume: musicVolume ?? this.musicVolume,
+      soundVolume: soundVolume ?? this.soundVolume,
+      reducedMotion: reducedMotion ?? this.reducedMotion,
     );
   }
 
@@ -412,6 +428,10 @@ class PlayerSettings {
       'sound_enabled': soundEnabled,
       'haptics_enabled': hapticsEnabled,
       'selected_blocks_preset': selectedBlocksPreset,
+      'selected_theme': selectedTheme,
+      'music_volume': musicVolume,
+      'sound_volume': soundVolume,
+      'reduced_motion': reducedMotion,
     };
   }
 
@@ -424,6 +444,13 @@ class PlayerSettings {
                   true
               ? (json['selected_blocks_preset'] as String).trim()
               : 'soft',
+      selectedTheme: (json['selected_theme'] as String?)?.trim().isNotEmpty ==
+              true
+          ? (json['selected_theme'] as String).trim()
+          : 'pastel',
+      musicVolume: (json['music_volume'] as num?)?.toDouble() ?? 0.50,
+      soundVolume: (json['sound_volume'] as num?)?.toDouble() ?? 1.0,
+      reducedMotion: json['reduced_motion'] == true,
     );
   }
 }

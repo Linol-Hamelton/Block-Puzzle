@@ -22,8 +22,13 @@ class GameOverOverlayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isNewBest = state.scoreState.totalScore >= state.bestScore &&
-        state.scoreState.totalScore > 0;
+    final bool isNewBest = state.sessionStartBestScore > 0 &&
+        state.scoreState.totalScore > state.sessionStartBestScore;
+    final int toRecord = state.sessionStartBestScore - state.scoreState.totalScore;
+    final bool isNearRecord = !isNewBest &&
+        state.sessionStartBestScore > 0 &&
+        toRecord > 0 &&
+        state.scoreState.totalScore >= (state.sessionStartBestScore * 0.95).floor();
     final ButtonStyle actionButtonStyle = FilledButton.styleFrom(
       minimumSize: const Size(112, 48),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -82,41 +87,96 @@ class GameOverOverlayCard extends StatelessWidget {
                           fontSize: 11,
                         ),
                       ),
+                    )
+                  else if (isNearRecord)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        'To Record: $toRecord',
+                        style: const TextStyle(
+                          color: Color(0xFFE65100),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
                     ),
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
+              Column(
                 children: <Widget>[
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Score',
-                      value: '${state.scoreState.totalScore}',
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _RoundStatTile(
+                          label: 'Score',
+                          value: '${state.scoreState.totalScore}',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _RoundStatTile(
+                          label: 'Best',
+                          value: '${state.bestScore}',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Best',
-                      value: '${state.bestScore}',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Level',
-                      value: '${state.level}',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _RoundStatTile(
-                      label: 'Moves',
-                      value: '${state.movesPlayed}',
-                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _RoundStatTile(
+                          label: 'Lines Cleared',
+                          value: '${state.linesCleared}',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _RoundStatTile(
+                          label: 'Max Combo',
+                          value: '${state.maxCombo}',
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+              if (state.isFirstGameOver) ...<Widget>[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFFD54F)),
+                  ),
+                  child: const Row(
+                    children: <Widget>[
+                      Icon(Icons.lightbulb_outline, color: Color(0xFFF57F17), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tip: Keep the 3x3 center clear to place large blocks easily!',
+                          style: TextStyle(
+                            color: Color(0xFF5D4037),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               Container(
                 width: double.infinity,

@@ -14,7 +14,7 @@ on:
       use_signing:
         description: "Use keystore secrets for release signing (true/false)"
         required: true
-        default: "false"
+        default: "true"
 
 concurrency:
   group: android-release-${{ github.ref }}
@@ -45,6 +45,17 @@ jobs:
 
       - name: Flutter pub get
         run: flutter pub get
+
+      - name: Validate release signing secrets
+        if: ${{ inputs.use_signing == 'true' }}
+        run: |
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] || \
+             [ -z "${{ secrets.ANDROID_STORE_PASSWORD }}" ] || \
+             [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ] || \
+             [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ]; then
+            echo "ERROR: Release signing requested (use_signing=true), but required secrets are missing!" >&2
+            exit 1
+          fi
 
       - name: Decode Android keystore
         if: ${{ inputs.use_signing == 'true' }}

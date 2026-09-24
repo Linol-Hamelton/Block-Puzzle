@@ -68,6 +68,10 @@ void main() {
       const MethodChannel('xyz.luan/audioplayers.global'),
       (MethodCall methodCall) async => 1,
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler('flutter/assets', (ByteData? message) async {
+      return ByteData.sublistView(Uint8List(44));
+    });
   });
 
   group('FlameGameSfxPlayer - Step 4a Combo Ladder & Reset', () {
@@ -198,6 +202,148 @@ void main() {
       await player.playGameOver();
       expect(musicSpy.duckCallCount, 1);
       expect(musicSpy.lastDuckDuration, const Duration(milliseconds: 500));
+    });
+  });
+
+  group('FlameGameSfxPlayer - Part D Voice Allocation & Cutoff Prevention', () {
+    late List<MethodCall> methodCalls;
+    late FlameGameSfxPlayer player;
+
+    setUp(() {
+      methodCalls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('xyz.luan/audioplayers'),
+        (MethodCall methodCall) async {
+          methodCalls.add(methodCall);
+          return 1;
+        },
+      );
+
+      player = FlameGameSfxPlayer(
+        logger: _SilentLogger(),
+      );
+    });
+
+    tearDown(() async {
+      await player.dispose();
+    });
+
+    test('line_clear is not cut off after 8 short sounds', () async {
+      await player.preload();
+
+      final String clearPlayerId = player.lineClearChannel.players[0].playerId;
+      final List<String> ringPlayerIds =
+          player.ring.players.map((AudioPlayer p) => p.playerId).toList();
+
+      methodCalls.clear();
+
+      // Play long line clear sound
+      await player.playLineClear(clearedLines: 1);
+
+      // Verify line clear engaged on the dedicated player
+      final bool clearStarted = methodCalls.any(
+        (MethodCall c) =>
+            c.arguments is Map &&
+            (c.arguments as Map)['playerId'] == clearPlayerId &&
+            c.method == 'setPlayerMode',
+      );
+      expect(clearStarted, isTrue, reason: 'Line clear must engage on dedicated voice');
+
+      methodCalls.clear();
+
+      // Fire 8 rapid short sounds (more than ring size 6)
+      for (int i = 0; i < 8; i++) {
+        await player.playPiecePlaced();
+      }
+
+      // Dedicated line_clear player must NEVER have received a stop or reuse call from ring
+      final bool clearTouchedByRing = methodCalls.any(
+        (MethodCall c) =>
+            c.arguments is Map &&
+            (c.arguments as Map)['playerId'] == clearPlayerId,
+      );
+      expect(
+        clearTouchedByRing,
+        isFalse,
+        reason: 'Dedicated line_clear voice must not be touched, stolen, or stopped by short sounds in ring',
+      );
+
+      // Verify ring players did receive stop/reuse calls
+      final int ringStopCalls = methodCalls.where(
+        (MethodCall c) =>
+            c.arguments is Map &&
+            ringPlayerIds.contains((c.arguments as Map)['playerId']) &&
+            c.method == 'stop',
+      ).length;
+      expect(ringStopCalls, greaterThanOrEqualTo(2), reason: 'Ring must recycle its own voices');
+    });
+
+    test('voice channels remain strictly bounded within platform track limits', () async {
+      await player.preload();
+
+      expect(player.ring.activePlayerCount, 6, reason: 'Ring size strictly 6');
+      expect(player.lineClearChannel.activePlayerCount, 2, reason: 'Line clear dedicated voices strictly 2');
+      expect(player.gameOverChannel.activePlayerCount, 1, reason: 'Game over dedicated voice strictly 1');
+
+      final int totalTracks = player.ring.activePlayerCount +
+          player.lineClearChannel.activePlayerCount +
+          player.gameOverChannel.activePlayerCount;
+      expect(totalTracks, 9);
+      expect(totalTracks, lessThanOrEqualTo(32), reason: 'Must stay well within Android 32-track SoundPool cap');
+    });
+
+    test('combo sounds play simultaneously over active line_clear tail', () async {
+      await player.preload();
+
+      final String clearPlayerId = player.lineClearChannel.players[0].playerId;
+
+      await player.playLineClear(clearedLines: 2);
+
+      // Clear method calls after line clear has started
+      methodCalls.clear();
+
+      // Combo sounds play concurrently
+      await player.playCombo(comboStreak: 1);
+      await player.playCombo(comboStreak: 2);
+
+      // Confirm dedicated clear voice was NOT stopped or reused by combo playback
+      final bool clearStoppedByCombo = methodCalls.any(
+        (MethodCall c) =>
+            c.arguments is Map &&
+            (c.arguments as Map)['playerId'] == clearPlayerId &&
+            c.method == 'stop',
+      );
+      expect(clearStoppedByCombo, isFalse, reason: 'Combo plays concurrently over clear tail without stopping it');
+    });
+
+    test('dispose releases all ring and dedicated channel players cleanly', () async {
+      await player.preload();
+
+      final List<String> allPlayerIds = <String>[
+        ...player.ring.players.map((AudioPlayer p) => p.playerId),
+        ...player.lineClearChannel.players.map((AudioPlayer p) => p.playerId),
+        ...player.gameOverChannel.players.map((AudioPlayer p) => p.playerId),
+      ];
+      expect(allPlayerIds.length, 9);
+
+      methodCalls.clear();
+      await player.dispose();
+
+      // All channel lists should be empty after dispose
+      expect(player.ring.activePlayerCount, 0);
+      expect(player.lineClearChannel.activePlayerCount, 0);
+      expect(player.gameOverChannel.activePlayerCount, 0);
+
+      // Verify dispose called on all 9 player IDs
+      final Set<dynamic> disposedIds = methodCalls
+          .where((MethodCall c) => c.method == 'dispose' && c.arguments is Map)
+          .map((MethodCall c) => (c.arguments as Map)['playerId'])
+          .toSet();
+
+      for (final String pid in allPlayerIds) {
+        expect(disposedIds.contains(pid), isTrue, reason: 'Player $pid must be disposed');
+      }
     });
   });
 }

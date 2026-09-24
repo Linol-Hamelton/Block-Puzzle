@@ -8,6 +8,7 @@ import '../../../domain/progression/player_progress_state.dart';
 import '../../monetization/iap_product.dart';
 import '../../monetization/iap_purchase_result.dart';
 import '../../monetization/iap_store_service.dart';
+import '../../../l10n/store_strings.dart';
 import 'store_view_state.dart';
 
 class StoreController {
@@ -55,12 +56,30 @@ class StoreController {
   }
 
   Future<void> purchaseProduct(IapProduct product) async {
+    final Map<String, Object?> remoteConfig =
+        await remoteConfigRepository.getCached();
+    final bool isStoreEnabled = _readBoolConfig(
+      remoteConfig,
+      key: 'iap.store_enabled',
+      fallback: false,
+    ) || _readBoolConfig(
+      remoteConfig,
+      key: 'feature_store_enabled',
+      fallback: false,
+    );
+    if (!isStoreEnabled) {
+      _stateNotifier.value = state.copyWith(
+        message: StoreStrings.storeUnavailable,
+      );
+      return;
+    }
+
     if (state.isPurchasing) {
       return;
     }
     if (state.ownedProductIds.contains(product.id)) {
       _stateNotifier.value = state.copyWith(
-        message: '"${product.title}" уже куплен',
+        message: StoreStrings.alreadyOwned(product.title),
       );
       return;
     }
@@ -93,7 +112,7 @@ class StoreController {
         _stateNotifier.value = state.copyWith(
           isPurchasing: false,
           ownedProductIds: owned,
-          message: 'Покупка "${product.title}" успешно завершена',
+          message: StoreStrings.purchaseSuccess(product.title),
         );
 
         await analyticsTracker.track(
@@ -116,7 +135,7 @@ class StoreController {
                 : 'failed');
         _stateNotifier.value = state.copyWith(
           isPurchasing: false,
-          message: 'Покупка отменена: $reason',
+          message: StoreStrings.purchaseCancelled(reason),
         );
       }
     } catch (error, stackTrace) {
@@ -124,7 +143,7 @@ class StoreController {
       logger.error('$stackTrace');
       _stateNotifier.value = state.copyWith(
         isPurchasing: false,
-        message: 'Ошибка покупки: $error',
+        message: StoreStrings.purchaseFailed(error),
       );
     }
   }
@@ -143,7 +162,7 @@ class StoreController {
       _stateNotifier.value = state.copyWith(
         isPurchasing: false,
         ownedProductIds: owned,
-        message: 'Восстановлено покупок: ${owned.length}',
+        message: StoreStrings.restoreSuccess(owned.length),
       );
 
       await analyticsTracker.track(
@@ -156,7 +175,7 @@ class StoreController {
       logger.error('Restore purchases failed: $error');
       _stateNotifier.value = state.copyWith(
         isPurchasing: false,
-        message: 'Ошибка восстановления: $error',
+        message: StoreStrings.restoreFailed(error),
       );
     }
   }
@@ -172,6 +191,23 @@ class StoreController {
     try {
       final Map<String, Object?> remoteConfig =
           await remoteConfigRepository.getCached();
+      final bool isStoreEnabled = _readBoolConfig(
+        remoteConfig,
+        key: 'iap.store_enabled',
+        fallback: false,
+      ) || _readBoolConfig(
+        remoteConfig,
+        key: 'feature_store_enabled',
+        fallback: false,
+      );
+      if (!isStoreEnabled) {
+        _stateNotifier.value = state.copyWith(
+          isLoading: false,
+          products: const <IapProduct>[],
+        );
+        return;
+      }
+
       final List<IapProduct> catalog = await iapStoreService.loadCatalog();
       final Set<String> owned = await iapStoreService.loadOwnedProductIds();
       final PlayerProgressState? progressState =
@@ -225,7 +261,7 @@ class StoreController {
       logger.error('Store catalog load failed: $error');
       _stateNotifier.value = state.copyWith(
         isLoading: false,
-        message: 'Не удалось загрузить магазин',
+        message: StoreStrings.loadCatalogFailed,
       );
     }
   }
@@ -523,6 +559,30 @@ class StoreController {
     }
     if (raw is String) {
       return int.tryParse(raw) ?? fallback;
+    }
+    return fallback;
+  }
+
+  bool _readBoolConfig(
+    Map<String, Object?> config, {
+    required String key,
+    required bool fallback,
+  }) {
+    final Object? raw = config[key];
+    if (raw is bool) {
+      return raw;
+    }
+    if (raw is num) {
+      return raw > 0;
+    }
+    if (raw is String) {
+      final String normalized = raw.trim().toLowerCase();
+      if (normalized == 'true') {
+        return true;
+      }
+      if (normalized == 'false') {
+        return false;
+      }
     }
     return fallback;
   }

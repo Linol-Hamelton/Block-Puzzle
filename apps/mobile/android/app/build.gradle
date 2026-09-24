@@ -53,10 +53,10 @@ android {
 
     buildTypes {
         release {
-            // Local/dev fallback uses debug signing when keystore is absent.
-            signingConfig = keystorePropertiesFile.exists()
-                ? signingConfigs.release
-                : signingConfigs.debug
+            if (!keystorePropertiesFile.exists()) {
+                throw new GradleException("Release build requires keystore, but key.properties is missing.")
+            }
+            signingConfig = signingConfigs.release
         }
     }
 }

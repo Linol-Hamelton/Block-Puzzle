@@ -14,9 +14,12 @@ const Map<String, Object?> bundledRemoteConfigDefaults = <String, Object?>{
   'ads.rewarded_revive_clear_cells': 6,
   'difficulty.hard_piece_weight': 0.2,
   'difficulty.max_hard_pieces_per_triplet': 1,
+  // Stage C monetization gate per DEC-0026 / DEC-0028 item 7.
+  // In v1.0, all monetization surfaces and paid SKUs are hidden until Stage C.
+  'iap.store_enabled': false,
   'iap.rollout_strategy': 'cosmetics_first',
   'iap.bundle_enabled': false,
-  'iap.rewarded_tools_unlimited_enabled': true,
+  'iap.rewarded_tools_unlimited_enabled': false,
   'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
   'iap.segment_collector_owned_threshold': 2,
   'iap.segment_engaged_streak_threshold': 2,

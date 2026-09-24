@@ -163,10 +163,17 @@
     },
     "iap_rewarded_tools_unlimited_enabled": {
       "defaultValue": {
-        "value": "true"
+        "value": "false"
       },
       "valueType": "BOOLEAN",
       "description": "app key: iap.rewarded_tools_unlimited_enabled"
+    },
+    "iap_store_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "valueType": "BOOLEAN",
+      "description": "DEC-0026/DEC-0028 Stage C gate: enables premium store and monetization surfaces"
     },
     "iap_rewarded_tools_unlimited_sku": {
       "defaultValue": {

@@ -399,10 +399,134 @@ void main() {
           'game_end',
           'line_clear',
           'ops_error',
+          'undo_used',
+          'near_record',
+          'clear_size',
+          'game_over_fill_ratio',
+          'all_clear',
+          'reduced_motion_toggled',
+          'danger_pulse_shown',
         ]) {
           expect(AnalyticsSchemaValidator.isReservedEventName(name), isFalse,
               reason: '$name is sent by this app and must not be reserved');
         }
+      });
+    });
+
+    group('DEC-0028 telemetry events', () {
+      test('validates undo_used payload', () {
+        final AnalyticsValidationResult result = validator.validate(
+          'undo_used',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'round_id': 'round_42',
+            'is_free': true,
+            'source': 'classic',
+          },
+        );
+        expect(result.isValid, isTrue);
+        expect(result.missingRequired, isEmpty);
+      });
+
+      test('validates near_record payload and enforces required fields', () {
+        final AnalyticsValidationResult valid = validator.validate(
+          'near_record',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'round_id': 'round_42',
+            'score': 960,
+            'best_score': 1000,
+            'gap': 40,
+            'gap_pct': 0.04,
+          },
+        );
+        expect(valid.isValid, isTrue);
+
+        final AnalyticsValidationResult missing = validator.validate(
+          'near_record',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'round_id': 'round_42',
+          },
+        );
+        expect(missing.isValid, isFalse);
+        expect(missing.missingRequired, contains('score'));
+        expect(missing.missingRequired, contains('best_score'));
+      });
+
+      test('validates clear_size payload', () {
+        final AnalyticsValidationResult result = validator.validate(
+          'clear_size',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'round_id': 'round_42',
+            'lines_cleared': 3,
+            'cells_cleared': 24,
+            'combo_streak': 2,
+          },
+        );
+        expect(result.isValid, isTrue);
+      });
+
+      test('validates game_over_fill_ratio payload', () {
+        final AnalyticsValidationResult result = validator.validate(
+          'game_over_fill_ratio',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'round_id': 'round_42',
+            'fill_ratio': 0.78,
+            'occupied_cells': 50,
+            'total_cells': 64,
+          },
+        );
+        expect(result.isValid, isTrue);
+      });
+
+      test('validates all_clear payload', () {
+        final AnalyticsValidationResult result = validator.validate(
+          'all_clear',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'round_id': 'round_42',
+            'score': 1250,
+            'moves_played': 18,
+          },
+        );
+        expect(result.isValid, isTrue);
+      });
+
+      test('validates reduced_motion_toggled payload', () {
+        final AnalyticsValidationResult result = validator.validate(
+          'reduced_motion_toggled',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'enabled': true,
+            'source': 'settings',
+          },
+        );
+        expect(result.isValid, isTrue);
+
+        final AnalyticsValidationResult missing = validator.validate(
+          'reduced_motion_toggled',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+          },
+        );
+        expect(missing.isValid, isFalse);
+        expect(missing.missingRequired, contains('enabled'));
+      });
+
+      test('validates danger_pulse_shown payload', () {
+        final AnalyticsValidationResult result = validator.validate(
+          'danger_pulse_shown',
+          params: <String, Object?>{
+            'schema_version': '1.1.0',
+            'round_id': 'round_42',
+            'fill_ratio': 0.76,
+            'duration_ms': 1500,
+          },
+        );
+        expect(result.isValid, isTrue);
       });
     });
   });

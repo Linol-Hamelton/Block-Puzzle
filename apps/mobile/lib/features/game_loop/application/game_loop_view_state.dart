@@ -29,6 +29,11 @@ class GameLoopViewState {
     required this.bestScore,
     required this.gamesPlayed,
     required this.movesPlayed,
+    this.sessionStartBestScore = 0,
+    this.linesCleared = 0,
+    this.maxCombo = 0,
+    this.hasUsedFreeUndo = false,
+    this.isFirstGameOver = false,
     this.onboardingStepId,
     this.onboardingTitle,
     this.onboardingDescription,
@@ -61,6 +66,11 @@ class GameLoopViewState {
   final int bestScore;
   final int gamesPlayed;
   final int movesPlayed;
+  final int sessionStartBestScore;
+  final int linesCleared;
+  final int maxCombo;
+  final bool hasUsedFreeUndo;
+  final bool isFirstGameOver;
   final String? onboardingStepId;
   final String? onboardingTitle;
   final String? onboardingDescription;
@@ -92,6 +102,11 @@ class GameLoopViewState {
       bestScore: 0,
       gamesPlayed: 0,
       movesPlayed: 0,
+      sessionStartBestScore: 0,
+      linesCleared: 0,
+      maxCombo: 0,
+      hasUsedFreeUndo: false,
+      isFirstGameOver: false,
       onboardingStepId: null,
       onboardingTitle: null,
       onboardingDescription: null,
@@ -124,6 +139,11 @@ class GameLoopViewState {
     int? bestScore,
     int? gamesPlayed,
     int? movesPlayed,
+    int? sessionStartBestScore,
+    int? linesCleared,
+    int? maxCombo,
+    bool? hasUsedFreeUndo,
+    bool? isFirstGameOver,
     String? onboardingStepId,
     String? onboardingTitle,
     String? onboardingDescription,
@@ -160,6 +180,11 @@ class GameLoopViewState {
       bestScore: bestScore ?? this.bestScore,
       gamesPlayed: gamesPlayed ?? this.gamesPlayed,
       movesPlayed: movesPlayed ?? this.movesPlayed,
+      sessionStartBestScore: sessionStartBestScore ?? this.sessionStartBestScore,
+      linesCleared: linesCleared ?? this.linesCleared,
+      maxCombo: maxCombo ?? this.maxCombo,
+      hasUsedFreeUndo: hasUsedFreeUndo ?? this.hasUsedFreeUndo,
+      isFirstGameOver: isFirstGameOver ?? this.isFirstGameOver,
       onboardingStepId:
           resetOnboarding ? null : (onboardingStepId ?? this.onboardingStepId),
       onboardingTitle:

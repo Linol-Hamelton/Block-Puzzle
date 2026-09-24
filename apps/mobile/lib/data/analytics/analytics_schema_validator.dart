@@ -523,5 +523,78 @@ class AnalyticsSchemaValidator {
         'firebase_ready',
       },
     ),
+    // DEC-0028 gameplay telemetry schemas
+    'undo_used': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+      },
+      optionalParams: <String>{
+        'is_free',
+        'cost',
+        'source',
+        'score',
+        'board_fill_pct',
+        'moves_played',
+      },
+    ),
+    'near_record': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'score',
+        'best_score',
+      },
+      optionalParams: <String>{
+        'gap',
+        'gap_pct',
+      },
+    ),
+    'clear_size': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'lines_cleared',
+      },
+      optionalParams: <String>{
+        'cells_cleared',
+        'is_all_clear',
+        'combo_streak',
+      },
+    ),
+    'game_over_fill_ratio': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'fill_ratio',
+      },
+      optionalParams: <String>{
+        'occupied_cells',
+        'total_cells',
+        'score',
+      },
+    ),
+    'all_clear': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+      },
+      optionalParams: <String>{
+        'score',
+        'moves_played',
+      },
+    ),
+    'reduced_motion_toggled': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'enabled',
+      },
+      optionalParams: <String>{
+        'source',
+      },
+    ),
+    'danger_pulse_shown': AnalyticsEventSchema(
+      requiredParams: <String>{
+        'round_id',
+        'fill_ratio',
+      },
+      optionalParams: <String>{
+        'duration_ms',
+      },
+    ),
   };
 }

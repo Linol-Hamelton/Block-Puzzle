@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../../../core/di/di_container.dart';
 import '../../../ui/theme/app_theme.dart';
 import '../../monetization/iap_product.dart';
+import '../application/store_availability.dart';
 import '../application/store_controller.dart';
 import '../application/store_view_state.dart';
+import 'store_gate.dart';
 
 class StoreScreen extends StatefulWidget {
   const StoreScreen({super.key});
@@ -18,26 +20,40 @@ class StoreScreen extends StatefulWidget {
 class _StoreScreenState extends State<StoreScreen> {
   static const double _maxContentWidth = 840;
 
-  late final StoreController _controller;
+  StoreController? _controller;
   StoreViewState? _lastState;
+  bool _isStoreEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = sl<StoreController>();
-    _controller.stateListenable.addListener(_handleStateChange);
-    unawaited(_controller.initialize());
+    _isStoreEnabled = sl.isRegistered<StoreAvailability>()
+        ? sl<StoreAvailability>().isEnabled
+        : false;
+    if (_isStoreEnabled) {
+      final StoreController controller = sl<StoreController>();
+      _controller = controller;
+      controller.stateListenable.addListener(_handleStateChange);
+      unawaited(controller.initialize());
+    }
   }
 
   @override
   void dispose() {
-    _controller.stateListenable.removeListener(_handleStateChange);
-    _controller.dispose();
+    final StoreController? controller = _controller;
+    if (controller != null) {
+      controller.stateListenable.removeListener(_handleStateChange);
+      controller.dispose();
+    }
     super.dispose();
   }
 
   void _handleStateChange() {
-    final StoreViewState current = _controller.state;
+    final StoreController? controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    final StoreViewState current = controller.state;
     final StoreViewState? previous = _lastState;
     _lastState = current;
 
@@ -53,12 +69,16 @@ class _StoreScreenState extends State<StoreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isStoreEnabled || _controller == null) {
+      return const StoreUnavailableScreen();
+    }
+    final StoreController controller = _controller!;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Store'),
         actions: <Widget>[
           IconButton(
-            onPressed: _controller.restorePurchases,
+            onPressed: controller.restorePurchases,
             icon: const Icon(Icons.restore),
             tooltip: 'Restore purchases',
           ),
@@ -97,7 +117,7 @@ class _StoreScreenState extends State<StoreScreen> {
             ),
           ),
           ValueListenableBuilder<StoreViewState>(
-            valueListenable: _controller.stateListenable,
+            valueListenable: controller.stateListenable,
             builder:
                 (BuildContext context, StoreViewState state, Widget? child) {
               if (state.isLoading && state.products.isEmpty) {
@@ -105,7 +125,7 @@ class _StoreScreenState extends State<StoreScreen> {
               }
 
               return RefreshIndicator(
-                onRefresh: _controller.refresh,
+                onRefresh: controller.refresh,
                 child: Center(
                   child: ConstrainedBox(
                     constraints:
@@ -120,7 +140,10 @@ class _StoreScreenState extends State<StoreScreen> {
                           userSegment: state.userSegment,
                         ),
                         const SizedBox(height: 16),
-                        ...state.products.map(
+                        ...state.products
+                            .where((IapProduct product) =>
+                                product.id != 'utility_tools_pass')
+                            .map(
                           (IapProduct product) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _ProductCard(
@@ -130,7 +153,7 @@ class _StoreScreenState extends State<StoreScreen> {
                               isRecommended:
                                   state.recommendedProductId == product.id,
                               isBusy: state.isPurchasing,
-                              onBuy: () => _controller.purchaseProduct(product),
+                              onBuy: () => controller.purchaseProduct(product),
                             ),
                           ),
                         ),

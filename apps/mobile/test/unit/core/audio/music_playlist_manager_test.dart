@@ -176,7 +176,7 @@ void main() {
       expect((duckDb - (-3.0)).abs(), lessThan(0.001));
     });
 
-    test('initialize configures explicit AudioContext with AndroidAudioFocus.gain', () async {
+    test('initialize configures explicit AudioContext with AndroidAudioFocus.gainTransientMayDuck', () async {
       final FakeAudioPlayer playerA = FakeAudioPlayer();
       final FakeAudioPlayer playerB = FakeAudioPlayer();
       final MusicPlaylistManager manager = MusicPlaylistManager(
@@ -192,7 +192,7 @@ void main() {
       expect(playerB.configuredAudioContext, isNotNull);
       expect(
         playerA.configuredAudioContext!.android.audioFocus,
-        equals(AndroidAudioFocus.gain),
+        equals(AndroidAudioFocus.gainTransientMayDuck),
       );
       expect(
         playerA.configuredAudioContext!.android.contentType,
@@ -242,14 +242,14 @@ void main() {
 
       // Trigger ducking for 80 ms in the middle of crossfade
       manager.duck(duration: const Duration(milliseconds: 80));
-      expect(manager.duckMultiplier, closeTo(MusicPlaylistManager.kDuckFactorMinus3dB, 1e-4));
+      expect(manager.duckMultiplier, closeTo(MusicPlaylistManager.kDuckFactorMinus1_5dB, 1e-4));
 
       // Check that during ducking, volume is attenuated on both players
       expect(playerA.currentVolume, lessThan(0.32));
       expect(playerB.currentVolume, lessThan(0.32));
 
-      // Wait for duck timer and crossfade to fully complete
-      await Future<void>.delayed(const Duration(milliseconds: 260));
+      // Wait for duck timer (80 ms), recovery ramp (250 ms) and crossfade to fully complete
+      await Future<void>.delayed(const Duration(milliseconds: 360));
 
       // After crossfade completes and duck finishes, final volume of incoming player
       // (which is now activePlayer, playerB) MUST be restored exactly to baseVolume (0.32)
@@ -545,6 +545,40 @@ void main() {
       await manager.play();
       expect(manager.isPaused, isFalse);
       expect(playerA.playCallCount, 2);
+
+      await manager.dispose();
+    });
+
+    test('DEC-0028: duck floor >= 0.70 across 4 rapid events at 50 ms intervals with coalescing', () async {
+      final FakeAudioPlayer playerA = FakeAudioPlayer();
+      final FakeAudioPlayer playerB = FakeAudioPlayer();
+      final MusicPlaylistManager manager = MusicPlaylistManager(
+        logger: _SilentLogger(),
+        playlist: const <String>['track1.m4a'],
+        playerA: playerA,
+        playerB: playerB,
+        baseVolume: 0.50,
+      );
+
+      await manager.initialize();
+      await manager.play();
+      expect(playerA.currentVolume, closeTo(0.50, 1e-4));
+
+      // Trigger 4 rapid duck calls at 50 ms intervals
+      for (int i = 0; i < 4; i++) {
+        manager.duck();
+        expect(manager.duckMultiplier, greaterThanOrEqualTo(0.70));
+        expect(playerA.currentVolume, greaterThanOrEqualTo(0.50 * 0.70 - 1e-4));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+
+      // Multiplier must remain bounded at or above 0.70 throughout
+      expect(manager.duckMultiplier, greaterThanOrEqualTo(0.70));
+
+      // After coalescing, duck duration, and 250 ms recovery ramp, volume must restore to base
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+      expect(manager.duckMultiplier, equals(1.0));
+      expect(playerA.currentVolume, closeTo(0.50, 1e-4));
 
       await manager.dispose();
     });

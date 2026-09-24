@@ -17,6 +17,8 @@ import '../../diagnostics/diagnostics_screen.dart';
 import '../../diagnostics/frame_timing_recorder.dart';
 import '../../diagnostics/step1j_decomposition.dart';
 import '../../diagnostics/step6_benchmark.dart';
+import '../../../core/audio/music_controller.dart';
+import '../../../core/device/screen_wake_manager.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
@@ -60,6 +62,10 @@ class _GameLoopScreenState extends State<GameLoopScreen>
       isDailyChallenge: widget.isDailyChallenge,
     );
     _controller.stateListenable.addListener(_onControllerStateChanged);
+    if (sl.isRegistered<MusicController>()) {
+      unawaited(sl<MusicController>().playClassicTrack());
+    }
+    unawaited(ScreenWakeManager.setKeepScreenOn(true));
   }
 
   @override
@@ -69,6 +75,10 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     _controller.stateListenable.removeListener(_onControllerStateChanged);
     _game.shutdown();
     _controller.dispose();
+    if (sl.isRegistered<MusicController>()) {
+      unawaited(sl<MusicController>().playMenuTrack());
+    }
+    unawaited(ScreenWakeManager.setKeepScreenOn(false));
     super.dispose();
   }
 
@@ -87,6 +97,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
         _controller.resumeGame();
         _game.resumeEngine();
         unawaited(_sfxPlayer.onAppResumed());
+        unawaited(ScreenWakeManager.setKeepScreenOn(true));
         return;
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
@@ -94,6 +105,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
       case AppLifecycleState.detached:
         _controller.pauseGame();
         _game.pauseEngine();
+        unawaited(ScreenWakeManager.setKeepScreenOn(false));
         return;
     }
   }
@@ -313,6 +325,56 @@ class _GameLoopScreenState extends State<GameLoopScreen>
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: ValueListenableBuilder<Step6BenchmarkScenario>(
+                        valueListenable: Step6Benchmark.scenario,
+                        builder: (BuildContext context, Step6BenchmarkScenario scenario, Widget? _) {
+                          final bool isTriple = scenario == Step6BenchmarkScenario.tripleClear;
+                          return FilledButton.tonal(
+                            key: const Key('btn_toggle_step6_scenario'),
+                            onPressed: () {
+                              final Step6BenchmarkScenario next = isTriple
+                                  ? Step6BenchmarkScenario.singleClear
+                                  : Step6BenchmarkScenario.tripleClear;
+                              Step6Benchmark.scenario.value = next;
+                              _game.controller.debugSetBoardState(
+                                BoardState(
+                                  size: 8,
+                                  occupiedCells: next == Step6BenchmarkScenario.tripleClear
+                                      ? Step6Benchmark.tripleClear24Cells
+                                      : Step6Benchmark.halfBoard26Cells,
+                                ),
+                              );
+                              recorder?.reset();
+                              Navigator.of(sheetContext).pop();
+                            },
+                            child: Text(isTriple ? 'Scenario: TRIPLE' : 'Scenario: SINGLE'),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: Step6Benchmark.reducedMotion,
+                        builder: (BuildContext context, bool reduced, Widget? _) {
+                          return FilledButton.tonal(
+                            key: const Key('btn_toggle_step6_reduced_motion'),
+                            onPressed: () {
+                              Step6Benchmark.reducedMotion.value = !reduced;
+                              recorder?.reset();
+                              Navigator.of(sheetContext).pop();
+                            },
+                            child: Text('Motion: ${reduced ? "REDUCED" : "FULL"}'),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -321,12 +383,69 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     );
   }
 
+  Future<bool> _confirmExit() async {
+    final bool? shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: LuminaPalette.panel,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: LuminaPalette.panelBorder),
+          ),
+          title: const Text(
+            'Exit Game?',
+            style: TextStyle(
+              color: LuminaPalette.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Your progress is saved. Do you want to return to the main menu?',
+            style: TextStyle(color: LuminaPalette.textSecondary),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Stay'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Exit'),
+            ),
+          ],
+        );
+      },
+    );
+    return shouldExit ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Step1jConfig>(
-      valueListenable: Step1jDecomposition.activeConfig,
-      builder: (BuildContext context, Step1jConfig _, Widget? __) {
-        return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) {
+          return;
+        }
+        final GameLoopViewState current = _controller.state;
+        final bool isGameActive = !current.isGameOver && current.movesPlayed > 0;
+        if (!isGameActive) {
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+          return;
+        }
+        final NavigatorState navigator = Navigator.of(context);
+        final bool shouldExit = await _confirmExit();
+        if (shouldExit && mounted) {
+          navigator.pop();
+        }
+      },
+      child: ValueListenableBuilder<Step1jConfig>(
+        valueListenable: Step1jDecomposition.activeConfig,
+        builder: (BuildContext context, Step1jConfig _, Widget? __) {
+          return Scaffold(
           appBar: PreferredSize(
             preferredSize: const Size.fromHeight(kToolbarHeight),
             child: Visibility(
@@ -608,6 +727,7 @@ class _GameLoopScreenState extends State<GameLoopScreen>
       ),
     );
   },
+),
 );
 }
 

@@ -85,10 +85,32 @@ void main() {
     test('rejects a non-positive scale instead of dividing by zero', () {
       expect(() => BurstField(timeScale: 0), throwsA(isA<AssertionError>()));
     });
+
+    test('recycles expired particles into pool and reuses them on subsequent spawns', () {
+      final BurstField field = BurstField(
+        random: math.Random(42),
+        maxParticles: 50,
+      );
+
+      field.spawnBurst(x: 10, y: 10, color: const Color(0xFFFFFFFF), count: 12);
+      expect(field.activeCount, 12);
+      expect(field.pooledCount, 0);
+
+      for (int i = 0; i < 300; i++) {
+        field.update(1 / 60);
+      }
+
+      expect(field.isEmpty, isTrue);
+      expect(field.pooledCount, 12);
+
+      field.spawnBurst(x: 20, y: 20, color: const Color(0xFFFF0000), count: 8);
+      expect(field.activeCount, 8);
+      expect(field.pooledCount, 4);
+    });
   });
 
   group('clear effects carry the scale', () {
-    test('the shockwave and the score pop are scaled, not hardcoded', () {
+    test('the shockwave is scaled and the score pop is decoupled to 0.85s', () {
       final ShockwaveRingComponent ring = ShockwaveRingComponent(
         center: Vector2.zero(),
         boardRect: const Rect.fromLTWH(0, 0, 100, 100),
@@ -99,7 +121,7 @@ void main() {
       );
 
       expect(ring.duration, closeTo(0.8 * kEffectTimeScale, 1e-9));
-      expect(pop.duration, closeTo(0.8 * kEffectTimeScale, 1e-9));
+      expect(pop.duration, closeTo(0.85, 1e-9));
     });
 
     test('a scaled effect is not finished at its unscaled lifetime', () {

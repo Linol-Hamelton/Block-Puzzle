@@ -19,6 +19,16 @@ class ScoreState {
     };
   }
 
+  ScoreState copyWith({
+    int? totalScore,
+    int? comboStreak,
+  }) {
+    return ScoreState(
+      totalScore: totalScore ?? this.totalScore,
+      comboStreak: comboStreak ?? this.comboStreak,
+    );
+  }
+
   factory ScoreState.fromJson(Map<String, Object?> json) {
     return ScoreState(
       totalScore: json['total_score'] as int? ?? 0,

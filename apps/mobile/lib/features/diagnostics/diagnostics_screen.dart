@@ -438,8 +438,8 @@ class _FrameTimingCard extends StatelessWidget {
               style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             _timingRow(
-              '  p50 / p90 / p99',
-              '${snapshot.buildP50Ms.toStringAsFixed(2)} / ${snapshot.buildP90Ms.toStringAsFixed(2)} / ${snapshot.buildP99Ms.toStringAsFixed(2)} ms',
+              '  p50 / p90 / p95 / p99',
+              '${snapshot.buildP50Ms.toStringAsFixed(2)} / ${snapshot.buildP90Ms.toStringAsFixed(2)} / ${snapshot.buildP95Ms.toStringAsFixed(2)} / ${snapshot.buildP99Ms.toStringAsFixed(2)} ms',
               theme,
             ),
             _timingRow(
@@ -453,8 +453,8 @@ class _FrameTimingCard extends StatelessWidget {
               style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             _timingRow(
-              '  p50 / p90 / p99',
-              '${snapshot.rasterP50Ms.toStringAsFixed(2)} / ${snapshot.rasterP90Ms.toStringAsFixed(2)} / ${snapshot.rasterP99Ms.toStringAsFixed(2)} ms',
+              '  p50 / p90 / p95 / p99',
+              '${snapshot.rasterP50Ms.toStringAsFixed(2)} / ${snapshot.rasterP90Ms.toStringAsFixed(2)} / ${snapshot.rasterP95Ms.toStringAsFixed(2)} / ${snapshot.rasterP99Ms.toStringAsFixed(2)} ms',
               theme,
             ),
             _timingRow(
@@ -469,6 +469,22 @@ class _FrameTimingCard extends StatelessWidget {
               theme,
               highlight: snapshot.totalWorstMs > (snapshot.jankThresholdMicroseconds / 1000.0),
             ),
+            if (recorder.jankLog.isNotEmpty) ...<Widget>[
+              const Divider(),
+              Text(
+                '20-Min Jank Log (${recorder.jankLog.length} min):',
+                style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              for (final JankMinuteRecord rec in recorder.jankLog.reversed.take(5))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  child: Text(
+                    rec.toString(),
+                    style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                  ),
+                ),
+            ],
             const Divider(),
             _timingRow(
               'Total window frames',

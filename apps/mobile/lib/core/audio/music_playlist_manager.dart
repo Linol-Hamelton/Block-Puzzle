@@ -19,7 +19,7 @@ class MusicPlaylistManager {
   MusicPlaylistManager({
     required AppLogger logger,
     List<String>? playlist,
-    double baseVolume = 0.32,
+    double baseVolume = 0.50,
     Duration crossfadeDuration = const Duration(milliseconds: 1200),
     AudioPlayer? playerA,
     AudioPlayer? playerB,
@@ -43,7 +43,7 @@ class MusicPlaylistManager {
 
   final AppLogger _logger;
   final List<String> _playlist;
-  final double _baseVolume;
+  double _baseVolume;
   final Duration _crossfadeDuration;
   final AudioContext _audioContext;
   final String _audioPrefix;
@@ -63,32 +63,48 @@ class MusicPlaylistManager {
 
   Timer? _crossfadeTimer;
   Timer? _duckTimer;
+  Timer? _duckRecoveryTimer;
+  DateTime? _lastDuckTime;
   StreamSubscription<void>? _completeSubA;
   StreamSubscription<void>? _completeSubB;
   StreamSubscription<PlayerState>? _stateSubA;
   StreamSubscription<PlayerState>? _stateSubB;
 
-  /// Default explicit AudioContext for Android and iOS per DEC-0024 p.7d.
+  static const int kTrackMenu = 0;
+  static const int kTrackClassic = 1;
+  static const int kTrackTetris = 2;
+  static const int kTrackMatch3 = 3;
+
+  /// Default explicit AudioContext for Android and iOS per DEC-0024/DEC-0028.
   static final AudioContext defaultAudioContext = AudioContext(
     android: const AudioContextAndroid(
       isSpeakerphoneOn: false,
       stayAwake: false,
       contentType: AndroidContentType.music,
       usageType: AndroidUsageType.media,
-      audioFocus: AndroidAudioFocus.gain,
+      audioFocus: AndroidAudioFocus.gainTransientMayDuck,
       audioMode: AndroidAudioMode.normal,
     ),
     iOS: AudioContextIOS(
       category: AVAudioSessionCategory.playback,
-      options: const <AVAudioSessionOptions>{},
+      options: const <AVAudioSessionOptions>{AVAudioSessionOptions.mixWithOthers},
     ),
   );
+
+  /// Multiplier for -1.5 dB ducking per DEC-0028: 10^(-1.5/20) approx 0.84139514.
+  static const double kDuckFactorMinus1_5dB = 0.84139514;
 
   /// Multiplier for -3 dB ducking: 10^(-3/20) approx 0.70794578.
   static const double kDuckFactorMinus3dB = 0.70794578;
 
-  /// Default ducking duration per DEC-0024 Step 4c.
+  /// Default ducking duration per DEC-0024/DEC-0028.
   static const Duration kDefaultDuckDuration = Duration(milliseconds: 150);
+
+  /// Coalescing window (100-120 ms) per DEC-0028.
+  static const Duration kCoalescingWindow = Duration(milliseconds: 110);
+
+  /// Recovery ramp duration (250 ms) per DEC-0028.
+  static const Duration kRecoveryDuration = Duration(milliseconds: 250);
 
   bool get isEnabled => _enabled;
   bool get isPlaying => _playing;
@@ -100,6 +116,14 @@ class MusicPlaylistManager {
   double get crossfadeProgress => _crossfadeProgress;
   double get baseVolume => _baseVolume;
   List<String> get playlist => List<String>.unmodifiable(_playlist);
+
+  void setBaseVolume(double volume) {
+    if (_isDisposed) {
+      return;
+    }
+    _baseVolume = volume.clamp(0.0, 1.0);
+    _applyCurrentVolumes();
+  }
 
   AudioPlayer get activePlayer => _activePlayerIndex == 0 ? _playerA : _playerB;
   AudioPlayer get standbyPlayer => _activePlayerIndex == 0 ? _playerB : _playerA;
@@ -131,8 +155,10 @@ class MusicPlaylistManager {
       await _playerA.setReleaseMode(ReleaseMode.stop);
       await _playerB.setReleaseMode(ReleaseMode.stop);
 
-      await _playerA.setAudioContext(_audioContext);
-      await _playerB.setAudioContext(_audioContext);
+      if (_enabled) {
+        await _playerA.setAudioContext(_audioContext);
+        await _playerB.setAudioContext(_audioContext);
+      }
 
       await _completeSubA?.cancel();
       _completeSubA = _playerA.onPlayerComplete.listen((_) {
@@ -162,6 +188,9 @@ class MusicPlaylistManager {
     _enabled = enabled;
     if (!enabled) {
       unawaited(stop());
+    } else {
+      unawaited(_playerA.setAudioContext(_audioContext));
+      unawaited(_playerB.setAudioContext(_audioContext));
     }
   }
 
@@ -339,19 +368,30 @@ class MusicPlaylistManager {
     }
   }
 
-  /// Ducking per DEC-0024 Step 4c: reduces music volume by [factor] (-3 dB default)
-  /// for [duration] (150 ms default) without overriding crossfade envelope gains.
+  /// Ducking per DEC-0024 / DEC-0028: reduces music volume by [factor] (-1.5 dB default)
+  /// with a coalescing window (110 ms) and a 250 ms recovery ramp.
   ///
+  /// Invariant: _duckMultiplier >= 0.70 at all times (guaranteed duck floor).
   /// Ducking is a multiplier applied on top of the envelope:
   /// V_effective = V_base * gain_crossfade * multiplier_duck.
   void duck({
     Duration duration = kDefaultDuckDuration,
-    double factor = kDuckFactorMinus3dB,
+    double factor = kDuckFactorMinus1_5dB,
   }) {
     if (_isDisposed || !_enabled || !_playing || _isPaused) {
       return;
     }
-    _duckMultiplier = factor;
+    final DateTime now = DateTime.now();
+    if (_lastDuckTime != null && now.difference(_lastDuckTime!) < kCoalescingWindow) {
+      // Coalescing window: suppress rapid re-triggering within 100-120 ms
+      return;
+    }
+    _lastDuckTime = now;
+    _duckRecoveryTimer?.cancel();
+    _duckRecoveryTimer = null;
+
+    final double clampedFactor = factor.clamp(0.70, 1.0);
+    _duckMultiplier = clampedFactor;
     _applyCurrentVolumes();
 
     _duckTimer?.cancel();
@@ -359,9 +399,33 @@ class MusicPlaylistManager {
       if (_isDisposed) {
         return;
       }
-      _duckMultiplier = 1.0;
-      _applyCurrentVolumes();
-      _duckTimer = null;
+      _startDuckRecovery();
+    });
+  }
+
+  void _startDuckRecovery() {
+    _duckTimer = null;
+    const int steps = 5;
+    final int stepMs = kRecoveryDuration.inMilliseconds ~/ steps;
+    final double startMultiplier = _duckMultiplier;
+    final double delta = (1.0 - startMultiplier) / steps;
+    int step = 0;
+
+    _duckRecoveryTimer = Timer.periodic(Duration(milliseconds: stepMs), (Timer timer) {
+      if (_isDisposed) {
+        timer.cancel();
+        return;
+      }
+      step++;
+      if (step >= steps) {
+        _duckMultiplier = 1.0;
+        _applyCurrentVolumes();
+        timer.cancel();
+        _duckRecoveryTimer = null;
+      } else {
+        _duckMultiplier = (startMultiplier + delta * step).clamp(0.70, 1.0);
+        _applyCurrentVolumes();
+      }
     });
   }
 
@@ -415,6 +479,9 @@ class MusicPlaylistManager {
     _crossfadeTimer = null;
     _duckTimer?.cancel();
     _duckTimer = null;
+    _duckRecoveryTimer?.cancel();
+    _duckRecoveryTimer = null;
+    _lastDuckTime = null;
     _isCrossfading = false;
     _crossfadeProgress = 0.0;
     _duckMultiplier = 1.0;

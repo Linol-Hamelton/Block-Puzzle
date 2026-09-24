@@ -15,9 +15,11 @@ class FrameTimingSnapshot {
     required this.buildP50Ms,
     required this.buildP90Ms,
     required this.buildP99Ms,
+    this.buildP95Ms = 0.0,
     required this.buildWorstMs,
     required this.rasterP50Ms,
     required this.rasterP90Ms,
+    this.rasterP95Ms = 0.0,
     required this.rasterP99Ms,
     required this.rasterWorstMs,
     required this.totalWorstMs,
@@ -34,10 +36,12 @@ class FrameTimingSnapshot {
         jankPercentage = 0.0,
         buildP50Ms = 0.0,
         buildP90Ms = 0.0,
+        buildP95Ms = 0.0,
         buildP99Ms = 0.0,
         buildWorstMs = 0.0,
         rasterP50Ms = 0.0,
         rasterP90Ms = 0.0,
+        rasterP95Ms = 0.0,
         rasterP99Ms = 0.0,
         rasterWorstMs = 0.0,
         totalWorstMs = 0.0;
@@ -57,11 +61,13 @@ class FrameTimingSnapshot {
 
   final double buildP50Ms;
   final double buildP90Ms;
+  final double buildP95Ms;
   final double buildP99Ms;
   final double buildWorstMs;
 
   final double rasterP50Ms;
   final double rasterP90Ms;
+  final double rasterP95Ms;
   final double rasterP99Ms;
   final double rasterWorstMs;
 
@@ -72,10 +78,36 @@ class FrameTimingSnapshot {
     return 'FrameTimingSnapshot(sampleFrames: $sampleFrameCount, totalFrames: $totalWindowFrames, '
         'window: ${(windowDuration.inMilliseconds / 1000.0).toStringAsFixed(1)}s, fps: ${windowFps.toStringAsFixed(1)}, '
         'jank: ${jankPercentage.toStringAsFixed(1)}% ($jankCount), threshold: ${(jankThresholdMicroseconds / 1000.0).toStringAsFixed(1)}ms, '
-        'build[p50: ${buildP50Ms.toStringAsFixed(2)}ms, p90: ${buildP90Ms.toStringAsFixed(2)}ms, p99: ${buildP99Ms.toStringAsFixed(2)}ms, worst: ${buildWorstMs.toStringAsFixed(2)}ms], '
-        'raster[p50: ${rasterP50Ms.toStringAsFixed(2)}ms, p90: ${rasterP90Ms.toStringAsFixed(2)}ms, p99: ${rasterP99Ms.toStringAsFixed(2)}ms, worst: ${rasterWorstMs.toStringAsFixed(2)}ms], '
+        'build[p50: ${buildP50Ms.toStringAsFixed(2)}ms, p90: ${buildP90Ms.toStringAsFixed(2)}ms, p95: ${buildP95Ms.toStringAsFixed(2)}ms, p99: ${buildP99Ms.toStringAsFixed(2)}ms, worst: ${buildWorstMs.toStringAsFixed(2)}ms], '
+        'raster[p50: ${rasterP50Ms.toStringAsFixed(2)}ms, p90: ${rasterP90Ms.toStringAsFixed(2)}ms, p95: ${rasterP95Ms.toStringAsFixed(2)}ms, p99: ${rasterP99Ms.toStringAsFixed(2)}ms, worst: ${rasterWorstMs.toStringAsFixed(2)}ms], '
         'totalWorst: ${totalWorstMs.toStringAsFixed(2)}ms)';
   }
+}
+
+/// Statistics for a 1-minute bucket used in the 20-minute jank log.
+class JankMinuteRecord {
+  const JankMinuteRecord({
+    required this.minuteIndex,
+    required this.totalFrames,
+    required this.jankFrames,
+    required this.jankPercentage,
+    required this.rasterP50Ms,
+    required this.rasterP95Ms,
+    required this.rasterWorstMs,
+  });
+
+  final int minuteIndex;
+  final int totalFrames;
+  final int jankFrames;
+  final double jankPercentage;
+  final double rasterP50Ms;
+  final double rasterP95Ms;
+  final double rasterWorstMs;
+
+  @override
+  String toString() =>
+      'Min $minuteIndex: frames=$totalFrames, jank=$jankFrames (${jankPercentage.toStringAsFixed(1)}%), '
+      'raster[p50: ${rasterP50Ms.toStringAsFixed(1)}ms, p95: ${rasterP95Ms.toStringAsFixed(1)}ms, worst: ${rasterWorstMs.toStringAsFixed(1)}ms]';
 }
 
 /// Fixed-capacity ring buffer recorder for frame timings.
@@ -115,6 +147,60 @@ class FrameTimingRecorder {
   int _head = 0;
   int _count = 0;
   int _totalRecordedFrames = 0;
+
+  final List<JankMinuteRecord> _completedMinutes = <JankMinuteRecord>[];
+  int _currentMinuteFrameCount = 0;
+  int _currentMinuteJankCount = 0;
+  final List<int> _currentMinuteRastersUs = <int>[];
+  int _lastRecordedMinute = 0;
+
+  /// Returns completed 1-minute jank log records for long-running benchmarks (e.g. 20-min run).
+  List<JankMinuteRecord> get jankLog =>
+      List<JankMinuteRecord>.unmodifiable(_completedMinutes);
+
+  void _finalizeMinute(int minuteIndex) {
+    if (_currentMinuteFrameCount == 0) {
+      _completedMinutes.add(
+        JankMinuteRecord(
+          minuteIndex: minuteIndex,
+          totalFrames: 0,
+          jankFrames: 0,
+          jankPercentage: 0.0,
+          rasterP50Ms: 0.0,
+          rasterP95Ms: 0.0,
+          rasterWorstMs: 0.0,
+        ),
+      );
+      return;
+    }
+
+    final List<double> rasters = _currentMinuteRastersUs
+        .map((int us) => us / 1000.0)
+        .toList()
+      ..sort();
+
+    final double worst = rasters.isEmpty ? 0.0 : rasters.last;
+    final double p50 = calculatePercentile(rasters, 0.50);
+    final double p95 = calculatePercentile(rasters, 0.95);
+    final double jankPct =
+        (_currentMinuteJankCount / _currentMinuteFrameCount) * 100.0;
+
+    _completedMinutes.add(
+      JankMinuteRecord(
+        minuteIndex: minuteIndex,
+        totalFrames: _currentMinuteFrameCount,
+        jankFrames: _currentMinuteJankCount,
+        jankPercentage: jankPct,
+        rasterP50Ms: p50,
+        rasterP95Ms: p95,
+        rasterWorstMs: worst,
+      ),
+    );
+
+    _currentMinuteFrameCount = 0;
+    _currentMinuteJankCount = 0;
+    _currentMinuteRastersUs.clear();
+  }
 
   /// Resolves the current display refresh rate in Hz from [PlatformDispatcher].
   static double resolveRefreshRate({PlatformDispatcher? dispatcher}) {
@@ -184,6 +270,12 @@ class FrameTimingRecorder {
     required int buildMicroseconds,
     required int rasterMicroseconds,
   }) {
+    final int minute = windowDuration.inMinutes;
+    while (_lastRecordedMinute < minute) {
+      _finalizeMinute(_lastRecordedMinute + 1);
+      _lastRecordedMinute++;
+    }
+
     _buildMicroseconds[_head] = buildMicroseconds;
     _rasterMicroseconds[_head] = rasterMicroseconds;
     _head = (_head + 1) % capacity;
@@ -191,6 +283,14 @@ class FrameTimingRecorder {
       _count++;
     }
     _totalRecordedFrames++;
+
+    _currentMinuteFrameCount++;
+    if (math.max(buildMicroseconds, rasterMicroseconds) > jankThresholdMicroseconds) {
+      _currentMinuteJankCount++;
+    }
+    if (_currentMinuteRastersUs.length < 300) {
+      _currentMinuteRastersUs.add(rasterMicroseconds);
+    }
   }
 
   /// Clears the ring buffer and restarts the measurement window timer.
@@ -198,6 +298,11 @@ class FrameTimingRecorder {
     _head = 0;
     _count = 0;
     _totalRecordedFrames = 0;
+    _completedMinutes.clear();
+    _currentMinuteFrameCount = 0;
+    _currentMinuteJankCount = 0;
+    _currentMinuteRastersUs.clear();
+    _lastRecordedMinute = 0;
     _stopwatch.reset();
     _stopwatch.start();
   }
@@ -260,10 +365,12 @@ class FrameTimingRecorder {
       jankPercentage: (jankCount / _count) * 100.0,
       buildP50Ms: calculatePercentile(builds, 0.50),
       buildP90Ms: calculatePercentile(builds, 0.90),
+      buildP95Ms: calculatePercentile(builds, 0.95),
       buildP99Ms: calculatePercentile(builds, 0.99),
       buildWorstMs: buildWorst,
       rasterP50Ms: calculatePercentile(rasters, 0.50),
       rasterP90Ms: calculatePercentile(rasters, 0.90),
+      rasterP95Ms: calculatePercentile(rasters, 0.95),
       rasterP99Ms: calculatePercentile(rasters, 0.99),
       rasterWorstMs: rasterWorst,
       totalWorstMs: totalWorst,

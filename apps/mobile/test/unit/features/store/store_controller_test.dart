@@ -5,6 +5,7 @@ import 'package:block_puzzle_mobile/data/remote_config/remote_config_snapshot.da
 import 'package:block_puzzle_mobile/data/repositories/in_memory_player_progress_repository.dart';
 import 'package:block_puzzle_mobile/domain/progression/player_progress_state.dart';
 import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
+import 'package:block_puzzle_mobile/features/monetization/iap_product.dart';
 import 'package:block_puzzle_mobile/features/store/application/store_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -137,6 +138,62 @@ void main() {
       expect(controller.state.recommendedProductId, 'utility_tools_pass');
       expect(controller.state.products.first.id, 'utility_tools_pass');
     });
+
+    test(
+        'DEC-0026 / DEC-0028: when iap.store_enabled is false (v1.0), catalog is empty and store_open is not tracked',
+        () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final StoreController controller = StoreController(
+        iapStoreService: DebugIapStoreService(storeEnabled: false),
+        remoteConfigRepository:
+            const _InMemoryRemoteConfigRepository(<String, Object?>{
+          'iap.store_enabled': false,
+        }),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        analyticsTracker: analytics,
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+
+      expect(controller.state.products, isEmpty);
+      expect(analytics.events.contains('store_open'), isFalse);
+      expect(analytics.events.contains('offer_targeting_exposure'), isFalse);
+    });
+
+    test(
+        'DEC-0026 / DEC-0028: when iap.store_enabled is false (v1.0), purchaseProduct is rejected',
+        () async {
+      final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
+      final StoreController controller = StoreController(
+        iapStoreService: DebugIapStoreService(storeEnabled: false),
+        remoteConfigRepository:
+            const _InMemoryRemoteConfigRepository(<String, Object?>{
+          'iap.store_enabled': false,
+        }),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        analyticsTracker: analytics,
+        logger: AppLogger(),
+      );
+
+      await controller.initialize();
+
+      const IapProduct product = IapProduct(
+        id: 'skin_pack_neon',
+        title: 'Neon Skin Pack',
+        description: 'Vibrant colors',
+        priceLabel: '\$1.99',
+        priceValue: 1.99,
+        currencyCode: 'USD',
+        type: IapProductType.nonConsumable,
+      );
+
+      await controller.purchaseProduct(product);
+
+      expect(controller.state.message, contains('недоступен'));
+      expect(analytics.events.contains('iap_purchase_attempt'), isFalse);
+      expect(analytics.events.contains('iap_purchase'), isFalse);
+    });
   });
 }
 
@@ -179,9 +236,16 @@ class _TrackedAnalyticsEvent {
 }
 
 class _InMemoryRemoteConfigRepository implements RemoteConfigRepository {
-  const _InMemoryRemoteConfigRepository(this._config);
+  const _InMemoryRemoteConfigRepository([
+    this._explicitConfig = const <String, Object?>{},
+  ]);
 
-  final Map<String, Object?> _config;
+  final Map<String, Object?> _explicitConfig;
+
+  Map<String, Object?> get _config => <String, Object?>{
+        'iap.store_enabled': true,
+        ..._explicitConfig,
+      };
 
   @override
   Future<Map<String, Object?>> fetchLatest() async {

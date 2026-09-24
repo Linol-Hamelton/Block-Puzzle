@@ -1,77 +1,42 @@
 # Current Task
 
-Status: In progress - W1 masters integrated & reviewed; owner audible/call pending
+Status: Completed - Stage W3 (First External Test Readiness) implemented; checks pass
 Owner: RuslanFomenko
-Last update: 2026-09-21
+Last update: 2026-09-24
 
 ---
 
 ## Objective
 
-Execute DEC-0024: the pre-release audio/visual polish. Stage A is closed and
-proven on device; this is the last pass before Stage C.
+Execute Stage W3 from docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md:
+Prepare repository for first external testing round (W3), completing all prerequisites
+following G1.1-G1.3 gameplay/audio merge.
 
-## Problem
+## Problem & Acceptance
 
-Classic sits at 26.1 ms raster / 38 fps on a 120 Hz panel. Step 1k proved stand
-floor was low due to 360x360 canvas (expanded stand reached 31.55 ms). Frame
-budget closed on release baseline numbers (26.1 ms / 38 fps).
-
-## Constraints
-
-**Read DEC-0024, not DEC-0023** - point 5 differs and the old wording regresses
-the game. DEC-0001..DEC-0025 outrank any plan. No commits/pushes unless the
-owner asks. Reviewers write only in their own journal. Boosters rejected per
-DEC-0008; Tetris swipes deferred to v1.1. saplesmusic/ is reference only,
-gitignored, never shipped or committed.
-
-## Acceptance criteria
-
-- [x] Steps 1, 1b-1j, 2, 4a, 4b, 5: accepted. Reviews 05..12.
-- [x] Step 1i: well to an Image; layer-4 delta 11.35 -> -0.05 ms.
-- [x] Step 1j: decomposed inside one scene; third exit branch, nothing fixed.
-- [x] Step 1j(b): occupied cells rasterised; half-filled 38.35 -> 26.14 ms.
-- [x] Step 1b.5: jank = max(build, raster); A/D pair on half board +0.34 ms.
-- [x] Step 6: shockwave + score pops; code accepted, effect under the 2 ms cap.
-- [x] Step 1k: stand floor 7.85 -> 31.55 ms on Classic canvas; 1k.2 regressed; closed at 26.1/38.
-- [x] Step 7: bounded sfx ring; live 11-combo pass. crash.txt and 20-min protocol not attached.
-- [x] Effects run 3.5x slower on a scaled clock; owner asked for 3-5x.
-- [x] Disposed-surface crash class closed across all five render caches.
-- [ ] Step 3: MusicPlaylistManager (Gemini, DEC-0026; prototype reverted per review 14).
-- [ ] Step 4c: ducking multiplier over crossfade envelope (Gemini, with music layer).
-- [x] Unit test for the occupied-cells image cache (review 12, point 4.1).
-- [x] Frame rate held on 2209116AG, measured rather than asserted.
+- [x] G1.1-G1.3: Synced from D:\Block-Puzzle-g1 (DEC-0028 gameplay, audio, store gating).
+- [x] C5: Telemetry game_id: 'classic' added to GameLoopController events.
+- [x] D1: Android release signing fail-fast without debug fallback.
+- [x] C6: Scoped/factory services per DEC-0016 (ABExperimentService, OnboardingFlowController, ProgressionSyncService).
+- [x] F4: RU-only localization for store_controller strings via StoreStrings.
+- [x] C7: Test DI in test/helpers/test_di.dart and 8 end-to-end integration widget tests in test/widget_test.dart.
+- [x] Quality Gates: flutter analyze 0 issues, flutter test (453/453 passing).
 
 ## Current state
 
-**Start here: docs/design/13_DEC0024_AUDIT_AND_STATE.md** (audit) and
-**docs/design/14_DEC0024_STEPS_1K_7_3_4C_REVIEW.md** (review 14).
-Full repo audits: docs/audit/06 (DeepSeek), 07 (Claude; dissents on the
-frame-rate gate, adds D1-D6), 08 (Gemini), 09 (adversarial review; forks F1-F7).
-Next stage started: W1 review docs/design/15 (PASS WITH CONDITIONS); plan ed.3, DEC-0026/0027.
-Live plan: .ai/PLAN.md. Criteria per step: docs/design/04.
-Verified: analyze 0 issues, 395/395 tests, validator OK (review design/15).
+- All W3 tasks (C5, D1, C6, F4, C7) implemented and verified.
+- Suite: 453 tests passing cleanly across unit and widget integration tests.
+- Analyzer: 0 issues on flutter analyze --no-pub.
 
-## Active agent
+## Roles
 
-- Implementer: Gemini - W1 steps 3/4c implemented; reviewed by DeepSeek (design/15).
-- Reviewer: DeepSeek (owner-approved 2026-09-21, DEC-0027) - criteria, code review.
-- Reviewer: Claude - audit 13; DeepSeek - review 14 (1k, 7, 3, 4c, status).
-- Started: 2026-09-16
+- implementer: antigravity (G1 sync & Stage W3 implementation)
+- reviewer: deepseek / claude
 
 ## Open questions
 
-1. Stage C frozen by DEC-0026 (ad-free, no monetization for now); DEC-0018
-   progress-merge rules; DEC-0004 KPI formulas and sample sizes remain open.
-2. W2 done 2026-09-21: merged to main, pushed origin/main at 0400582 (PNG stay).
-3. Steps 3/4c: code PASS WITH CONDITIONS (docs/design/15); device continuity
-   verified; F2 = accepted risk, plugin sends no focus event; owner audible/call.
-4. Masters: integrated & reviewed PASS (design/15); WAV masters out of git pending owner.
-5. Composition: slower effects overlap more, so whether a clear still reads
-   as one moment is an eyes-on call on device.
-6. Stage C boundaries (audit 06, section 4): Google Sign-In linking (DEC-0018),
-   verifyPurchase service account, utility_tools_pass vs DEC-0008, Classic
-   game_id, scoped services (DEC-0016), widget tests, localization.
+1. Owner approval to commit working tree changes (G1.1-G1.3 + W3).
+2. Owner trigger for release build workflow or signing key provisioning.
 
 ---
 

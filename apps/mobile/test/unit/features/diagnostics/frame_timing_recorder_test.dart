@@ -218,6 +218,60 @@ void main() {
       expect(recorder.snapshot.totalWindowFrames, 0);
     });
 
+    test('calculates p95 correctly for build and raster', () {
+      final FrameTimingRecorder recorder = FrameTimingRecorder(capacity: 100);
+      for (int i = 1; i <= 100; i++) {
+        recorder.addRaw(
+          buildMicroseconds: i * 1000,
+          rasterMicroseconds: i * 1000,
+        );
+      }
+
+      final FrameTimingSnapshot snap = recorder.snapshot;
+      expect(snap.buildP95Ms, closeTo(95.05, 0.2));
+      expect(snap.rasterP95Ms, closeTo(95.05, 0.2));
+    });
+
+    test('20-minute jank log records minute buckets and clears on reset', () {
+      Duration simulatedTime = Duration.zero;
+      final FrameTimingRecorder recorder = FrameTimingRecorder(
+        capacity: 500,
+        customRefreshRate: 60.0,
+        elapsedProvider: () => simulatedTime,
+      );
+
+      // Minute 0 (first 60 seconds)
+      simulatedTime = const Duration(seconds: 10);
+      recorder.addRaw(buildMicroseconds: 5000, rasterMicroseconds: 5000);
+      recorder.addRaw(buildMicroseconds: 5000, rasterMicroseconds: 20000); // 1 jank
+
+      // Advance to minute 1 (triggers finalization of minute 1)
+      simulatedTime = const Duration(seconds: 65);
+      recorder.addRaw(buildMicroseconds: 4000, rasterMicroseconds: 4000);
+
+      expect(recorder.jankLog.length, 1);
+      final JankMinuteRecord min1 = recorder.jankLog.first;
+      expect(min1.minuteIndex, 1);
+      expect(min1.totalFrames, 2);
+      expect(min1.jankFrames, 1);
+      expect(min1.jankPercentage, 50.0);
+      expect(min1.rasterWorstMs, 20.0);
+
+      // Advance to minute 3 (advances multiple minutes)
+      simulatedTime = const Duration(seconds: 185);
+      recorder.addRaw(buildMicroseconds: 3000, rasterMicroseconds: 3000);
+
+      expect(recorder.jankLog.length, 3);
+      expect(recorder.jankLog[1].minuteIndex, 2);
+      expect(recorder.jankLog[1].totalFrames, 1);
+      expect(recorder.jankLog[2].minuteIndex, 3);
+      expect(recorder.jankLog[2].totalFrames, 0);
+
+      // Reset clears jank log
+      recorder.reset();
+      expect(recorder.jankLog, isEmpty);
+    });
+
     test('kDiagnosticsEnabled constant controls callback registration path', () {
       // Confirms compile-time define value behaves predictably
       expect(kDiagnosticsEnabled, isA<bool>());

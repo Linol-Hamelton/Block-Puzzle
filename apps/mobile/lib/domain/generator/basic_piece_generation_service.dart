@@ -201,8 +201,11 @@ class BasicPieceGenerationService implements PieceGenerationService {
       profile: profile,
     );
 
+    // DEC-0028 Item 16: Anti-chunking at board fill > 50%
+    final bool antiChunkingActive = fillRatio > 0.50;
     final List<Piece> result = <Piece>[];
     int hardUsed = 0;
+    int heavyUsed = 0;
 
     // Piece 0 (First piece): Fair Bag guarantee.
     // The first piece of a dealt triplet is guaranteed mathematically placeable
@@ -211,6 +214,7 @@ class BasicPieceGenerationService implements PieceGenerationService {
         _random.nextDouble() < runtimeBalance.hardPieceWeight;
     _PieceTemplate firstTemplate = _pickTemplate(
       hard: firstPickHard,
+      disallowHeavy: false,
     );
 
     if (!_canPlaceTemplate(boardState, firstTemplate)) {
@@ -248,6 +252,9 @@ class BasicPieceGenerationService implements PieceGenerationService {
     if (firstTemplate.isHard) {
       hardUsed += 1;
     }
+    if (_isHeavyTemplate(firstTemplate)) {
+      heavyUsed += 1;
+    }
     result.add(
       Piece(
         id: '${firstTemplate.key}_${_idSequence++}',
@@ -255,19 +262,24 @@ class BasicPieceGenerationService implements PieceGenerationService {
       ),
     );
 
-    // Pieces 1 and 2: Standard deal.
+    // Pieces 1 and 2: Standard deal with anti-chunking guard.
     // Placing the first piece may make pieces 2 and 3 unplaceable, and that is fair.
     while (result.length < 3) {
       final bool hardCandidateAllowed =
           hardUsed < runtimeBalance.maxHardPiecesPerTriplet;
       final bool pickHard = hardCandidateAllowed &&
           _random.nextDouble() < runtimeBalance.hardPieceWeight;
+      final bool disallowHeavy = antiChunkingActive && heavyUsed >= 1;
 
       final _PieceTemplate template = _pickTemplate(
         hard: pickHard,
+        disallowHeavy: disallowHeavy,
       );
       if (template.isHard) {
         hardUsed += 1;
+      }
+      if (_isHeavyTemplate(template)) {
+        heavyUsed += 1;
       }
 
       result.add(
@@ -319,10 +331,22 @@ class BasicPieceGenerationService implements PieceGenerationService {
     );
   }
 
+  static bool _isHeavyTemplate(_PieceTemplate template) {
+    return template.key == 'square3' ||
+        template.key == 'line5' ||
+        template.key == 'vline5';
+  }
+
   _PieceTemplate _pickTemplate({
     required bool hard,
+    bool disallowHeavy = false,
   }) {
-    final List<_PieceTemplate> pool = hard ? _hardTemplates : _easyTemplates;
+    List<_PieceTemplate> pool = hard ? _hardTemplates : _easyTemplates;
+    if (hard && disallowHeavy) {
+      pool = _hardTemplates
+          .where((_PieceTemplate t) => !_isHeavyTemplate(t))
+          .toList(growable: false);
+    }
     return pool[_random.nextInt(pool.length)];
   }
 }
