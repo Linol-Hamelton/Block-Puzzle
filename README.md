@@ -3,45 +3,51 @@
 Flutter + Flame block puzzle client with supporting docs, store assets, release checklists, and backend service contracts. Android-first (Google Play and RuStore), ad-free-first monetization, targeting the TOP-1 tier of the block puzzle genre.
 
 ## Current Status
-- Product maturity: `pre-production`
-- Core mode: `Classic` is playable and instrumented, but not yet publish-ready
-- Active priority: foundation gates — Firebase Crashlytics, real Google Play Billing v7, lifecycle-safe persistence, Firebase Remote Config, release discipline
-- Frozen until foundation gates are green: `Mode Hub`, `Time Rush`, `Puzzle Pack`, `Daily Challenge`, `Leaderboards`
+- Product maturity: `pre-release / external testing ready`
+- Playable modes: `Classic`, `Tetris`, `Match-3`, `Daily Challenge` — all fully wired and playable
+- Quality & test coverage: **453 tests passing** (`flutter test --no-pub`), 0 analyzer issues (`flutter analyze --no-pub`)
+- Active milestone: Stage W3 (First External Test Readiness) complete; Stage W4 (Documentation Hygiene) in progress per [docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md](docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md)
+- Distribution: direct release-signed APK for initial external testing cohort (DEC-0012/DEC-0026)
 
 ## Monetization Model (Fixed Decision)
 - Fully ad-free. No banner, no interstitial, no rewarded video.
-- Revenue comes from IAP only: cosmetics (block skins, board backgrounds, line-clear VFX, SFX packs), Premium Pass, soft-currency packs.
-- Second chance, daily wheel, and utility tools are backed by soft currency and the Premium Pass, never by ads.
+- In v1.0 initial release, commercial store surfaces are gated and hidden (DEC-0026 / DEC-0028).
+- Future monetization (Stage C, frozen) is limited strictly to non-consumable cosmetic items (skins, themes, VFX).
 - Reference: [docs/operations/08_AD_FREE_MODE_STRATEGY.md](docs/operations/08_AD_FREE_MODE_STRATEGY.md)
 
 ## Backend Choice (Fixed Decision)
 Firebase-first for production data plane:
-- Firebase Crashlytics — crash / ANR reporting
-- Firebase Analytics + BigQuery export — event ingestion, cohort analysis via Looker Studio
-- Firebase Remote Config — feature flags, kill switches, AB assignments, live config
+- Firebase Crashlytics — crash reporting
+- Firebase Analytics + BigQuery export — event ingestion, cohort analysis
+- Firebase Remote Config — feature flags, mode kill-switches, live config
 - Firebase Cloud Messaging — push notifications (re-engagement, max 1/day)
 - Firebase Auth (Anonymous) — UID binding for entitlement sync
-- Cloud Functions — receipt validation (`verifyPurchase`), alert routing, mission rolling
+- Cloud Functions — receipt validation (`verifyPurchase`), alert routing
 
-The `services/config-api` and `services/analytics-pipeline` contracts are deferred; they remain in the repo for historical context and as potential future replacement paths if Firebase becomes insufficient for control or compliance reasons.
+The `services/config-api` and `services/analytics-pipeline` contracts are deferred in favor of Firebase.
 
 ## What Is Implemented
-> Full reconciled status with code evidence: [docs/roadmap/05_IMPLEMENTATION_STATUS.md](docs/roadmap/05_IMPLEMENTATION_STATUS.md). Latest audit + release-readiness assessment: [docs/audit/01_FULL_PROJECT_AUDIT_2026-06-19.md](docs/audit/01_FULL_PROJECT_AUDIT_2026-06-19.md).
-- Classic gameplay loop: scoring, line clear, combo, game over, restart
-- Daily Challenge variant of Classic (deterministic seed + milestone rewards)
-- FTUE/onboarding flow with persisted completion state
-- Best score, streak, daily goals, rewarded credits, owned premium items — persisted via **Hive** (`HivePlayerProgressRepository` + `HiveGameSessionRepository`) with `schemaVersion=2` migration and corrupt-cache self-heal
-- Firebase Crashlytics error/log reporting wired in production (dedicated ANR bridge still pending)
-- Remote config client contract with bundled defaults, cached snapshots, versioning, rollback slot (Phase 1 adds Firebase Remote Config implementation)
-- Local queued analytics with schema validation and release-safe transport hooks (Phase 1 adds Firebase Analytics bridge)
-- Premium store UI surface, offer targeting logic, entitlement-aware utility tools access (Phase 1 wires real Google Play Billing)
-- Ops instrumentation (`session_*`, `game_*`, `ops_*`) and client-side alert evaluation
+> Full reconciled status with code evidence: [docs/roadmap/05_IMPLEMENTATION_STATUS.md](docs/roadmap/05_IMPLEMENTATION_STATUS.md).
+- **Three Playable Game Modes**:
+  - Classic: Fair Bag deal guarantee (DEC-0024/0028), anti-chunking deal generator, combo ladder, score popups, shockwave VFX.
+  - Tetris: 7-bag, SRS rotation/kicks, ghost piece, hold/next preview, T-spin, combo, dedicated snapshot persistence.
+  - Match-3: 8x8 gem grid, cascade resolver, move limits, shuffle, dedicated session store.
+  - Daily Challenge: deterministic seed milestone run.
+- **Audio Overhaul (DEC-0024 / DEC-0026 / DEC-0028)**:
+  - 4 mastered AAC-LC CBR 144k stereo tracks (`music_menu`, `music_classic`, `music_tetris`, `music_match3`).
+  - Seamless equal-power crossfading (`MusicPlaylistManager`) across screens with audio focus and ducking.
+  - Dedicated unstealable SFX channels for line clears and game over.
+- **Screen Wake Management**: `FLAG_KEEP_SCREEN_ON` platform channel (`ScreenWakeManager`) keeps screen on during active games.
+- **Persistence & Progress**: Hive-backed persistence (`HivePlayerProgressRepository` + `HiveGameSessionRepository`), daily goals, streak, best score.
+- **Telemetry**: Analytics events (`game_session_start`, `game_start`, `line_clear`, `game_end`, `ops_*`) with strict schema validation and explicit `game_id` across all modes.
+- **Test Infrastructure & E2E**: Test DI helper (`apps/mobile/test/helpers/test_di.dart`) and 8 end-to-end integration widget tests in `apps/mobile/test/widget_test.dart`.
+- **Security & CI**: Release signing fail-fast without debug fallback in Gradle & CI workflow.
+- **Localization**: Russian localization for store controller strings (`StoreStrings`).
 
 ## What Is Simulated Or Scaffolded
-- `services/config-api` contract exists, deferred — Firebase Remote Config replaces it
-- `services/analytics-pipeline` contract exists, deferred — Firebase Analytics + BigQuery replace it
-- **Billing implemented in code, not yet shippable** — `GooglePlayBillingService` (real `in_app_purchase`, Billing v7) + `verifyPurchase` Cloud Function exist and are wired for production. Still needs `flutter pub get`, Anonymous Auth at bootstrap, Play Console SKUs/service-account linkage, function deploy, and a Play sandbox test before it transacts real money.
-- Store screenshots and checklist assets are restored from current branded exports
+- `services/config-api` and `services/analytics-pipeline` contracts exist, deferred — Firebase replaces them.
+- Store monetization UI: gated and hidden in v1.0 builds per DEC-0026 / DEC-0028. `utility_tools_pass` excluded from catalog.
+- Billing client (`GooglePlayBillingService`) and Cloud Function exist; sandbox deployment deferred to Stage C.
 
 ## Debug-Only (restricted to `APP_ENV=dev` + `APP_FLAVOR=debug`)
 - `DebugAnalyticsTracker`

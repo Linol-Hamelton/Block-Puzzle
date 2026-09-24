@@ -30,7 +30,7 @@
 | Слоя локализации нет; 125 кириллических символов в контроллере | `lib/l10n/` — только README; `store_controller.dart` |
 | Девять каталогов Phase 3 — только README | `features/{achievements,cosmetics,economy,…}` |
 | Абстракции мультиигры нет | `grep GameId|GameRegistry|GameEngine` → 0 |
-| Три файла-гиганта | `block_puzzle_game.dart` 1746, `game_loop_screen.dart` 1411, `game_loop_controller.dart` 1288 |
+| Три файла-гиганта | `block_puzzle_game.dart` 2106 (ранее 1746), `game_loop_screen.dart` 1633 (ранее 1411), `game_loop_controller.dart` 1303 (ранее 1288) |
 | `widget_test.dart` — заглушка; `cold_kill_recovery_test` не существует | числится гейтом выхода |
 | Медиасреда на `D:\AI` работает | SDXL: 1024×1024 за 26.4 с. Stable Audio 3 Medium: 20 с музыки за 5.8 с, пик **5.06 ГБ** VRAM |
 

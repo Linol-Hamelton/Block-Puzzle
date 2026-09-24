@@ -1,5 +1,7 @@
 # leaderboard
 
+> **Статус модуля (per DEC-0026 / F6, W4):** Не начато. Каталог сохранён как архитектурный скелет Phase 4 для поддержания ссылочной целостности спецификаций ([docs/roadmap/01_ROADMAP_AND_SPRINTS.md](../../../../docs/roadmap/01_ROADMAP_AND_SPRINTS.md), [docs/architecture/02_ARCHITECTURE_MODULE_CATALOG.md](../../../../docs/architecture/02_ARCHITECTURE_MODULE_CATALOG.md)).
+
 Phase 4.
 
 Scope:

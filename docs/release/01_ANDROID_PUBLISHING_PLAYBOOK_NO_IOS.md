@@ -1,4 +1,4 @@
-﻿# Android Publishing Playbook (No iOS)
+# Android Publishing Playbook (No iOS)
 
 Last updated: 2026-02-26
 
@@ -44,7 +44,7 @@ Use canonical metadata sources:
 
 ## 6. Market Notes (RU)
 1. Google Play billing has regional constraints for Russia.
-2. RuStore remains the primary RU monetization distribution channel.
+2. Per DEC-0012 and DEC-0026, Google Play is the primary release store; direct signed APK is used for first external testing (Stage W3). RuStore distribution is deferred until after initial closed test reporting.
 
 ## 7. References
 1. https://support.google.com/googleplay/android-developer/answer/11950272

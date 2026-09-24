@@ -2,6 +2,35 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-09-25 (Stage W4 — Documentation Hygiene & Status Reconciliation)
+- Reconciled `roadmap/05_IMPLEMENTATION_STATUS.md` and `README.md` against codebase reality (3 playable modes, 453 tests, Stage W3 complete).
+- Corrected inaccurate claim regarding automated `cold_kill_recovery_test` (flagged in audits 06/07/09 and plan 15; documented as pending automated test, manually verified on device).
+- Aligned `release/01_ANDROID_PUBLISHING_PLAYBOOK_NO_IOS.md` with DEC-0012 and DEC-0026 (Google Play primary; direct signed APK for Stage W3 external test; RuStore deferred).
+- Updated `operations/17_FIREBASE_PROJECT_SETUP.md` section 10 executor roles to follow dynamic task assignment.
+- Updated tech debt registry in `roadmap/14_EXECUTION_PLAN_2026-09-14.md` with actual line counts of large files.
+- Annotated 10 Phase 3/4 feature skeletons in `apps/mobile/lib/features/` per DEC-0026 / F6.
+
+## 2026-09-25 (Stage W3 — First External Test Readiness & G1 Integration)
+- **G1.1-G1.3 Integration (DEC-0028)**: Synced 65 files from `D:\Block-Puzzle-g1` into `main`: Fair Bag deal fairness guarantee, anti-chunking deal generator, ScreenWakeManager (`FLAG_KEEP_SCREEN_ON`), audio pack, and store gating.
+- **C5 Telemetry**: Injected `'game_id': 'classic'` in `GameLoopController` for `game_start`, `line_clear`, and `game_end`.
+- **D1 CI & Gradle Protection**: Android release signing fail-fast without debug fallback in `build.gradle` and `.github/workflows/android-release.yml`.
+- **C6 Lifecycle Scoping**: Switched `ABExperimentService`, `OnboardingFlowController`, `ProgressionSyncService` to `registerFactory` in `di_container.dart` per DEC-0016.
+- **F4 RU-only Localization**: Extracted 8 user-facing store strings to `StoreStrings` (`store_strings.dart`).
+- **C7 Test Infrastructure**: Built `apps/mobile/test/helpers/test_di.dart` and replaced placeholder in `apps/mobile/test/widget_test.dart` with 8 end-to-end integration scenarios for `BlockPuzzleApp`.
+- All **453 tests** passing cleanly (`flutter test --no-pub`), `flutter analyze --no-pub` 0 issues. Committed on `main` (`9d2dd54`).
+
+## 2026-09-22 (Audio Production Sprint & DEC-0028 Gameplay Calibration)
+- Shipped 4 AAC-LC 144k CBR stereo music masters (`music_menu`, `music_classic`, `music_tetris`, `music_match3`) generated via Stable Audio 3.
+- Integrated `MusicPlaylistManager` with equal-power crossfading, audio focus awareness, and volume ducking multiplier.
+- Added dedicated unstealable SFX channels in `FlameGameSfxPlayer` preventing voice cutoffs on simultaneous clears.
+- Total audio assets budget: 11.23 MB (well under 15 MB limit).
+
+## 2026-09-14 (DEC-0001..DEC-0025 Multi-Game Architecture & Governance Protocol)
+- Established formal decision governance (`.ai/DECISIONS.md`) and multi-agent protocol v1.9.0 (`AGENTS.md`).
+- Multi-game seam: outer registry and routing for Classic, Tetris, and Match-3 without forced board unification (DEC-0001).
+- Ad-free monetization confirmation (DEC-0008, DEC-0026).
+- Strict compiler defines and release debug adapter guard (DEC-0007).
+
 ## 2026-06-21 (Match-3 "Три в ряд" — Phase 2)
 - Shipped the third game on the shared meta-layer (per [architecture/04_MULTI_GAME_ENGINE_PLAN.md](architecture/04_MULTI_GAME_ENGINE_PLAN.md) / ADR-002), reachable from a new "Play Match 3" button on the home screen.
 - **Domain core** (`lib/domain/match3/`, pure Dart): `TileGrid`, `MatchDetector` (H/V runs of 3+ with de-duplicated union), `SwapValidator` (adjacency + revert-on-no-match), `TileSpawner` (seeded, no-pre-existing-match fill + refill), `CascadeResolver` (deterministic clear→gravity→refill→re-detect with per-step records), `Match3Scoring` (per-tile × cascade multiplier + 4/5-run bonuses), `Match3Engine` (move-limited run, no-moves reshuffle, events, snapshot/restore). Special tiles (line/bomb gems) intentionally deferred — the detonation matrix is the top clone-bug risk.
