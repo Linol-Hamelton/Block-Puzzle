@@ -176,10 +176,10 @@ class MusicController with WidgetsBindingObserver {
   Future<void> playTetrisTrack() => switchToTrack(MusicPlaylistManager.kTrackTetris);
   Future<void> playMatch3Track() => switchToTrack(MusicPlaylistManager.kTrackMatch3);
 
-  /// Applies temporary ducking (-1.5 dB for 150 ms default) over the current volume.
+  /// Applies temporary ducking (-3 dB for 150 ms default) over the current volume.
   void duck({
     Duration duration = MusicPlaylistManager.kDefaultDuckDuration,
-    double factor = MusicPlaylistManager.kDuckFactorMinus1_5dB,
+    double factor = MusicPlaylistManager.kDuckFactorMinus3dB,
   }) {
     if (!_enabled || _isDisposed) {
       return;

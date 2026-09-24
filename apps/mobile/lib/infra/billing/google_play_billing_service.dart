@@ -86,16 +86,6 @@ class GooglePlayBillingService implements IapStoreService {
       badge: 'Best Value',
       gate: _CatalogGate.bundle,
     ),
-    _CatalogEntry(
-      id: 'utility_tools_pass',
-      title: 'Utility Tools Pass',
-      description: 'Unlimited hint and undo access with ad-free progression.',
-      priceLabel: '\$3.99',
-      priceValue: 3.99,
-      type: IapProductType.nonConsumable,
-      badge: 'Utility',
-      gate: _CatalogGate.utility,
-    ),
   ];
 
   @override
@@ -123,10 +113,6 @@ class GooglePlayBillingService implements IapStoreService {
       remoteConfig['iap.bundle_enabled'],
       fallback: false,
     );
-    final bool includeUtilityPass = _readBool(
-      remoteConfig['iap.rewarded_tools_unlimited_enabled'],
-      fallback: false,
-    );
     _rolloutStrategy = _readString(
       remoteConfig['iap.rollout_strategy'],
       fallback: includeBundle ? 'cosmetics_bundle' : 'cosmetics_first',
@@ -136,8 +122,7 @@ class GooglePlayBillingService implements IapStoreService {
         .where(
           (_CatalogEntry e) =>
               e.gate == _CatalogGate.always ||
-              (e.gate == _CatalogGate.bundle && includeBundle) ||
-              (e.gate == _CatalogGate.utility && includeUtilityPass),
+              (e.gate == _CatalogGate.bundle && includeBundle),
         )
         .toList(growable: false);
 
@@ -432,7 +417,7 @@ class GooglePlayBillingService implements IapStoreService {
   }
 }
 
-enum _CatalogGate { always, bundle, utility }
+enum _CatalogGate { always, bundle }
 
 class _CatalogEntry {
   const _CatalogEntry({

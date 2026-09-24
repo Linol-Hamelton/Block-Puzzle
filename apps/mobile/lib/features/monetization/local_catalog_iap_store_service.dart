@@ -56,17 +56,6 @@ class LocalCatalogIapStoreService implements IapStoreService {
     badge: 'Best Value',
   );
 
-  static const IapProduct _utilityPass = IapProduct(
-    id: 'utility_tools_pass',
-    title: 'Utility Tools Pass',
-    description: 'Unlimited hint and undo access with ad-free progression.',
-    priceLabel: '\$3.99',
-    priceValue: 3.99,
-    currencyCode: 'USD',
-    type: IapProductType.nonConsumable,
-    badge: 'Utility',
-  );
-
   @override
   String get rolloutStrategy => _rolloutStrategy;
 
@@ -90,10 +79,6 @@ class LocalCatalogIapStoreService implements IapStoreService {
       remoteConfig['iap.bundle_enabled'],
       fallback: false,
     );
-    final bool includeUtilityPass = _readBool(
-      remoteConfig['iap.rewarded_tools_unlimited_enabled'],
-      fallback: false,
-    );
     _rolloutStrategy = _readString(
       remoteConfig['iap.rollout_strategy'],
       fallback: includeBundle ? 'cosmetics_bundle' : 'cosmetics_first',
@@ -104,9 +89,6 @@ class LocalCatalogIapStoreService implements IapStoreService {
     ];
     if (includeBundle) {
       catalog.add(_bundle);
-    }
-    if (includeUtilityPass) {
-      catalog.add(_utilityPass);
     }
     return catalog;
   }

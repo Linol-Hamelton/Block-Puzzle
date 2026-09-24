@@ -61,5 +61,11 @@ void main() {
 
       expect(secondAttempt.status, IapPurchaseStatus.cancelled);
     });
+
+    test('DEC-0026: catalog never contains utility_tools_pass', () async {
+      final DebugIapStoreService service = DebugIapStoreService(includeBundle: true);
+      final catalog = await service.loadCatalog();
+      expect(catalog.any((p) => p.id == 'utility_tools_pass'), isFalse);
+    });
   });
 }

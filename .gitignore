@@ -52,3 +52,11 @@ node_modules/
 # must stay out of it. Our own tracks are generated and live in
 # apps/mobile/assets/audio/.
 saplesmusic/
+
+# Python bytecode cache
+__pycache__/
+*.py[cod]
+
+# Audio generation masters (WAV masters kept locally outside git per Review 15 / MAR Condition 6)
+data/audio_masters/
+

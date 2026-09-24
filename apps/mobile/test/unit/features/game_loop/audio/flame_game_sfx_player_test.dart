@@ -181,9 +181,11 @@ void main() {
       await player.playLineClear(clearedLines: 2);
       expect(musicSpy.duckCallCount, 1);
       expect(musicSpy.lastDuckDuration, const Duration(milliseconds: 150));
+      expect(musicSpy.lastDuckFactor, closeTo(MusicPlaylistManager.kDuckFactorMinus3dB, 0.001));
 
       await player.playLineClear(clearedLines: 4);
       expect(musicSpy.duckCallCount, 2);
+      expect(musicSpy.lastDuckFactor, closeTo(MusicPlaylistManager.kDuckFactorMinus3dB, 0.001));
     });
 
     test('combo ducks music only on streak >= 2', () async {
@@ -193,15 +195,18 @@ void main() {
       await player.playCombo(comboStreak: 2);
       expect(musicSpy.duckCallCount, 1);
       expect(musicSpy.lastDuckDuration, const Duration(milliseconds: 150));
+      expect(musicSpy.lastDuckFactor, closeTo(MusicPlaylistManager.kDuckFactorMinus3dB, 0.001));
 
       await player.playCombo(comboStreak: 5);
       expect(musicSpy.duckCallCount, 2);
+      expect(musicSpy.lastDuckFactor, closeTo(MusicPlaylistManager.kDuckFactorMinus3dB, 0.001));
     });
 
     test('game over ducks music for 500 ms', () async {
       await player.playGameOver();
       expect(musicSpy.duckCallCount, 1);
       expect(musicSpy.lastDuckDuration, const Duration(milliseconds: 500));
+      expect(musicSpy.lastDuckFactor, closeTo(MusicPlaylistManager.kDuckFactorMinus3dB, 0.001));
     });
   });
 

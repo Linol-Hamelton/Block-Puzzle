@@ -59,7 +59,7 @@ Functional and non-functional requirements for Lumina Blocks — Flutter + Flame
 ## 4. Non-Functional Requirements (TOP-1 Targets)
 
 ### Performance
-- 60 FPS target; p95 ≥ 50 FPS on mid-range Android (Redmi 9/10, Samsung A23/A35, Honor X6).
+- Target FPS: 38-40 FPS release baseline on 120 Hz reference device (Xiaomi 2209116AG) per DEC-0026 / DEC-0024 step 1k exit threshold.
 - Cold-start p90 ≤ 2.5s on low-mid Android.
 - Memory: rss growth ≤ 40MB over a 60-minute stability session on mid device.
 - Input latency: drag-to-place visible feedback under 32ms.

@@ -1158,6 +1158,80 @@ Approved by: RuslanFomenko
 
 ---
 
+### DEC-0028
+
+Status: Accepted
+Date: 2026-09-21
+Supersedes: nothing
+
+Context:
+Two independent evaluations of the gameplay program were produced on top of the
+DeepSeek+Gemini research cycle: docs/research/02 (Claude/Antigravity, independent
+code audit) and an external report kept verbatim in
+.ai/runtime/lumina-research/opinion-2.md. The reports disagreed on several product
+forks (timings, All Clear reward, Undo semantics, palettes, generation fairness,
+danger signalling, monetization surfaces). The owner settled all ten forks by an
+explicit vote on 2026-09-21. Chat is not project memory; AGENTS.md requires a
+decision block for choices others must be able to check.
+
+Decision (owner-voted, 2026-09-21):
+1. Effect timings: kEffectTimeScale = 3.5 stays for particles and shockwave
+   physics; score and combo text are decoupled and shortened to 0.8-0.9 s.
+2. All Clear: audio-visual celebration only, no score bonus in v1.0, so existing
+   records and daily-goal scoring stay comparable.
+3. Undo: one free undo per Classic session, combo streak resets on undo, and
+   GameSnapshot persists hasUsedFreeUndo (default false) so an app restart cannot
+   reset the limit.
+4. Palettes: the three ready themes (Neon, Soft Pastel, Monochrome) are opened
+   free in v1.0 after a contrast/deuteranopia audit (Claude variant chosen by the
+   owner).
+5. Generator: deterministic anti-chunking at fill > 50 percent (at most one heavy
+   piece 3x3/1x5 per rack), no hidden pity or clutch assist; verified by 5000 rack
+   simulations on the existing headless harness (test/internal_playtest).
+6. Danger Edge Pulse: soft border pulse at fill > 75 percent, alpha 0.15-0.25,
+   1.5 s cycle, disabled by Reduced Motion.
+7. Monetization surfaces: utility_tools_pass and other monetization SKUs are
+   hidden in v1.0 until Stage C (compliance with DEC-0008 and DEC-0026).
+8. Technical directives from reviews C1/C2: GameSnapshot constructor defaults
+   hasUsedFreeUndo to false; volume sliders debounce at 50 ms; combo praise text
+   lives in one centered HUD layer above the board.
+9. FTUE: one one-time contextual tip after the player's first Game Over
+   ("keep the center free for 3x3").
+10. Wave 0 order: prerequisites first - Step 6+ benchmark extension and the
+    analytics events undo_used, near_record, clear_size, game_over_fill_ratio,
+    all_clear, reduced_motion_toggled, danger_pulse_shown - then audio and UX
+    fixes; VFX density changes only after the benchmark gate (p50 raster
+    <= 26.1 ms on Xiaomi 2209116AG per DEC-0024).
+
+Reasoning:
+Each clause follows the verified evidence in docs/research/01 and 03: consensus
+positions of all three reports where they agreed (timings split, celebration-only
+All Clear, sport-integrity Undo, anti-chunking without pity, soft danger signal,
+prerequisite-first ordering), the Claude variant for palettes as the one that best
+serves visual identity while staying free, and the code-verified defects
+(piece_placed at 0.75, duck timer chaining, undo blocked by
+insufficient_tools_credits, missing GameSnapshot flag).
+
+Alternatives rejected:
+Adding juice without a frame-budget gate (violates DEC-0024). All Clear score
+bonus (breaks record comparability and daily goals). Undo with streak preserved
+(allows streak farming). Holding palettes until Stage C (owner chose identity).
+Hidden pity/clutch assist (trust risk, confirmed by 1-star review patterns).
+New modes, social leaderboards, currencies and difficulty ramps from the external
+report (frozen roadmap, offline-only model, DEC-0008/DEC-0026; detail in
+docs/research/03).
+
+Consequences:
+The v1.0 gameplay scope is fixed. Step 6+ and telemetry are prerequisites; VFX
+density work is blocked until the benchmark passes. Implementation and review
+stay separated per DEC-0025: implementation by Gemini (agy) in a dedicated
+worktree, review by DeepSeek in a separate sprint, owner acceptance after both.
+Work does not start until the owner issues the start command (DEC-0027).
+
+Approved by: RuslanFomenko (owner, vote in session 2026-09-21)
+
+---
+
 ## Template for new decisions
 
 ### DEC-nnnn

@@ -15,7 +15,7 @@ void main() {
         dailyMoves: 45,
         economyState: const PlayerEconomyState(
           rewardedToolsCredits: 3,
-          ownedProductIds: <String>{'skin_pack_neon', 'utility_tools_pass'},
+          ownedProductIds: <String>{'skin_pack_neon', 'premium_starter_bundle'},
         ),
         cosmeticsState: const PlayerCosmeticsState(
           selectedSkinId: 'skin_pack_neon',
@@ -35,7 +35,7 @@ void main() {
       expect(restored.economyState.rewardedToolsCredits, 3);
       expect(
         restored.economyState.ownedProductIds,
-        containsAll(<String>['skin_pack_neon', 'utility_tools_pass']),
+        containsAll(<String>['skin_pack_neon', 'premium_starter_bundle']),
       );
       expect(restored.cosmeticsState.selectedSkinId, 'skin_pack_neon');
       expect(
@@ -51,7 +51,7 @@ void main() {
         bestScore: 9999,
         economyState: const PlayerEconomyState(
           rewardedToolsCredits: 5,
-          ownedProductIds: <String>{'skin_pack_neon', 'utility_tools_pass'},
+          ownedProductIds: <String>{'skin_pack_neon', 'premium_starter_bundle'},
         ),
         cosmeticsState: const PlayerCosmeticsState(
           selectedSkinId: 'skin_pack_neon',

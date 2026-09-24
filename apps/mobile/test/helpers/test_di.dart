@@ -263,7 +263,6 @@ Future<void> configureTestDependencies({
     () => DebugIapStoreService(
       storeEnabled: storeEnabled,
       includeBundle: true,
-      includeUtilityPass: false,
     ),
   );
 

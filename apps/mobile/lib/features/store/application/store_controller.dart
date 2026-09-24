@@ -16,7 +16,7 @@ class StoreController {
   static const String _engagedSegment = 'engaged_user';
   static const String _collectorSegment = 'collector';
   static const String _utilityOwnerSegment = 'utility_owner';
-  static const String _defaultUtilityPassSku = 'utility_tools_pass';
+  static const String _defaultUtilityPassSku = '';
   static const String _defaultBundleSku = 'premium_starter_bundle';
   static const String _defaultNeonSku = 'skin_pack_neon';
   static const String _defaultMonoSku = 'skin_pack_mono';
@@ -339,7 +339,7 @@ class StoreController {
       key: 'iap.rewarded_tools_unlimited_sku',
       fallback: _defaultUtilityPassSku,
     );
-    if (ownedProductIds.contains(utilityPassSku)) {
+    if (utilityPassSku.isNotEmpty && ownedProductIds.contains(utilityPassSku)) {
       return _utilityOwnerSegment;
     }
 

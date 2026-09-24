@@ -8,7 +8,7 @@ Last updated: 2026-09-25 (reconciled against codebase after DEC-0024, DEC-0026, 
 - Product maturity: `pre-release / external testing ready`
 - Playable scope: `Classic`, `Tetris`, `Match-3`, `Daily Challenge`
 - Release readiness: `ready for Stage W3 external APK testing`
-- Active phase: `Stage W3 complete, Stage W4 (Documentation Hygiene) in progress` (per [15_POST_DEC0024_PLAN_2026-09-21.md](15_POST_DEC0024_PLAN_2026-09-21.md))
+- Active phase: `Stage W3 code & build wiring complete (W3.1-W3.5); W3.6-W3.8 (APK tester cohort distribution and telemetry gathering) will be executed during external testing. Stage W4 (Documentation Hygiene) in progress` (per [15_POST_DEC0024_PLAN_2026-09-21.md](15_POST_DEC0024_PLAN_2026-09-21.md))
 - Strategy: finish reliability/data/quality foundations before open public distribution
 - Monetization model: fully ad-free; in v1.0 monetization surfaces are completely gated / hidden per DEC-0026 / DEC-0028
 - Production data plane: Firebase-first (Crashlytics, Analytics + BigQuery, Remote Config, Cloud Messaging, Auth, Cloud Functions)

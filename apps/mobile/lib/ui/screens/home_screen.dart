@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-import '../../core/audio/music_controller.dart';
 import '../../features/game_loop/presentation/game_loop_screen.dart';
 import '../../core/di/di_container.dart';
 import '../../features/diagnostics/diagnostics_screen.dart';
@@ -157,11 +154,7 @@ class HomeScreen extends StatelessWidget {
                                   child: GameLoopScreen(),
                                 ),
                               ),
-                            ).then((_) {
-                              if (sl.isRegistered<MusicController>()) {
-                                unawaited(sl<MusicController>().playMenuTrack());
-                              }
-                            });
+                            );
                           },
                           icon: const Icon(Icons.play_arrow_rounded),
                           label: const Text('Start Classic'),
@@ -185,11 +178,7 @@ class HomeScreen extends StatelessWidget {
                                   child: TetrisScreen(),
                                 ),
                               ),
-                            ).then((_) {
-                              if (sl.isRegistered<MusicController>()) {
-                                unawaited(sl<MusicController>().playMenuTrack());
-                              }
-                            });
+                            );
                           },
                           icon: const Icon(Icons.grid_view_rounded),
                           label: const Text('Play Tetris'),
@@ -213,11 +202,7 @@ class HomeScreen extends StatelessWidget {
                                   child: Match3Screen(),
                                 ),
                               ),
-                            ).then((_) {
-                              if (sl.isRegistered<MusicController>()) {
-                                unawaited(sl<MusicController>().playMenuTrack());
-                              }
-                            });
+                            );
                           },
                           icon: const Icon(Icons.diamond_rounded),
                           label: const Text('Play Match 3'),

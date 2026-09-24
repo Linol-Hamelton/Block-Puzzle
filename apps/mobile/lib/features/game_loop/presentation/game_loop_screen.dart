@@ -17,7 +17,6 @@ import '../../diagnostics/diagnostics_screen.dart';
 import '../../diagnostics/frame_timing_recorder.dart';
 import '../../diagnostics/step1j_decomposition.dart';
 import '../../diagnostics/step6_benchmark.dart';
-import '../../../core/audio/music_controller.dart';
 import '../../../core/device/screen_wake_manager.dart';
 import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
@@ -62,9 +61,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
       isDailyChallenge: widget.isDailyChallenge,
     );
     _controller.stateListenable.addListener(_onControllerStateChanged);
-    if (sl.isRegistered<MusicController>()) {
-      unawaited(sl<MusicController>().playClassicTrack());
-    }
     unawaited(ScreenWakeManager.setKeepScreenOn(true));
   }
 
@@ -75,9 +71,6 @@ class _GameLoopScreenState extends State<GameLoopScreen>
     _controller.stateListenable.removeListener(_onControllerStateChanged);
     _game.shutdown();
     _controller.dispose();
-    if (sl.isRegistered<MusicController>()) {
-      unawaited(sl<MusicController>().playMenuTrack());
-    }
     unawaited(ScreenWakeManager.setKeepScreenOn(false));
     super.dispose();
   }

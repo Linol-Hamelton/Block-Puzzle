@@ -69,6 +69,13 @@ class MusicPlaylistManager {
   StreamSubscription<void>? _completeSubB;
   StreamSubscription<PlayerState>? _stateSubA;
   StreamSubscription<PlayerState>? _stateSubB;
+  StreamSubscription<Duration>? _positionSubA;
+  StreamSubscription<Duration>? _positionSubB;
+  StreamSubscription<Duration>? _durationSubA;
+  StreamSubscription<Duration>? _durationSubB;
+  Duration? _durationA;
+  Duration? _durationB;
+  int? _pendingTrackIndex;
 
   static const int kTrackMenu = 0;
   static const int kTrackClassic = 1;
@@ -170,6 +177,26 @@ class MusicPlaylistManager {
         unawaited(_onActiveTrackComplete(1));
       });
 
+      await _durationSubA?.cancel();
+      _durationSubA = _playerA.onDurationChanged.listen((Duration d) {
+        _durationA = d;
+      });
+
+      await _durationSubB?.cancel();
+      _durationSubB = _playerB.onDurationChanged.listen((Duration d) {
+        _durationB = d;
+      });
+
+      await _positionSubA?.cancel();
+      _positionSubA = _playerA.onPositionChanged.listen((Duration pos) {
+        _onPlayerPositionChanged(0, pos);
+      });
+
+      await _positionSubB?.cancel();
+      _positionSubB = _playerB.onPositionChanged.listen((Duration pos) {
+        _onPlayerPositionChanged(1, pos);
+      });
+
       await _stateSubA?.cancel();
       _stateSubA = _playerA.onPlayerStateChanged.listen((PlayerState state) {
         _onPlayerStateChanged(0, state);
@@ -181,6 +208,22 @@ class MusicPlaylistManager {
       });
     } catch (error) {
       _logger.warn('MusicPlaylistManager initialize error: $error');
+    }
+  }
+
+  void _onPlayerPositionChanged(int playerIndex, Duration pos) {
+    if (_isDisposed || !_playing || !_enabled || _isPaused || _isCrossfading) {
+      return;
+    }
+    if (playerIndex != _activePlayerIndex) {
+      return;
+    }
+    final Duration? dur = (playerIndex == 0) ? _durationA : _durationB;
+    if (dur != null && dur > _crossfadeDuration) {
+      if (pos >= dur - _crossfadeDuration) {
+        _logger.info('Pre-emptive crossfade triggered at ${pos.inMilliseconds} ms (track duration ${dur.inMilliseconds} ms)');
+        unawaited(nextTrack());
+      }
     }
   }
 
@@ -211,9 +254,11 @@ class MusicPlaylistManager {
       _crossfadeTimer = null;
       _isCrossfading = false;
       _crossfadeProgress = 0.0;
+      _pendingTrackIndex = null;
       try {
         await standbyPlayer.stop();
       } catch (_) {}
+      await activePlayer.setVolume(_effectiveVolumeFor(gain: 1.0));
     }
 
     // Synchronize pause state with active player if underlying player was paused externally (F2)
@@ -277,7 +322,7 @@ class MusicPlaylistManager {
 
     _isCrossfading = true;
     _crossfadeProgress = 0.0;
-    _currentTrackIndex = targetTrackIndex;
+    _pendingTrackIndex = targetTrackIndex;
     final String targetTrack = _playlist[targetTrackIndex];
 
     final AudioPlayer outgoing = activePlayer;
@@ -317,6 +362,7 @@ class MusicPlaylistManager {
     } catch (error) {
       _logger.warn('Crossfade failed: $error');
       _isCrossfading = false;
+      _pendingTrackIndex = null;
     }
   }
 
@@ -325,6 +371,10 @@ class MusicPlaylistManager {
     _crossfadeTimer = null;
     _isCrossfading = false;
     _crossfadeProgress = 0.0;
+    if (_pendingTrackIndex != null) {
+      _currentTrackIndex = _pendingTrackIndex!;
+      _pendingTrackIndex = null;
+    }
 
     final AudioPlayer outgoing = activePlayer;
     final AudioPlayer incoming = standbyPlayer;
@@ -340,7 +390,7 @@ class MusicPlaylistManager {
     if (_isDisposed || !_playing || !_enabled || _isPaused) {
       return;
     }
-    if (playerIndex == _activePlayerIndex) {
+    if (playerIndex == _activePlayerIndex && !_isCrossfading) {
       await nextTrack();
     }
   }
@@ -368,7 +418,7 @@ class MusicPlaylistManager {
     }
   }
 
-  /// Ducking per DEC-0024 / DEC-0028: reduces music volume by [factor] (-1.5 dB default)
+  /// Ducking per DEC-0024 / DEC-0028: reduces music volume by [factor] (-3 dB default)
   /// with a coalescing window (110 ms) and a 250 ms recovery ramp.
   ///
   /// Invariant: _duckMultiplier >= 0.70 at all times (guaranteed duck floor).
@@ -376,7 +426,7 @@ class MusicPlaylistManager {
   /// V_effective = V_base * gain_crossfade * multiplier_duck.
   void duck({
     Duration duration = kDefaultDuckDuration,
-    double factor = kDuckFactorMinus1_5dB,
+    double factor = kDuckFactorMinus3dB,
   }) {
     if (_isDisposed || !_enabled || !_playing || _isPaused) {
       return;
@@ -484,6 +534,7 @@ class MusicPlaylistManager {
     _lastDuckTime = null;
     _isCrossfading = false;
     _crossfadeProgress = 0.0;
+    _pendingTrackIndex = null;
     _duckMultiplier = 1.0;
     _playing = false;
     _isPaused = false;
@@ -505,6 +556,14 @@ class MusicPlaylistManager {
     _completeSubA = null;
     await _completeSubB?.cancel();
     _completeSubB = null;
+    await _positionSubA?.cancel();
+    _positionSubA = null;
+    await _positionSubB?.cancel();
+    _positionSubB = null;
+    await _durationSubA?.cancel();
+    _durationSubA = null;
+    await _durationSubB?.cancel();
+    _durationSubB = null;
     await _stateSubA?.cancel();
     _stateSubA = null;
     await _stateSubB?.cancel();

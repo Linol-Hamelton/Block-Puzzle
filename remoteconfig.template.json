@@ -177,7 +177,7 @@
     },
     "iap_rewarded_tools_unlimited_sku": {
       "defaultValue": {
-        "value": "utility_tools_pass"
+        "value": ""
       },
       "valueType": "STRING",
       "description": "app key: iap.rewarded_tools_unlimited_sku"
@@ -247,7 +247,7 @@
     },
     "iap_targeting_engaged_primary_sku": {
       "defaultValue": {
-        "value": "utility_tools_pass"
+        "value": "skin_pack_neon"
       },
       "valueType": "STRING",
       "description": "app key: iap.targeting.engaged_primary_sku"

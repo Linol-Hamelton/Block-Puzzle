@@ -165,7 +165,7 @@ void main() {
           'strategy': 'cosmetics_first',
           'offer_strategy_variant': 'cosmetics_first_v2',
           'user_segment': 'engaged_user',
-          'recommended_sku': 'utility_tools_pass',
+          'recommended_sku': 'skin_pack_mono',
         },
       );
 
@@ -182,7 +182,7 @@ void main() {
           'segment': 'new_user',
           'strategy_variant': 'cosmetics_first_v2',
           'recommended_sku': 'skin_pack_neon',
-          'targeted_skus': 'skin_pack_neon,skin_pack_mono,utility_tools_pass',
+          'targeted_skus': 'skin_pack_neon,skin_pack_mono,premium_starter_bundle',
         },
       );
 

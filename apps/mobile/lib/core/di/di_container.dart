@@ -107,10 +107,6 @@ Future<void> configureDependencies({
     fallback: false,
   );
   final bool includeBundle = _resolveIapBundleEnabled(bootstrapRemoteConfig);
-  final bool includeUtilityPass = bootstrapConfigReader.readBool(
-    'iap.rewarded_tools_unlimited_enabled',
-    fallback: false,
-  );
 
   sl.registerSingleton<AppConfig>(
     appConfig,
@@ -157,7 +153,6 @@ Future<void> configureDependencies({
       if (useDebugAdapters) {
         return DebugIapStoreService(
           includeBundle: includeBundle,
-          includeUtilityPass: includeUtilityPass,
           storeEnabled: isStoreEnabled,
         );
       }

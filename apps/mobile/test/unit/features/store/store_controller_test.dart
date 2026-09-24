@@ -1,11 +1,13 @@
 import 'package:block_puzzle_mobile/core/logging/app_logger.dart';
 import 'package:block_puzzle_mobile/data/analytics/analytics_tracker.dart';
+import 'package:block_puzzle_mobile/data/remote_config/bundled_remote_config_defaults.dart';
 import 'package:block_puzzle_mobile/data/remote_config/remote_config_repository.dart';
 import 'package:block_puzzle_mobile/data/remote_config/remote_config_snapshot.dart';
 import 'package:block_puzzle_mobile/data/repositories/in_memory_player_progress_repository.dart';
 import 'package:block_puzzle_mobile/domain/progression/player_progress_state.dart';
 import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
 import 'package:block_puzzle_mobile/features/monetization/iap_product.dart';
+import 'package:block_puzzle_mobile/features/monetization/local_catalog_iap_store_service.dart';
 import 'package:block_puzzle_mobile/features/store/application/store_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -101,12 +103,11 @@ void main() {
       expect(controller.state.ownedProductIds.contains(product.id), isTrue);
     });
 
-    test('targets utility offer for engaged segment and reorders catalog',
+    test('targets cosmetic bundle offer for engaged segment and reorders catalog',
         () async {
       final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
       final DebugIapStoreService service = DebugIapStoreService(
         includeBundle: true,
-        includeUtilityPass: true,
       );
       final InMemoryPlayerProgressRepository progressRepository =
           InMemoryPlayerProgressRepository();
@@ -124,7 +125,7 @@ void main() {
         remoteConfigRepository: const _InMemoryRemoteConfigRepository(
           <String, Object?>{
             'ab.offer_strategy_variant': 'cosmetics_first_v2',
-            'iap.targeting.engaged_primary_sku': 'utility_tools_pass',
+            'iap.targeting.engaged_primary_sku': 'premium_starter_bundle',
           },
         ),
         playerProgressRepository: progressRepository,
@@ -135,8 +136,39 @@ void main() {
       await controller.initialize();
 
       expect(controller.state.userSegment, 'engaged_user');
-      expect(controller.state.recommendedProductId, 'utility_tools_pass');
-      expect(controller.state.products.first.id, 'utility_tools_pass');
+      expect(controller.state.recommendedProductId, 'premium_starter_bundle');
+      expect(controller.state.products.first.id, 'premium_starter_bundle');
+    });
+
+    test(
+        'DEC-0026 / DEC-0028: utility_tools_pass is strictly excluded from remote config defaults and catalog',
+        () async {
+      expect(
+        bundledRemoteConfigDefaults['iap.rewarded_tools_unlimited_sku'],
+        isNot('utility_tools_pass'),
+      );
+      expect(
+        bundledRemoteConfigDefaults['iap.targeting.engaged_primary_sku'],
+        isNot('utility_tools_pass'),
+      );
+
+      final LocalCatalogIapStoreService catalogService =
+          LocalCatalogIapStoreService(
+        remoteConfigRepository: const _InMemoryRemoteConfigRepository(
+          <String, Object?>{
+            'iap.store_enabled': true,
+            'iap.bundle_enabled': true,
+            'iap.rewarded_tools_unlimited_enabled': true,
+          },
+        ),
+        playerProgressRepository: InMemoryPlayerProgressRepository(),
+        logger: AppLogger(),
+      );
+      final List<IapProduct> products = await catalogService.loadCatalog();
+      expect(
+        products.any((IapProduct p) => p.id == 'utility_tools_pass'),
+        isFalse,
+      );
     });
 
     test(

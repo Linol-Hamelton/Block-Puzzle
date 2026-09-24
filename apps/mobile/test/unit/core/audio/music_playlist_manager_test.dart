@@ -29,6 +29,30 @@ class FakeAudioPlayer extends AudioPlayer {
       StreamController<void>.broadcast();
   final StreamController<PlayerState> stateController =
       StreamController<PlayerState>.broadcast();
+  final StreamController<Duration> positionController =
+      StreamController<Duration>.broadcast();
+  final StreamController<Duration> durationController =
+      StreamController<Duration>.broadcast();
+
+  Duration? currentDuration;
+
+  @override
+  Stream<Duration> get onPositionChanged => positionController.stream;
+
+  @override
+  Stream<Duration> get onDurationChanged => durationController.stream;
+
+  @override
+  Future<Duration?> getDuration() async => currentDuration;
+
+  void emitDuration(Duration d) {
+    currentDuration = d;
+    durationController.add(d);
+  }
+
+  void emitPosition(Duration pos) {
+    positionController.add(pos);
+  }
 
   double currentVolume = 1.0;
   ReleaseMode? configuredReleaseMode;
@@ -242,7 +266,7 @@ void main() {
 
       // Trigger ducking for 80 ms in the middle of crossfade
       manager.duck(duration: const Duration(milliseconds: 80));
-      expect(manager.duckMultiplier, closeTo(MusicPlaylistManager.kDuckFactorMinus1_5dB, 1e-4));
+      expect(manager.duckMultiplier, closeTo(MusicPlaylistManager.kDuckFactorMinus3dB, 1e-4));
 
       // Check that during ducking, volume is attenuated on both players
       expect(playerA.currentVolume, lessThan(0.32));
@@ -300,6 +324,43 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 450));
       expect(manager.currentTrackIndex, equals(2));
       expect(manager.isCrossfading, isFalse);
+
+      await manager.dispose();
+    });
+
+    test('case 2b: play() without trackIndex during active crossfade cancels crossfade and restores active volume and index', () async {
+      final FakeAudioPlayer playerA = FakeAudioPlayer();
+      final FakeAudioPlayer playerB = FakeAudioPlayer();
+      final MusicPlaylistManager manager = MusicPlaylistManager(
+        logger: _SilentLogger(),
+        playerA: playerA,
+        playerB: playerB,
+        playlist: const <String>['track0.m4a', 'track1.m4a', 'track2.m4a'],
+        baseVolume: 0.32,
+        crossfadeDuration: const Duration(milliseconds: 500),
+      );
+
+      await manager.initialize();
+      await manager.play(trackIndex: 0);
+
+      // Start crossfade to track 1
+      unawaited(manager.crossfadeTo(1));
+      expect(manager.isCrossfading, isTrue);
+
+      // Mid-crossfade, invoke play() without trackIndex
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await manager.play();
+
+      // Crossfade must be cancelled
+      expect(manager.isCrossfading, isFalse);
+      expect(manager.currentTrackIndex, equals(0));
+      expect(manager.isPlaying, isTrue);
+
+      // Standby player must be stopped
+      expect(playerB.isPlayerStopped, isTrue);
+
+      // Active player must be restored to full base volume
+      expect(playerA.currentVolume, closeTo(0.32, 1e-4));
 
       await manager.dispose();
     });
@@ -367,6 +428,44 @@ void main() {
       playerA.completeTrack();
       await Future<void>.delayed(const Duration(milliseconds: 100));
       expect(manager.currentTrackIndex, equals(0));
+      expect(manager.activePlayer, equals(playerB));
+
+      await manager.dispose();
+    });
+
+    test('case 4b: pre-emptive crossfade triggers seamless overlap before track ends', () async {
+      final FakeAudioPlayer playerA = FakeAudioPlayer();
+      final FakeAudioPlayer playerB = FakeAudioPlayer();
+      final MusicPlaylistManager manager = MusicPlaylistManager(
+        logger: _SilentLogger(),
+        playerA: playerA,
+        playerB: playerB,
+        playlist: const <String>['track0.m4a', 'track1.m4a', 'track2.m4a'],
+        crossfadeDuration: const Duration(milliseconds: 100),
+      );
+
+      await manager.initialize();
+      await manager.play(trackIndex: 0);
+
+      // Emit duration of 1000 ms for track 0 on playerA
+      playerA.emitDuration(const Duration(milliseconds: 1000));
+      await Future<void>.delayed(Duration.zero);
+
+      // At position 850 ms (< 1000 - 100 = 900 ms), no crossfade yet
+      playerA.emitPosition(const Duration(milliseconds: 850));
+      await Future<void>.delayed(Duration.zero);
+      expect(manager.isCrossfading, isFalse);
+
+      // At position 910 ms (>= 900 ms), pre-emptive crossfade is triggered
+      playerA.emitPosition(const Duration(milliseconds: 910));
+      await Future<void>.delayed(Duration.zero);
+      expect(manager.isCrossfading, isTrue);
+      expect(playerB.isPlayerPlaying, isTrue); // Incoming player starts while outgoing player is still playing!
+
+      // Allow crossfade to finalize
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(manager.isCrossfading, isFalse);
+      expect(manager.currentTrackIndex, equals(1));
       expect(manager.activePlayer, equals(playerB));
 
       await manager.dispose();

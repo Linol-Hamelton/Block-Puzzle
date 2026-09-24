@@ -140,10 +140,7 @@ class _StoreScreenState extends State<StoreScreen> {
                           userSegment: state.userSegment,
                         ),
                         const SizedBox(height: 16),
-                        ...state.products
-                            .where((IapProduct product) =>
-                                product.id != 'utility_tools_pass')
-                            .map(
+                        ...state.products.map(
                           (IapProduct product) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _ProductCard(

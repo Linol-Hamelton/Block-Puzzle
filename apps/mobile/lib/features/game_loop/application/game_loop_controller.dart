@@ -122,8 +122,8 @@ class GameLoopController {
   int _rewardedToolsHintCost = 1;
   int _rewardedToolsUndoCost = 1;
   int _undoHistoryLimit = 1;
-  bool _rewardedToolsIapEnabled = true;
-  String _rewardedToolsUnlimitedSku = 'utility_tools_pass';
+  bool _rewardedToolsIapEnabled = false;
+  String _rewardedToolsUnlimitedSku = '';
   bool _bannerRequestedInSession = false;
   bool _rewardedReviveUsedInCurrentGame = false;
   bool _gameEndEmitted = false;
@@ -178,11 +178,11 @@ class GameLoopController {
     ).clamp(1, 5);
     _rewardedToolsIapEnabled = _configReader.readBool(
       'iap.rewarded_tools_unlimited_enabled',
-      fallback: true,
+      fallback: false,
     );
     _rewardedToolsUnlimitedSku = _configReader.readString(
       'iap.rewarded_tools_unlimited_sku',
-      fallback: 'utility_tools_pass',
+      fallback: '',
     );
     _shareFlowEnabled = _configReader.readBool(
       'social.share_enabled',
@@ -1125,7 +1125,7 @@ class GameLoopController {
   }
 
   bool get _hasUnlimitedRewardedToolsAccess {
-    if (!_rewardedToolsIapEnabled) {
+    if (!_rewardedToolsIapEnabled || _rewardedToolsUnlimitedSku.isEmpty) {
       return false;
     }
     return _ownedIapProductIds.contains(_rewardedToolsUnlimitedSku);

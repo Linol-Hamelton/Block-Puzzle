@@ -7,12 +7,10 @@ import 'iap_store_service.dart';
 class DebugIapStoreService implements IapStoreService {
   DebugIapStoreService({
     this.includeBundle = false,
-    this.includeUtilityPass = true,
     this.storeEnabled = true,
   });
 
   final bool includeBundle;
-  final bool includeUtilityPass;
   final bool storeEnabled;
   final Set<String> _ownedProductIds = <String>{};
 
@@ -49,17 +47,6 @@ class DebugIapStoreService implements IapStoreService {
     badge: 'Best Value',
   );
 
-  static const IapProduct _utilityPass = IapProduct(
-    id: 'utility_tools_pass',
-    title: 'Utility Tools Pass',
-    description: 'Unlimited hint and undo access (ad-free strategy).',
-    priceLabel: '\$3.99',
-    priceValue: 3.99,
-    currencyCode: 'USD',
-    type: IapProductType.nonConsumable,
-    badge: 'Utility',
-  );
-
   @override
   String get rolloutStrategy =>
       includeBundle ? 'cosmetics_bundle' : 'cosmetics_first';
@@ -73,9 +60,6 @@ class DebugIapStoreService implements IapStoreService {
     ];
     if (includeBundle) {
       catalog.add(_bundle);
-    }
-    if (includeUtilityPass) {
-      catalog.add(_utilityPass);
     }
     return catalog;
   }

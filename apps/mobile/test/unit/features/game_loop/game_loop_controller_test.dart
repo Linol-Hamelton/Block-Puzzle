@@ -25,6 +25,7 @@ import 'package:block_puzzle_mobile/features/monetization/ad_placement.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_service.dart';
 import 'package:block_puzzle_mobile/features/monetization/ad_show_result.dart';
 import 'package:block_puzzle_mobile/features/monetization/debug_iap_store_service.dart';
+import 'package:block_puzzle_mobile/features/monetization/iap_product.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -581,10 +582,16 @@ void main() {
         () async {
       final _MemoryAnalyticsTracker analytics = _MemoryAnalyticsTracker();
       final DebugIapStoreService iapService = DebugIapStoreService();
-      final product = (await iapService.loadCatalog()).firstWhere(
-        (item) => item.id == 'utility_tools_pass',
+      const IapProduct testProduct = IapProduct(
+        id: 'test_unlimited_tools_pass',
+        title: 'Test Unlimited Pass',
+        description: 'Test pass description',
+        priceLabel: '\$0.99',
+        priceValue: 0.99,
+        currencyCode: 'USD',
+        type: IapProductType.nonConsumable,
       );
-      await iapService.purchase(product: product);
+      await iapService.purchase(product: testProduct);
 
       final GameLoopController controller = GameLoopController(
         placePieceUseCase: const PlacePieceUseCase(
@@ -1094,7 +1101,7 @@ class _HintUndoRemoteConfigRepository implements RemoteConfigRepository {
       'progression.rewarded_tools_undo_cost': 1,
       'progression.undo_history_limit': 1,
       'iap.rewarded_tools_unlimited_enabled': true,
-      'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
+      'iap.rewarded_tools_unlimited_sku': 'test_unlimited_tools_pass',
     };
   }
 
@@ -1172,7 +1179,7 @@ class _NoCreditsHintUndoRemoteConfigRepository
       'progression.rewarded_tools_undo_cost': 1,
       'progression.undo_history_limit': 1,
       'iap.rewarded_tools_unlimited_enabled': false,
-      'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
+      'iap.rewarded_tools_unlimited_sku': 'test_unlimited_tools_pass',
     };
   }
 
@@ -1255,7 +1262,7 @@ class _IapUnlimitedHintUndoRemoteConfigRepository
       'progression.rewarded_tools_undo_cost': 1,
       'progression.undo_history_limit': 1,
       'iap.rewarded_tools_unlimited_enabled': true,
-      'iap.rewarded_tools_unlimited_sku': 'utility_tools_pass',
+      'iap.rewarded_tools_unlimited_sku': 'test_unlimited_tools_pass',
     };
   }
 
