@@ -4,14 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:block_puzzle_mobile/core/device/haptics_controller.dart';
-import 'package:block_puzzle_mobile/domain/tetris/tetris_engine.dart';
+import 'package:block_puzzle_mobile/domain/match3/match3_engine.dart';
+import 'package:block_puzzle_mobile/domain/match3/special_combo.dart';
+import 'package:block_puzzle_mobile/domain/match3/tile.dart';
+import 'package:block_puzzle_mobile/domain/match3/tile_grid.dart';
 import 'package:block_puzzle_mobile/features/game_loop/audio/game_sfx_player.dart';
-import 'package:block_puzzle_mobile/features/tetris/application/tetris_controller.dart';
-import 'package:block_puzzle_mobile/features/tetris/presentation/tetris_game.dart';
-import 'package:block_puzzle_mobile/features/tetris/presentation/tetris_screen.dart';
+import 'package:block_puzzle_mobile/features/match3/application/match3_controller.dart';
+import 'package:block_puzzle_mobile/features/match3/presentation/match3_game.dart';
+import 'package:block_puzzle_mobile/features/match3/presentation/match3_screen.dart';
 import 'package:block_puzzle_mobile/ui/effects/combo_pulse_component.dart';
-import 'package:block_puzzle_mobile/ui/effects/landing_squash_component.dart';
-import 'package:block_puzzle_mobile/ui/effects/score_pop_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/shockwave_ring_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/vfx_director.dart';
 import 'package:block_puzzle_mobile/ui/effects/vfx_events.dart';
@@ -60,20 +61,20 @@ class _MockSfxPlayer implements GameSfxPlayer {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late TetrisController controller;
-  late TetrisFlameGame game;
+  late Match3Controller controller;
+  late Match3FlameGame game;
 
   setUp(() async {
-    controller = TetrisController(
+    controller = Match3Controller(
       seed: 42,
       sfx: _MockSfxPlayer(),
       haptics: HapticsController()..isEnabled = false,
     );
     await controller.initialize();
-    game = TetrisFlameGame(controller: controller);
+    game = Match3FlameGame(controller: controller);
   });
 
-  group('TetrisFlameGame VFX Integration', () {
+  group('Match3FlameGame VFX Integration', () {
     test('initializes and attaches VfxDirector as child component', () async {
       await game.onLoad();
       game.update(0);
@@ -83,60 +84,47 @@ void main() {
       expect(game.vfxDirector.auraShader, isNotNull);
     });
 
-    test('lock event dispatches piecePlaced and spawns LandingSquashComponent', () async {
-      await game.onLoad();
-      game.update(0);
-      game.onGameResize(Vector2(300, 600));
-      game.render(Canvas(PictureRecorder()));
+    test('computeFallDistances correctly calculates cascade gravity offsets', () {
+      // 1. Empty burst returns empty map
+      expect(
+        Match3FlameGame.computeFallDistances(8, 8, const <GridPos>[]),
+        isEmpty,
+      );
 
-      // Trigger hard drop so active piece locks
-      controller.input(TetrisInput.hardDrop);
-      game.update(0.016);
+      // 2. Clear bottom 3 cells (5, 6, 7) in column 0
+      final Map<GridPos, double> dists1 = Match3FlameGame.computeFallDistances(
+        8,
+        8,
+        const <GridPos>[GridPos(0, 5), GridPos(0, 6), GridPos(0, 7)],
+      );
+      // All 8 rows in col 0 should drop by 3 units
+      for (int y = 0; y < 8; y++) {
+        expect(dists1[GridPos(0, y)], 3.0);
+      }
 
-      // VfxDirector should have spawned LandingSquashComponent
-      final List<LandingSquashComponent> squashes =
-          game.vfxDirector.children.whereType<LandingSquashComponent>().toList();
-      expect(squashes, isNotEmpty);
-      expect(squashes.first.cellRects, isNotEmpty);
+      // 3. Clear disjoint cells at row 2 and 5 in column 1
+      final Map<GridPos, double> dists2 = Match3FlameGame.computeFallDistances(
+        8,
+        8,
+        const <GridPos>[GridPos(1, 2), GridPos(1, 5)],
+      );
+      expect(dists2[const GridPos(1, 7)], isNull); // did not move
+      expect(dists2[const GridPos(1, 6)], isNull); // did not move
+      expect(dists2[const GridPos(1, 5)], 1.0);
+      expect(dists2[const GridPos(1, 4)], 1.0);
+      expect(dists2[const GridPos(1, 3)], 2.0);
+      expect(dists2[const GridPos(1, 2)], 2.0);
+      expect(dists2[const GridPos(1, 1)], 2.0); // newly refilled
+      expect(dists2[const GridPos(1, 0)], 2.0); // newly refilled
     });
 
-    test('lineClear event dispatches LineClearedVfxEvent with ScorePop and Shockwave', () async {
+    test('match event dispatches LineClearedVfxEvent with Shockwave and ScorePop', () async {
       await game.onLoad();
-      game.onGameResize(Vector2(300, 600));
-      game.render(Canvas(PictureRecorder()));
-
-      // Directly simulate visual lineClear event
-      controller.onVisualEvent?.call(
-        const TetrisEvent(TetrisEventType.lineClear, 4, 800),
-      );
-      game.update(0.016);
-
-      // Verify shockwave ring, score pop, and combo pulse TETRIS! spawned
-      expect(
-        game.vfxDirector.children.whereType<ShockwaveRingComponent>(),
-        isNotEmpty,
-      );
-      expect(
-        game.vfxDirector.children.whereType<ScorePopComponent>(),
-        isNotEmpty,
-      );
-      expect(
-        game.vfxDirector.children.whereType<ComboPulseComponent>(),
-        isNotEmpty,
-      );
-      expect(
-        game.vfxDirector.isHitStopActive,
-        isTrue,
-      );
-    });
-
-    test('perfectClear event triggers AllClear fanfare and score pop', () async {
-      await game.onLoad();
-      game.onGameResize(Vector2(300, 600));
+      game.onGameResize(Vector2(400, 400));
       game.render(Canvas(PictureRecorder()));
 
       controller.onVisualEvent?.call(
-        const TetrisEvent(TetrisEventType.perfectClear, 1, 1000),
+        const Match3Event(Match3EventType.match, 6, 2),
       );
       game.update(0.016);
 
@@ -148,16 +136,60 @@ void main() {
         game.vfxDirector.children.whereType<ComboPulseComponent>(),
         isNotEmpty,
       );
+    });
+
+    test('combo event dispatches ComboPulseVfxEvent, ScreenShake, and Hit-Stop', () async {
+      await game.onLoad();
+      game.onGameResize(Vector2(400, 400));
+      game.render(Canvas(PictureRecorder()));
+
+      controller.onVisualEvent?.call(
+        const Match3Event.combined(ComboKind.megaBomb),
+      );
+      game.update(0.016);
+
+      expect(
+        game.vfxDirector.children.whereType<ComboPulseComponent>(),
+        isNotEmpty,
+      );
       expect(
         game.vfxDirector.isHitStopActive,
         isTrue,
       );
     });
 
-    test('renders without errors across multiple frames including aura shader fallback', () async {
+    test('roundComplete event dispatches AllClearVfxEvent with fanfare shockwave', () async {
       await game.onLoad();
-      game.onGameResize(Vector2(300, 600));
+      game.onGameResize(Vector2(400, 400));
+      game.render(Canvas(PictureRecorder()));
+
+      controller.onVisualEvent?.call(
+        const Match3Event(Match3EventType.roundComplete, 1, 5),
+      );
+      game.update(0.016);
+
+      expect(
+        game.vfxDirector.children.whereType<ShockwaveRingComponent>(),
+        isNotEmpty,
+      );
+      expect(
+        game.vfxDirector.children.whereType<ComboPulseComponent>(),
+        isNotEmpty,
+      );
+    });
+
+    test('renders without errors including PieceAuraShader on special and igniting gems', () async {
+      await game.onLoad();
+      game.onGameResize(Vector2(400, 400));
       game.vfxDirector.vfxLevel = VfxLevel.full;
+
+      // Restore grid with special gems to test shader aura rendering
+      final Map<String, Object?> snapshot = controller.engine.toSnapshot();
+      final TileGrid customGrid = controller.engine.grid
+          .withSpecialAt(const GridPos(0, 0), SpecialKind.bomb)
+          .withSpecialAt(const GridPos(1, 1), SpecialKind.colorBomb);
+      snapshot['grid'] = customGrid.toJson();
+      controller.engine.restore(snapshot);
 
       final PictureRecorder recorder = PictureRecorder();
       final Canvas canvas = Canvas(recorder);
@@ -169,20 +201,18 @@ void main() {
     });
   });
 
-  group('Tetris CelebrationDirector Integration', () {
+  group('Match-3 CelebrationDirector Integration', () {
     testWidgets('displays celebration badge on game over when setting new record',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: Center(
-              child: TetrisGameOverCard(
-                score: 5000,
+              child: Match3GameOverCard(
+                score: 5500,
                 best: 4000,
-                lines: 40,
-                level: 5,
-                canRevive: false,
-                onRevive: () {},
+                moves: 24,
+                rounds: 3,
                 onRestart: () {},
               ),
             ),
@@ -196,19 +226,17 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('shows Game Over title without badge when not a new record',
+    testWidgets('shows Out of Moves title without badge when not a new record',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: Center(
-              child: TetrisGameOverCard(
+              child: Match3GameOverCard(
                 score: 2000,
                 best: 4000,
-                lines: 20,
-                level: 3,
-                canRevive: false,
-                onRevive: () {},
+                moves: 18,
+                rounds: 1,
                 onRestart: () {},
               ),
             ),
@@ -218,7 +246,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Game Over'), findsOneWidget);
+      expect(find.text('Out of Moves'), findsOneWidget);
       expect(find.text('New Record!'), findsNothing);
     });
   });

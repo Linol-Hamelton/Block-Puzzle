@@ -7,6 +7,7 @@ import '../../../core/device/haptics_controller.dart';
 import '../../../core/di/di_container.dart';
 import '../../../data/analytics/analytics_tracker.dart';
 import '../../../domain/match3/tile.dart';
+import '../../../ui/effects/celebration_director.dart';
 import '../../../ui/theme/app_theme.dart';
 import '../../../ui/widgets/nebula_background.dart';
 import '../../game_loop/audio/game_sfx_player.dart';
@@ -354,8 +355,11 @@ class _SwipeHint extends StatelessWidget {
   }
 }
 
-class _GameOverCard extends StatelessWidget {
-  const _GameOverCard({
+typedef _GameOverCard = Match3GameOverCard;
+
+class Match3GameOverCard extends StatelessWidget {
+  const Match3GameOverCard({
+    super.key,
     required this.score,
     required this.best,
     required this.moves,
@@ -371,6 +375,7 @@ class _GameOverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isNewBest = score >= best && score > 0;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 32),
       padding: const EdgeInsets.all(24),
@@ -382,13 +387,29 @@ class _GameOverCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          const Text(
-            'Out of Moves',
+          if (isNewBest) ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: CelebrationDirector.instance.activeProvider.buildCelebrationWidget(
+                context: context,
+                type: CelebrationType.newRecord,
+                score: score,
+                size: 80.0,
+              ),
+            ),
+          ],
+          Text(
+            isNewBest ? 'New Record!' : 'Out of Moves',
             style: TextStyle(
-              color: Color(0xFFFFC56B),
+              color: isNewBest ? const Color(0xFFFFD54F) : const Color(0xFFFFC56B),
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              shadows: <Shadow>[Shadow(color: Color(0x66FFC56B), blurRadius: 18)],
+              shadows: <Shadow>[
+                Shadow(
+                  color: isNewBest ? const Color(0x66FFD54F) : const Color(0x66FFC56B),
+                  blurRadius: 18,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),

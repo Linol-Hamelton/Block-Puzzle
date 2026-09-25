@@ -5,13 +5,18 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 
+import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/match3/match3_engine.dart';
 import '../../../domain/match3/tile.dart';
 import '../../../domain/match3/tile_grid.dart';
+import '../../../features/diagnostics/step6_benchmark.dart';
 import '../../../ui/effects/burst_field.dart';
+import '../../../ui/effects/easing_presets.dart';
 import '../../../ui/effects/effect_timing.dart';
 import '../../../ui/effects/glass_board.dart';
 import '../../../ui/effects/glass_tile_atlas.dart';
+import '../../../ui/effects/vfx_director.dart';
+import '../../../ui/effects/vfx_events.dart';
 import '../application/match3_controller.dart';
 
 /// Gem colors (neon palette consistent with the Lumina look).
@@ -33,17 +38,25 @@ class Match3FlameGame extends FlameGame {
   // Visual-juice state.
   double _flash = 0;
   double _shake = 0;
-  String? _pulseText;
-  double _pulseElapsed = 0;
-  static const double _pulseLife = 1.0 * kEffectTimeScale;
-  String? _scorePopText;
-  double _scorePopElapsed = 0;
-  static const double _scorePopLife = 0.9 * kEffectTimeScale;
   double _clock = 0;
   int _lastScore = 0;
   int _chargeSerial = -1;
   double _chargeElapsed = 0;
   final BurstField _burst = BurstField();
+
+  late final VfxDirector _vfxDirector = VfxDirector(
+    burstField: _burst,
+    viewfinder: camera.viewfinder,
+    isReducedMotion: () => Step6Benchmark.reducedMotion.value,
+    onScreenShake: (double amplitude) {
+      _shake = math.max(_shake, (amplitude / 4.0).clamp(0.2, 1.0));
+    },
+  );
+  VfxDirector get vfxDirector => _vfxDirector;
+
+  // Fall distance and cascade drop tracking.
+  int _dropSerial = -1;
+  Map<GridPos, double> _fallDistances = const <GridPos, double>{};
 
   // Last board geometry (screen space).
   double _ox = 0;
@@ -80,6 +93,7 @@ class Match3FlameGame extends FlameGame {
   Future<void> onLoad() async {
     controller.onVisualEvent = _onVisualEvent;
     _lastScore = controller.score;
+    add(_vfxDirector);
     await super.onLoad();
   }
 
@@ -91,6 +105,7 @@ class Match3FlameGame extends FlameGame {
     if (identical(controller.onVisualEvent, _onVisualEvent)) {
       controller.onVisualEvent = null;
     }
+    _vfxDirector.clearAll();
     dropCachedSurfaces();
     super.onRemove();
   }
@@ -165,44 +180,140 @@ class Match3FlameGame extends FlameGame {
   void _onVisualEvent(Match3Event event) {
     _idleElapsed = 0;
     _hintPair = null;
+    final double cell = _cell > 0 ? _cell : 20.0;
     switch (event.type) {
       case Match3EventType.swap:
         break;
       case Match3EventType.match:
-        // Every step now, not just the first: each one is its own moment on
-        // screen, so each one gets its own burst.
         _spawnClearParticles();
         _flash = math.max(_flash, (event.value / 9).clamp(0.3, 1).toDouble());
+
+        final Iterable<GridPos> burstKeys = controller.frameBurst.keys;
+        final double cx;
+        final double cy;
+        if (burstKeys.isNotEmpty) {
+          final double sumX =
+              burstKeys.fold(0.0, (double acc, GridPos p) => acc + p.x);
+          final double sumY =
+              burstKeys.fold(0.0, (double acc, GridPos p) => acc + p.y);
+          cx = _ox + (((sumX / burstKeys.length) + 0.5) * cell);
+          cy = _oy + (((sumY / burstKeys.length) + 0.5) * cell);
+        } else {
+          cx = _ox + (_cols * cell * 0.5);
+          cy = _oy + (_rows * cell * 0.5);
+        }
+        final Vector2 centroid = Vector2(cx, cy);
+
+        final Color matchColor = controller.frameBurst.isNotEmpty
+            ? (gemColors[controller.frameBurst.values.first] ??
+                const Color(0xFF00E5FF))
+            : const Color(0xFF00E5FF);
+
+        final Set<BoardCell> clearedCells = <BoardCell>{
+          for (final GridPos p in burstKeys) BoardCell(x: p.x, y: p.y),
+        };
+
+        final int strength = (event.value / 3).ceil().clamp(1, 4);
+        _vfxDirector.handleEvent(
+          VfxEvent.lineCleared(
+            cells: clearedCells,
+            centroid: centroid,
+            strength: strength,
+            color: matchColor,
+            boardOrigin: Vector2(_ox, _oy),
+            cellSize: cell,
+          ),
+        );
+
+        final int scoreDelta = controller.score - _lastScore;
+        if (scoreDelta > 0) {
+          _vfxDirector.handleEvent(
+            VfxEvent.scorePopped(
+              text: '+$scoreDelta',
+              position: centroid,
+              color: const Color(0xFFD6FFE0),
+            ),
+          );
+        }
+
         if (event.detail >= 2) {
           _shake = math.max(_shake, 0.5);
-          _pulse('COMBO x${event.detail}');
+          _vfxDirector.handleEvent(
+            VfxEvent.comboPulse(
+              text: 'COMBO x${event.detail}',
+              position: centroid,
+              comboStreak: event.detail,
+            ),
+          );
         } else if (event.value >= 5) {
-          _pulse('NICE!');
+          _vfxDirector.handleEvent(
+            VfxEvent.comboPulse(
+              text: 'NICE!',
+              position: centroid,
+              comboStreak: 1,
+            ),
+          );
         }
         break;
       case Match3EventType.specialSpawned:
-        // No pulse: a bonus gem is its own announcement, and the caption slot
-        // belongs to the cascade that earned it.
         _flash = math.max(_flash, 0.5);
         break;
       case Match3EventType.combo:
-        _pulse(event.combo?.label ?? 'COMBO');
         _flash = math.max(_flash, 0.9);
         _shake = math.max(_shake, 0.6);
+        final Vector2 center =
+            Vector2(_ox + (_cols * cell * 0.5), _oy + (_rows * cell * 0.5));
+        _vfxDirector.handleEvent(
+          VfxEvent.comboPulse(
+            text: event.combo?.label ?? 'COMBO',
+            position: center,
+            comboStreak: 3,
+          ),
+        );
+        _vfxDirector.handleEvent(
+          const VfxEvent.screenShake(amplitude: 2.8, zoomPunch: true),
+        );
+        _vfxDirector.triggerHitStop(0.045);
         break;
       case Match3EventType.roundComplete:
-        _pulse('ROUND ${event.value} + ${event.detail} MOVES');
         _flash = math.max(_flash, 0.8);
+        _vfxDirector.handleEvent(
+          VfxEvent.allClear(
+            boardOrigin: Vector2(_ox, _oy),
+            boardSize: Vector2(_cols * cell, _rows * cell),
+          ),
+        );
+        _vfxDirector.handleEvent(
+          VfxEvent.comboPulse(
+            text: 'ROUND ${event.value} + ${event.detail} MOVES',
+            position:
+                Vector2(_ox + (_cols * cell * 0.5), _oy + (_rows * cell * 0.35)),
+            comboStreak: 4,
+          ),
+        );
         break;
       case Match3EventType.invalidSwap:
         _shake = math.max(_shake, 0.25);
+        _vfxDirector.handleEvent(
+          const VfxEvent.screenShake(amplitude: 1.0),
+        );
         break;
       case Match3EventType.shuffle:
-        _pulse('SHUFFLE');
         _flash = math.max(_flash, 0.4);
+        _vfxDirector.handleEvent(
+          VfxEvent.comboPulse(
+            text: 'SHUFFLE',
+            position:
+                Vector2(_ox + (_cols * cell * 0.5), _oy + (_rows * cell * 0.5)),
+            comboStreak: 2,
+          ),
+        );
         break;
       case Match3EventType.gameOver:
         _shake = math.max(_shake, 0.7);
+        _vfxDirector.handleEvent(
+          const VfxEvent.screenShake(amplitude: 3.5),
+        );
         break;
     }
   }
@@ -211,9 +322,6 @@ class Match3FlameGame extends FlameGame {
     if (_cell <= 0) {
       return;
     }
-    // Only the step that just went off, not every cell the whole move will
-    // eventually clear. Spraying the entire cascade on its first step was why
-    // a four-step chain looked the same as a single match.
     controller.frameBurst.forEach((GridPos pos, TileColor color) {
       _burst.spawnBurst(
         x: _ox + (pos.x * _cell) + (_cell / 2),
@@ -244,14 +352,79 @@ class Match3FlameGame extends FlameGame {
     return (_chargeElapsed / hold).clamp(0, 1).toDouble();
   }
 
-  void _pulse(String text) {
-    _pulseText = text;
-    _pulseElapsed = 0;
+  /// Computes how many cells each tile drops following gravity and refill.
+  static Map<GridPos, double> computeFallDistances(
+    int cols,
+    int rows,
+    Iterable<GridPos> burstPositions,
+  ) {
+    final Map<GridPos, double> distances = <GridPos, double>{};
+    if (burstPositions.isEmpty) {
+      return distances;
+    }
+
+    final Map<int, List<int>> clearedByCol = <int, List<int>>{};
+    for (final GridPos p in burstPositions) {
+      if (p.x >= 0 && p.x < cols && p.y >= 0 && p.y < rows) {
+        (clearedByCol[p.x] ??= <int>[]).add(p.y);
+      }
+    }
+
+    for (final MapEntry<int, List<int>> entry in clearedByCol.entries) {
+      final int x = entry.key;
+      final Set<int> clearedRows = entry.value.toSet();
+      final int totalCleared = clearedRows.length;
+
+      int writeY = rows - 1;
+      for (int origY = rows - 1; origY >= 0; origY--) {
+        if (!clearedRows.contains(origY)) {
+          final int dist = writeY - origY;
+          if (dist > 0) {
+            distances[GridPos(x, writeY)] = dist.toDouble();
+          }
+          writeY--;
+        }
+      }
+      while (writeY >= 0) {
+        distances[GridPos(x, writeY)] = totalCleared.toDouble();
+        writeY--;
+      }
+    }
+    return distances;
+  }
+
+  /// Evaluates cascade drop progress along [EasingPresets.cascadeDropCurve].
+  double _dropProgress() {
+    final int serial = controller.frameSerial;
+    if (serial != _dropSerial) {
+      _dropSerial = serial;
+      _fallDistances = computeFallDistances(
+        _cols,
+        _rows,
+        controller.frameBurst.keys,
+      );
+    }
+    if (_fallDistances.isEmpty) {
+      return 1.0;
+    }
+    final double holdSec = controller.frameHold.inMilliseconds / 1000.0;
+    final double dropDuration = math.min(
+      EasingPresets.durationCascadeStep,
+      holdSec > 0 ? holdSec : EasingPresets.durationCascadeStep,
+    );
+    if (dropDuration <= 0) {
+      return 1.0;
+    }
+    final double t = (_chargeElapsed / dropDuration).clamp(0.0, 1.0);
+    return EasingPresets.evaluateProgress(t, EasingPresets.cascadeDropCurve);
   }
 
   @override
   void update(double dt) {
     super.update(dt);
+    if (_vfxDirector.isHitStopActive) {
+      return;
+    }
     _clock += dt;
     if (_flash > 0) {
       _flash = math.max(0, _flash - (dt * 2.6 / kEffectTimeScale));
@@ -259,26 +432,8 @@ class Match3FlameGame extends FlameGame {
     if (_shake > 0) {
       _shake = math.max(0, _shake - (dt * 3.4 / kEffectTimeScale));
     }
-    if (_pulseText != null) {
-      _pulseElapsed += dt;
-      if (_pulseElapsed > _pulseLife) {
-        _pulseText = null;
-      }
-    }
-    if (_scorePopText != null) {
-      _scorePopElapsed += dt;
-      if (_scorePopElapsed > _scorePopLife) {
-        _scorePopText = null;
-      }
-    }
-    final int score = controller.score;
-    if (score > _lastScore) {
-      _scorePopText = '+${score - _lastScore}';
-      _scorePopElapsed = 0;
-    }
-    _lastScore = score;
+    _lastScore = controller.score;
     _chargeElapsed += dt;
-    _burst.update(dt);
 
     // Idle hint: softly pulse one legal swap after 4.5s of player inactivity.
     if (_selected == null && !controller.isBusy && !controller.isGameOver) {
@@ -294,7 +449,6 @@ class Match3FlameGame extends FlameGame {
 
   @override
   void render(Canvas canvas) {
-    super.render(canvas);
     if (size.x <= 0 || size.y <= 0) {
       return;
     }
@@ -303,6 +457,7 @@ class Match3FlameGame extends FlameGame {
     final TileGrid grid = controller.displayGrid;
     final Set<GridPos> igniting = controller.ignitingCells;
     final double charge = igniting.isEmpty ? 0 : _frameCharge();
+    final double dropProgress = _dropProgress();
     final double cell = math.min(size.x / _cols, size.y / _rows);
     final double boardW = cell * _cols;
     final double boardH = cell * _rows;
@@ -331,13 +486,27 @@ class Match3FlameGame extends FlameGame {
       );
     }
 
-    _updateStaticGemsPicture(grid, igniting, cell, _cols, _rows);
-    if (_staticGemsPicture != null) {
-      canvas.save();
-      canvas.translate(ox, oy);
-      canvas.drawPicture(_staticGemsPicture!);
-      canvas.restore();
+    final bool isDropping = _fallDistances.isNotEmpty && dropProgress < 1.0;
+
+    // Static gems pre-recorded picture is only reused when gems are settled
+    if (!isDropping) {
+      _updateStaticGemsPicture(grid, igniting, cell, _cols, _rows);
+      if (_staticGemsPicture != null) {
+        canvas.save();
+        canvas.translate(ox, oy);
+        canvas.drawPicture(_staticGemsPicture!);
+        canvas.restore();
+      }
     }
+
+    // Clip dynamic falling / special gems to the board well
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(ox, oy, boardW, boardH),
+        const Radius.circular(14),
+      ),
+    );
 
     for (int y = 0; y < _rows; y++) {
       for (int x = 0; x < _cols; x++) {
@@ -346,10 +515,41 @@ class Match3FlameGame extends FlameGame {
           continue;
         }
         final bool isIgniting = igniting.contains(GridPos(x, y));
-        if (!tile.isSpecial && !isIgniting) {
+        final bool isSpecial = tile.isSpecial;
+
+        // Skip static gems if they were already painted via cached picture
+        if (!isDropping && !isSpecial && !isIgniting) {
           continue;
         }
+
+        final double fallDist = _fallDistances[GridPos(x, y)] ?? 0.0;
+        final double yOffset = (isDropping && fallDist > 0)
+            ? -(1.0 - dropProgress) * fallDist * cell
+            : 0.0;
+
         final Color color = gemColors[tile.color]!;
+
+        // Render PieceAuraShader behind special / charged gems
+        if (_vfxDirector.auraShader.isEnabled && (isSpecial || isIgniting)) {
+          final double inset = cell * 0.115;
+          final Rect gemRect = Rect.fromLTWH(
+            ox + (x * cell) + inset,
+            oy + (y * cell) + inset + yOffset,
+            cell - (inset * 2),
+            cell - (inset * 2),
+          );
+          final Color auraColor = tile.special == SpecialKind.colorBomb
+              ? const Color(0xFFFFFFFF)
+              : color;
+          _vfxDirector.auraShader.drawAura(
+            canvas,
+            targetBounds: gemRect,
+            color: auraColor,
+            time: _vfxDirector.clock,
+            intensity: isIgniting ? 0.95 : 0.65,
+          );
+        }
+
         _paintGem(
           canvas,
           ox,
@@ -360,12 +560,25 @@ class Match3FlameGame extends FlameGame {
           tile.color,
           color,
           charge: isIgniting ? charge : 0,
+          yOffset: yOffset,
         );
-        if (tile.isSpecial) {
-          _paintSpecial(canvas, ox, oy, x, y, cell, tile.special, color);
+        if (isSpecial) {
+          _paintSpecial(
+            canvas,
+            ox,
+            oy,
+            x,
+            y,
+            cell,
+            tile.special,
+            color,
+            yOffset: yOffset,
+          );
         }
       }
     }
+
+    canvas.restore(); // restore clip
 
     final GridPos? sel = _selected;
     if (sel != null) {
@@ -387,11 +600,9 @@ class Match3FlameGame extends FlameGame {
       );
     }
 
-    canvas.restore();
+    canvas.restore(); // restore shake translation
 
-    _burst.render(canvas);
-    _renderScorePop(canvas, ox, oy, boardW, boardH);
-    _renderPulse(canvas, ox, oy, boardW, boardH);
+    super.render(canvas); // renders VfxDirector, shockwaves, combo pulses, score pops, particles
   }
 
   /// The board the gems sit in, from the shared well so all three games are
@@ -560,12 +771,18 @@ class Match3FlameGame extends FlameGame {
     TileColor tileColor,
     Color color, {
     double charge = 0,
+    double yOffset = 0,
   }) {
     if (charge == 0 && _tileAtlas != null) {
       _tileAtlas!.drawTile(
         canvas,
         key: tileColor,
-        dstCellRect: Rect.fromLTWH(ox + (x * cell), oy + (y * cell), cell, cell),
+        dstCellRect: Rect.fromLTWH(
+          ox + (x * cell),
+          oy + (y * cell) + yOffset,
+          cell,
+          cell,
+        ),
       );
       return;
     }
@@ -575,7 +792,7 @@ class Match3FlameGame extends FlameGame {
     final double inset = cell * 0.115;
     final Rect rect = Rect.fromLTWH(
       ox + (x * cell) + inset,
-      oy + (y * cell) + inset,
+      oy + (y * cell) + inset + yOffset,
       cell - (inset * 2),
       cell - (inset * 2),
     );
@@ -604,10 +821,11 @@ class Match3FlameGame extends FlameGame {
     int y,
     double cell,
     SpecialKind kind,
-    Color color,
-  ) {
+    Color color, {
+    double yOffset = 0,
+  }) {
     final double cx = ox + (x * cell) + (cell / 2);
-    final double cy = oy + (y * cell) + (cell / 2);
+    final double cy = oy + (y * cell) + (cell / 2) + yOffset;
     // A slow shared shimmer, so bonuses read as "alive" against plain gems.
     final double glow = 0.72 + (0.28 * math.sin((_clock * 3.4) + x + y));
     final Color ink = Color.lerp(Colors.white, color, 0.12) ?? Colors.white;
@@ -752,77 +970,5 @@ class Match3FlameGame extends FlameGame {
       );
     }
   }
-
-  void _renderScorePop(
-    Canvas canvas,
-    double ox,
-    double oy,
-    double boardW,
-    double boardH,
-  ) {
-    final String? text = _scorePopText;
-    if (text == null) {
-      return;
-    }
-    final double t = (_scorePopElapsed / _scorePopLife).clamp(0, 1).toDouble();
-    final double opacity = (1 - t).clamp(0, 1).toDouble();
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Color.fromRGBO(214, 255, 224, opacity),
-          fontSize: 24,
-          fontWeight: FontWeight.w800,
-          shadows: <Shadow>[
-            Shadow(
-              color: Color.fromRGBO(95, 224, 138, opacity * 0.9),
-              blurRadius: 14,
-            ),
-          ],
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: boardW);
-    painter.paint(
-      canvas,
-      Offset(ox + ((boardW - painter.width) / 2), oy + (boardH * 0.42) - (t * 40)),
-    );
-  }
-
-  void _renderPulse(
-    Canvas canvas,
-    double ox,
-    double oy,
-    double boardW,
-    double boardH,
-  ) {
-    final String? text = _pulseText;
-    if (text == null) {
-      return;
-    }
-    final double t = (_pulseElapsed / _pulseLife).clamp(0, 1).toDouble();
-    final double opacity = (1 - t).clamp(0, 1).toDouble();
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Color.fromRGBO(196, 240, 255, opacity),
-          fontSize: 30,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.4,
-          shadows: <Shadow>[
-            Shadow(
-              color: Color.fromRGBO(86, 212, 255, opacity * 0.9),
-              blurRadius: 18,
-            ),
-          ],
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: boardW);
-    painter.paint(
-      canvas,
-      Offset(ox + ((boardW - painter.width) / 2), oy + (boardH * 0.32) - (t * 20)),
-    );
-  }
 }
+

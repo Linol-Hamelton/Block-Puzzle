@@ -6,6 +6,45 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Track B.2: Match-3 Flame VFX Juice & Celebration Adoption
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Integrated VfxDirector into Match3FlameGame: attached camera viewfinder, BurstField particle bus, Reduced Motion gating, and camera shake / zoom punch feedback.
+2. Implemented dynamic cascade gravity drop animation using EasingPresets.cascadeDropCurve: calculated per-cell fall distances across intermediate frames and smoothly interpolated refill gem descent into board sockets.
+3. Connected Match3Event pipeline to VfxDirector:
+   - Match: computed centroid of clearing burst keys, dispatched LineClearedVfxEvent, ShockwaveRingComponent, ScorePopComponent, and verbal tier ComboPulseComponent.
+   - Combo: triggered ComboPulseComponent with combo label, ScreenShakeVfxEvent with zoom punch, and 45ms hit-stop.
+   - RoundComplete: dispatched AllClearVfxEvent with board-wide fanfare shockwave and golden fireworks.
+   - InvalidSwap & GameOver: dispatched screen shake effects.
+4. Rendered PieceAuraShader around special crystals (bombs, line sweeps, color bombs) and igniting cells with chromatic blooming.
+5. Integrated CelebrationDirector celebration badge into Match3GameOverCard for New Record achievements.
+6. Created dedicated unit and widget test suite in apps/mobile/test/unit/features/match3/match3_vfx_test.dart (8/8 tests passing). Fixed minor lint warnings in tetris_vfx_test.dart.
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues across whole project).
+- flutter test: exit 0 (530/530 tests passing, +8 new tests).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Update .ai/TASK.md to complete Track B.2 and prepare handoff for DeepSeek hostile audit.
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner commits and pushes changes to main.
+
+Open:
+None.
+
+Evidence:
+- anchor: e10e829dfa3ca65316b551d1d4a8e42c22326f63, uncommitted changes present
+- digest: sha256:f9c30a3e01fdf90c0a5ce862be6ca2cd7af7366752e3912389c1711a398f489b over 570 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T02:50:52.912Z by antigravity-addff8667515dfd9
+- entry: sha256:e8469f8f2e574d40f724abff4e653a0ac733945a7f990eff9e424d4aefdf44f6 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Track B.1: Tetris Flame VFX Juice & Celebration Adoption
 
 Agent: antigravity-addff8667515dfd9
