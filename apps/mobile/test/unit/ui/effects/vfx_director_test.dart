@@ -219,6 +219,86 @@ void main() {
       expect(director.children.whereType<ScorePopComponent>(), isEmpty);
       expect(director.children.whereType<ComboPulseComponent>(), isEmpty);
     });
+
+    test('dispatches calibrated tiered onHapticFeedback synchronously with visual events', () {
+      final List<VfxHapticLevel> haptics = <VfxHapticLevel>[];
+      final VfxDirector hapticDirector = VfxDirector(
+        onHapticFeedback: haptics.add,
+      );
+
+      // Piece placed -> medium impact
+      hapticDirector.handleEvent(
+        VfxEvent.piecePlaced(
+          position: Vector2.zero(),
+          cellSize: 36,
+          color: const Color(0xFF00FF00),
+        ),
+      );
+      expect(haptics, equals(<VfxHapticLevel>[VfxHapticLevel.medium]));
+      haptics.clear();
+
+      // Line cleared single line -> light impact
+      hapticDirector.handleEvent(
+        VfxEvent.lineCleared(
+          cells: <BoardCell>{const BoardCell(x: 0, y: 0)},
+          centroid: Vector2.zero(),
+          strength: 1,
+          color: const Color(0xFF00FF00),
+          boardOrigin: Vector2.zero(),
+          cellSize: 36,
+        ),
+      );
+      expect(haptics, equals(<VfxHapticLevel>[VfxHapticLevel.light]));
+      haptics.clear();
+
+      // Line cleared 3 lines -> medium impact
+      hapticDirector.handleEvent(
+        VfxEvent.lineCleared(
+          cells: <BoardCell>{const BoardCell(x: 0, y: 0)},
+          centroid: Vector2.zero(),
+          strength: 3,
+          color: const Color(0xFF00FF00),
+          boardOrigin: Vector2.zero(),
+          cellSize: 36,
+        ),
+      );
+      expect(haptics, equals(<VfxHapticLevel>[VfxHapticLevel.medium]));
+      haptics.clear();
+
+      // Line cleared 4 lines -> heavy impact
+      hapticDirector.handleEvent(
+        VfxEvent.lineCleared(
+          cells: <BoardCell>{const BoardCell(x: 0, y: 0)},
+          centroid: Vector2.zero(),
+          strength: 4,
+          color: const Color(0xFF00FF00),
+          boardOrigin: Vector2.zero(),
+          cellSize: 36,
+        ),
+      );
+      expect(haptics, equals(<VfxHapticLevel>[VfxHapticLevel.heavy]));
+      haptics.clear();
+
+      // All clear -> doubleHeavy impact
+      hapticDirector.handleEvent(
+        VfxEvent.allClear(
+          boardOrigin: Vector2.zero(),
+          boardSize: Vector2.all(300),
+        ),
+      );
+      expect(haptics, equals(<VfxHapticLevel>[VfxHapticLevel.doubleHeavy]));
+      haptics.clear();
+
+      // Combo pulse x6 -> heavy impact
+      hapticDirector.handleEvent(
+        VfxEvent.comboPulse(
+          text: 'SUPERB!\nCombo x6',
+          position: Vector2.zero(),
+          comboStreak: 6,
+        ),
+      );
+      expect(haptics, equals(<VfxHapticLevel>[VfxHapticLevel.heavy]));
+    });
   });
 
   group('ComboPulseComponent render optimization', () {

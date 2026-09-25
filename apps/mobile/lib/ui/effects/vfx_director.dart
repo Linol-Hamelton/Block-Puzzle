@@ -25,6 +25,7 @@ class VfxDirector extends Component {
     this.vfxLevel = VfxLevel.standard,
     this.isReducedMotion,
     this.onScreenShake,
+    this.onHapticFeedback,
   }) : burst = burstField ?? BurstField() {
     priority = 205;
     auraShader = PieceAuraShader(
@@ -47,6 +48,9 @@ class VfxDirector extends Component {
 
   /// Callback to shake the game camera/viewfinder when direct [viewfinder] is not bound.
   final void Function(double amplitude)? onScreenShake;
+
+  /// Optional callback to trigger tactile feedback synchronized with visual impacts.
+  final void Function(VfxHapticLevel level)? onHapticFeedback;
 
   bool get _reducedMotion =>
       isReducedMotion?.call() ?? Step6Benchmark.reducedMotion.value;
@@ -118,6 +122,7 @@ class VfxDirector extends Component {
   }
 
   void _handlePiecePlaced(PiecePlacedVfxEvent event) {
+    onHapticFeedback?.call(VfxHapticLevel.medium);
     if (_reducedMotion) {
       return;
     }
@@ -166,14 +171,28 @@ class VfxDirector extends Component {
     final double cellSize = event.cellSize;
     final Color color = event.color;
 
-    // 1. Screen Shake & Zoom punch
+    // 1. Screen Shake, Zoom punch & Hit-Stop
     if (!reduced) {
       final double shake = (2.0 + (event.strength - 1) * 0.6).clamp(2.0, 4.5);
       final bool zoomPunch = event.strength >= 3;
       _handleScreenShake(ScreenShakeVfxEvent(amplitude: shake, zoomPunch: zoomPunch));
+      if (event.strength >= 4) {
+        triggerHitStop(0.045);
+      }
     }
 
-    // 2. Full-board flash
+    // 2. Synchronized Tiered Haptic Feedback
+    if (onHapticFeedback != null) {
+      if (event.strength >= 4) {
+        onHapticFeedback!(VfxHapticLevel.heavy);
+      } else if (event.strength == 3) {
+        onHapticFeedback!(VfxHapticLevel.medium);
+      } else {
+        onHapticFeedback!(VfxHapticLevel.light);
+      }
+    }
+
+    // 3. Full-board flash
     add(
       LineClearFlashComponent(
         boardOrigin: event.boardOrigin,
@@ -243,6 +262,16 @@ class VfxDirector extends Component {
   }
 
   void _handleComboPulse(ComboPulseVfxEvent event) {
+    if (!_reducedMotion && event.comboStreak >= 4) {
+      triggerHitStop(0.045);
+    }
+    if (onHapticFeedback != null && event.comboStreak >= 3) {
+      if (event.comboStreak >= 6) {
+        onHapticFeedback!(VfxHapticLevel.heavy);
+      } else {
+        onHapticFeedback!(VfxHapticLevel.medium);
+      }
+    }
     final existing = children.whereType<ComboPulseComponent>().toList(growable: false);
     for (final c in existing) {
       c.removeFromParent();
@@ -289,6 +318,7 @@ class VfxDirector extends Component {
   }
 
   void _handleAllClear(AllClearVfxEvent event) {
+    onHapticFeedback?.call(VfxHapticLevel.doubleHeavy);
     final bool reduced = _reducedMotion;
     final Vector2 center = Vector2(
       event.boardOrigin.x + (event.boardSize.x / 2),

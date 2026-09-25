@@ -197,3 +197,19 @@ class AllClearVfxEvent extends VfxEvent {
   final Vector2 boardSize;
   final Color? color;
 }
+
+/// Tiered haptic feedback intensity levels recognized by the VFX system.
+enum VfxHapticLevel {
+  /// Subtle click for single/double line clears and minor interactions.
+  light,
+
+  /// Solid tactile pulse for piece landing and triple line clears.
+  medium,
+
+  /// Heavy impact for 4+ line wipes (Tetris) and high combos (x6+).
+  heavy,
+
+  /// Dual maximum impact for All Clear full-board milestone.
+  doubleHeavy,
+}
+

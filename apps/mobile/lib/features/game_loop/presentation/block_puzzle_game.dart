@@ -62,6 +62,18 @@ class BlockPuzzleGame extends FlameGame {
     viewfinder: camera.viewfinder,
     isReducedMotion: () => Step6Benchmark.reducedMotion.value,
     onScreenShake: (double amplitude) => _playScreenShake(amplitude: amplitude),
+    onHapticFeedback: (VfxHapticLevel level) {
+      switch (level) {
+        case VfxHapticLevel.light:
+          unawaited(haptics.lightImpact());
+        case VfxHapticLevel.medium:
+          unawaited(haptics.mediumImpact());
+        case VfxHapticLevel.heavy:
+          unawaited(haptics.heavyImpact());
+        case VfxHapticLevel.doubleHeavy:
+          unawaited(haptics.doubleHeavyImpact());
+      }
+    },
   );
   VfxDirector get vfxDirector => _vfxDirector;
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
@@ -372,7 +384,6 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     unawaited(sfxPlayer.playPiecePlaced());
-    unawaited(haptics.mediumImpact());
 
     final List<Vector2> cellCenters = <Vector2>[];
     final List<Rect> cellRects = <Rect>[];
@@ -404,13 +415,6 @@ class BlockPuzzleGame extends FlameGame {
 
     if (result.clearedLines > 0) {
       unawaited(sfxPlayer.playLineClear(clearedLines: result.clearedLines));
-      if (result.comboStreak >= 6) {
-        unawaited(haptics.heavyImpact());
-      } else if (result.comboStreak >= 3) {
-        unawaited(haptics.mediumImpact());
-      } else {
-        unawaited(haptics.lightImpact());
-      }
       _playLineClearAnimation(
         strength: result.clearedLines,
         clearedCells: result.clearedCells,
@@ -423,16 +427,12 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     if (result.isAllClear) {
-      unawaited(haptics.doubleHeavyImpact());
       _playPerfectClear();
     }
 
     if (result.comboStreak > 1) {
       unawaited(sfxPlayer.playCombo(comboStreak: result.comboStreak));
       _playComboAnimation(comboStreak: result.comboStreak);
-      if (result.comboStreak >= 4) {
-        _vfxDirector.triggerHitStop(0.045);
-      }
     }
 
     if (result.isGameOver) {
@@ -928,7 +928,6 @@ class BlockPuzzleGame extends FlameGame {
 
   void _playPerfectClear() {
     unawaited(sfxPlayer.playCombo(comboStreak: 6));
-    unawaited(haptics.doubleHeavyImpact());
     _vfxDirector.handleEvent(
       VfxEvent.allClear(
         boardOrigin: _boardOrigin.clone(),

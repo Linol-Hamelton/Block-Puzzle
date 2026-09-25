@@ -1,6 +1,6 @@
 # Current Task
 
-Status: Completed - Flame VFX Juice: Stage 5 Rive Animations & Celebration Architecture Spike
+Status: Completed - VFX Calibration (Timings, SFX, Haptics) & Multi-Game Tech Debt Formalization
 Owner: RuslanFomenko
 Last update: 2026-09-25
 
@@ -8,28 +8,23 @@ Last update: 2026-09-25
 
 ## Objective
 
-Evaluate vector animation runtimes (Rive/rive_flame) and establish the celebration architecture:
-- Synthesize technical evaluation in `docs/design/03_RIVE_RUNTIME_SPIKE_EVALUATION.md` (APK size, cold start, memory, C++ ABI overhead).
-- Implement pluggable `CelebrationDirector` and `CelebrationProvider` in `apps/mobile/lib/ui/effects/celebration_director.dart`.
-- Provide high-performance `ProceduralCelebrationProvider` (starburst, trophy badge, gold particle fanfare) and `RiveCelebrationAdapter` state machine interface.
-- Integrate victory celebration into `GameOverOverlayCard` on New Best Score and Daily Challenge completion.
-- Respect `Reduced Motion` and verify 100% green tests (514/514 tests) with 0 static analysis issues.
+1. Formalize multi-game VFX adoption technical debt in `docs/design/02_VFX_JUICE_RESEARCH_PLAN.md` and `.ai/PLAN.md` (roadmap for Tetris and Match-3 adopting `VfxDirector`, camera shake, squash & shaders).
+2. Calibrate animation timings, SFX trigger synchronization, and haptic feedback levels across piece drops, combo ladders, line clears, and celebratory milestones in Classic.
+3. Verify test suite (515+ tests green) and strict static analysis (0 issues).
 
 ## Problem & Acceptance
 
-- [x] Synthesize technical evaluation in `docs/design/03_RIVE_RUNTIME_SPIKE_EVALUATION.md`
-- [x] Create `apps/mobile/lib/ui/effects/celebration_director.dart` with pluggable providers
-- [x] Implement `ProceduralCelebrationProvider` with zero-allocation easing and particle bursts
-- [x] Implement `RiveCelebrationAdapter` with state machine contract and asset hooks
-- [x] Connect celebration feedback to `GameOverOverlayCard` for New Best and Daily Challenge
-- [x] Add unit test suite in `apps/mobile/test/unit/ui/effects/celebration_director_test.dart`
+- [x] Document technical debt matrix for Tetris and Match-3 in `docs/design/02_VFX_JUICE_RESEARCH_PLAN.md`
+- [x] Update `.ai/PLAN.md` with multi-game scaling phase and acceptance criteria
+- [x] Calibrate and synchronize audio/haptic/visual feedback in `BlockPuzzleGame` and `VfxDirector`
+- [x] Add unit test verifying calibrated feedback dispatch
 - [x] Verify `flutter analyze`, `flutter test`, and `validate-protocol.ps1` pass cleanly
 
 ## Current state
 
-- All stages (0, 1, 2, 3, 4, 5, 6) of Flame VFX Juice system completed.
-- Full test suite: 514/514 tests green (+16 new tests for Stage 5).
-- Ready for owner review, commit, and push.
+- All stages (0-6) completed for Classic, procedural tile atlas baked for Tetris/Match-3.
+- Feedback calibration (timings, SFX, tiered haptics) complete with zero regressions.
+- Multi-game adoption tech debt formalized and ready for owner review.
 
 ## Roles
 
