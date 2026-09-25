@@ -3206,3 +3206,50 @@ Evidence:
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
 
+## Archived 2026-09-25 from .ai/worklog/antigravity-addff8667515dfd9.md
+
+## 2026-09-25 - Archive 11 oldest worklogs to eliminate protocol validator warning
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Checked .ai/worklog directory against AGENTS.md section 8 size limits (30-file maximum, 36 files present triggering a validator warning).
+2. Selected 11 oldest closed journals from 2026-09-14 through 2026-09-17:
+   - codex-d56f1c2c371b35a6.md
+   - claude-bd0bce05de513f55.md
+   - codex-53895f33df88f871.md
+   - gemini-a9fddb2389c5621b.md
+   - deepseek-5f13ae54cae74a62.md
+   - gemini-aaf28405ea94be70.md
+   - gemini-918d5c9ee64c083e.md
+   - gemini-2d06f930ed9e09d5.md
+   - gemini-fb4abe3f81b4b68b.md
+   - deepseek-f7cc6b98736bc1f6.md
+   - claude-0789722ac9b82f43.md
+3. Appended complete verbatim contents of all 11 journals into .ai/ARCHIVE.md with source attribution headers under cooperative lock.
+4. Removed the 11 archived files from .ai/worklog via git rm.
+5. Updated .ai/TASK.md to Completed.
+
+Result:
+- .ai/worklog file count reduced from 36 to 25 (under the 30-file limit).
+- validate-protocol.ps1: Protocol OK. 0 warning(s), 28 decisions verified, all checks PASS.
+- No history deleted; all text preserved verbatim in .ai/ARCHIVE.md.
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews and commits the changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: 463890ffaf5b2baf83a58676f15fffd021e803c2, uncommitted changes present
+- digest: sha256:7cff92469932aac6659e3f3f26b16a6cb962cd2951fb5872c8f7e05e09ffaba7 over 601 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T00:02:26.187Z by antigravity-addff8667515dfd9
+- entry: sha256:53263a590c562365dcc06e204880531a884602a86c51433e0b0798c2ca7fc501 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+

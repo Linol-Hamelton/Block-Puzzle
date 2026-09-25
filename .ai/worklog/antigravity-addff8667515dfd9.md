@@ -6,6 +6,41 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Flame VFX Juice: Stage 1 Polish & Stage 2 VfxDirector Architecture
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Implemented strongly-typed VfxEvent sealed hierarchy and VfxLevel enum in apps/mobile/lib/ui/effects/vfx_events.dart.
+2. Extracted and modularized VFX components into dedicated files under ui/effects/: shockwave_ring_component.dart, score_pop_component.dart, line_clear_flash_component.dart, combo_pulse_component.dart.
+3. Optimized ComboPulseComponent: eliminated per-frame TextPaint/TextStyle allocations via cached TextPainter and matrix scaling.
+4. Created VfxDirector in apps/mobile/lib/ui/effects/vfx_director.dart: manages BurstField particle budget, coordinates shockwaves, floating scores, combo pulses, full-board flashes, screen shakes, and All Clear fanfare with VfxLevel gating and Reduced Motion support.
+5. Integrated VfxDirector into BlockPuzzleGame, decoupling game loops from direct component instantiation and adding tactile piece placement landing particle juice.
+6. Re-exported all extracted VFX components from block_puzzle_game.dart for 100% backward compatibility.
+7. Added unit test suite in test/unit/ui/effects/vfx_director_test.dart covering all events, VfxLevel, and Reduced Motion.
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (478/478 tests passing, +13 new tests).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews, commits, and pushes changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: ea9d2b666de2507613e806ab0666a8e46c41b4d4, uncommitted changes present
+- digest: sha256:e359a4ef400f59a22b6acdbb293673fdd9893aa226a4f98b6d500aa6ba0983eb over 557 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T00:33:23.949Z by antigravity-addff8667515dfd9
+- entry: sha256:2144ca1365166005e337dbdd4aeb6cc5fce7a5376ba4ae5f709a4f70345fa68c of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Flame VFX Juice Research: Stage 0 audit and Stage 1 easing spikes
 
 Agent: antigravity-addff8667515dfd9
@@ -73,50 +108,6 @@ Evidence:
 - digest format: 4
 - recorded: 2026-09-25T00:12:08.991Z by antigravity-addff8667515dfd9
 - entry: sha256:72c42a372973b8243af6aefa2d12613481184ed0f494f64d7b0fbf34e47a595e of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Archive 11 oldest worklogs to eliminate protocol validator warning
-
-Agent: antigravity-addff8667515dfd9
-
-Action:
-1. Checked .ai/worklog directory against AGENTS.md section 8 size limits (30-file maximum, 36 files present triggering a validator warning).
-2. Selected 11 oldest closed journals from 2026-09-14 through 2026-09-17:
-   - codex-d56f1c2c371b35a6.md
-   - claude-bd0bce05de513f55.md
-   - codex-53895f33df88f871.md
-   - gemini-a9fddb2389c5621b.md
-   - deepseek-5f13ae54cae74a62.md
-   - gemini-aaf28405ea94be70.md
-   - gemini-918d5c9ee64c083e.md
-   - gemini-2d06f930ed9e09d5.md
-   - gemini-fb4abe3f81b4b68b.md
-   - deepseek-f7cc6b98736bc1f6.md
-   - claude-0789722ac9b82f43.md
-3. Appended complete verbatim contents of all 11 journals into .ai/ARCHIVE.md with source attribution headers under cooperative lock.
-4. Removed the 11 archived files from .ai/worklog via git rm.
-5. Updated .ai/TASK.md to Completed.
-
-Result:
-- .ai/worklog file count reduced from 36 to 25 (under the 30-file limit).
-- validate-protocol.ps1: Protocol OK. 0 warning(s), 28 decisions verified, all checks PASS.
-- No history deleted; all text preserved verbatim in .ai/ARCHIVE.md.
-
-Next step:
-- Record protocol handoff evidence with protocol-handoff.cjs.
-- Release cooperative lock.
-- Human owner reviews and commits the changes.
-
-Open:
-None.
-
-Evidence:
-- anchor: 463890ffaf5b2baf83a58676f15fffd021e803c2, uncommitted changes present
-- digest: sha256:7cff92469932aac6659e3f3f26b16a6cb962cd2951fb5872c8f7e05e09ffaba7 over 601 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-25T00:02:26.187Z by antigravity-addff8667515dfd9
-- entry: sha256:53263a590c562365dcc06e204880531a884602a86c51433e0b0798c2ca7fc501 of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify

@@ -7,7 +7,6 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flame/text.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/device/haptics_controller.dart';
@@ -16,9 +15,12 @@ import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
 import '../../../l10n/verbal_tiers.dart';
 import '../../../ui/effects/burst_field.dart';
-import '../../../ui/effects/easing_presets.dart';
-import '../../../ui/effects/effect_timing.dart';
 import '../../../ui/effects/glass_board.dart';
+import '../../../ui/effects/line_clear_flash_component.dart';
+import '../../../ui/effects/score_pop_component.dart';
+import '../../../ui/effects/shockwave_ring_component.dart';
+import '../../../ui/effects/vfx_director.dart';
+import '../../../ui/effects/vfx_events.dart';
 import '../../diagnostics/diagnostics_screen.dart';
 import '../../diagnostics/step1j_decomposition.dart';
 import '../../diagnostics/step6_benchmark.dart';
@@ -26,6 +28,13 @@ import '../audio/game_sfx_player.dart';
 import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
 import '../application/models/models.dart';
+
+export '../../../ui/effects/combo_pulse_component.dart';
+export '../../../ui/effects/line_clear_flash_component.dart';
+export '../../../ui/effects/score_pop_component.dart';
+export '../../../ui/effects/shockwave_ring_component.dart';
+export '../../../ui/effects/vfx_director.dart';
+export '../../../ui/effects/vfx_events.dart';
 
 class BlockPuzzleGame extends FlameGame {
   static const double _touchDragLiftPixels = 50;
@@ -45,6 +54,12 @@ class BlockPuzzleGame extends FlameGame {
 
   final BoardComponent _boardComponent = BoardComponent();
   final BurstField _burst = BurstField();
+  late final VfxDirector _vfxDirector = VfxDirector(
+    burstField: _burst,
+    isReducedMotion: () => Step6Benchmark.reducedMotion.value,
+    onScreenShake: (double amplitude) => _playScreenShake(amplitude: amplitude),
+  );
+  VfxDirector get vfxDirector => _vfxDirector;
   final List<RackPieceComponent> _rackComponents = <RackPieceComponent>[];
   void Function()? _stateListener;
   String _rackSignature = '';
@@ -138,7 +153,7 @@ class BlockPuzzleGame extends FlameGame {
     }
 
     add(_boardComponent);
-    add(_BurstLayer(_burst));
+    add(_vfxDirector);
     if (kDiagnosticsEnabled) {
       add(_Step6BenchRunnerComponent(this));
     }
@@ -354,6 +369,27 @@ class BlockPuzzleGame extends FlameGame {
 
     unawaited(sfxPlayer.playPiecePlaced());
     unawaited(haptics.mediumImpact());
+
+    final List<Vector2> cellCenters = <Vector2>[];
+    for (final PieceCellOffset offset in pieceComponent.piece.cells) {
+      cellCenters.add(
+        Vector2(
+          _boardOrigin.x + ((anchor.x + offset.dx) * _boardCellSize) + (_boardCellSize / 2),
+          _boardOrigin.y + ((anchor.y + offset.dy) * _boardCellSize) + (_boardCellSize / 2),
+        ),
+      );
+    }
+    _vfxDirector.handleEvent(
+      VfxEvent.piecePlaced(
+        position: Vector2(
+          _boardOrigin.x + (anchor.x * _boardCellSize),
+          _boardOrigin.y + (anchor.y * _boardCellSize),
+        ),
+        cellCenters: cellCenters,
+        cellSize: _boardCellSize,
+        color: _currentPalette.occupiedColor,
+      ),
+    );
 
     if (result.clearedLines > 0) {
       unawaited(sfxPlayer.playLineClear(clearedLines: result.clearedLines));
@@ -698,47 +734,36 @@ class BlockPuzzleGame extends FlameGame {
     required int strength,
     required Set<BoardCell> clearedCells,
   }) {
-    final double s = (2.0 + (strength - 1) * 0.6).clamp(2.0, 4.0);
-    _playScreenShake(amplitude: s);
-
-    add(
-      LineClearFlashComponent(
-        boardOrigin: _boardOrigin.clone(),
-        boardSize: Vector2.all(_boardCellSize * 8),
+    final Vector2 centroid = computeClearedCentroid(
+      cells: clearedCells,
+      boardOrigin: _boardOrigin,
+      cellSize: _boardCellSize,
+    );
+    _vfxDirector.handleEvent(
+      VfxEvent.lineCleared(
+        cells: clearedCells,
+        centroid: centroid,
         strength: strength,
+        color: _currentPalette.occupiedColor,
+        boardOrigin: _boardOrigin.clone(),
+        cellSize: _boardCellSize,
       ),
     );
-
-    final double cellSize = _boardCellSize;
-    final Color burstColor = _currentPalette.occupiedColor;
-    for (final BoardCell cell in clearedCells) {
-      _burst.spawnBurst(
-        x: _boardOrigin.x + (cell.x * cellSize) + (cellSize / 2),
-        y: _boardOrigin.y + (cell.y * cellSize) + (cellSize / 2),
-        color: burstColor,
-        count: 6,
-        sizeBase: cellSize * 0.12,
-        sizeJitter: cellSize * 0.1,
-      );
-    }
   }
 
   void _playComboAnimation({
     required int comboStreak,
   }) {
-    final existing = children.whereType<ComboPulseComponent>().toList(growable: false);
-    for (final c in existing) {
-      c.removeFromParent();
-    }
     final String tier = VerbalTiers.resolve(comboStreak: comboStreak);
     final String text = tier.isNotEmpty ? '$tier\nCombo x$comboStreak' : 'Combo x$comboStreak';
-    add(
-      ComboPulseComponent(
+    _vfxDirector.handleEvent(
+      VfxEvent.comboPulse(
         text: text,
-        startPosition: Vector2(
+        position: Vector2(
           _boardOrigin.x + (_boardCellSize * 4),
           _boardOrigin.y - 12,
         ),
+        comboStreak: comboStreak,
       ),
     );
   }
@@ -752,10 +777,10 @@ class BlockPuzzleGame extends FlameGame {
       boardOrigin: _boardOrigin,
       cellSize: _boardCellSize,
     );
-    add(
-      ScorePopComponent(
+    _vfxDirector.handleEvent(
+      VfxEvent.scorePopped(
         text: '+$delta',
-        startPosition: centroid,
+        position: centroid,
       ),
     );
   }
@@ -764,17 +789,13 @@ class BlockPuzzleGame extends FlameGame {
     if (cells.isEmpty) {
       return;
     }
-    final existing = children.whereType<ShockwaveRingComponent>().toList(growable: false);
-    for (final s in existing) {
-      s.removeFromParent();
-    }
     final Vector2 centroid = computeClearedCentroid(
       cells: cells,
       boardOrigin: _boardOrigin,
       cellSize: _boardCellSize,
     );
-    add(
-      ShockwaveRingComponent(
+    _vfxDirector.handleEvent(
+      VfxEvent.shockwave(
         center: centroid,
         boardRect: Rect.fromLTWH(
           _boardOrigin.x,
@@ -893,42 +914,11 @@ class BlockPuzzleGame extends FlameGame {
   void _playPerfectClear() {
     unawaited(sfxPlayer.playCombo(comboStreak: 6));
     unawaited(haptics.doubleHeavyImpact());
-    add(
-      LineClearFlashComponent(
+    _vfxDirector.handleEvent(
+      VfxEvent.allClear(
         boardOrigin: _boardOrigin.clone(),
         boardSize: Vector2.all(_boardCellSize * 8),
-        strength: 5,
-      ),
-    );
-    _playScreenShake(amplitude: 4.0);
-    // DEC-0028 Item 18: Golden ripple / wave
-    add(
-      ShockwaveRingComponent(
-        center: Vector2(
-          _boardOrigin.x + (_boardCellSize * 4),
-          _boardOrigin.y + (_boardCellSize * 4),
-        ),
-        boardRect: Rect.fromLTWH(
-          _boardOrigin.x,
-          _boardOrigin.y,
-          _boardCellSize * 8,
-          _boardCellSize * 8,
-        ),
         color: const Color(0xFFFFD700),
-        maxRadius: _boardCellSize * 5.5,
-      ),
-    );
-    final existing = children.whereType<ComboPulseComponent>().toList(growable: false);
-    for (final c in existing) {
-      c.removeFromParent();
-    }
-    add(
-      ComboPulseComponent(
-        text: 'ALL CLEAR!',
-        startPosition: Vector2(
-          _boardOrigin.x + (_boardCellSize * 4),
-          _boardOrigin.y + (_boardCellSize * 3.5),
-        ),
       ),
     );
   }
@@ -2002,246 +1992,6 @@ class _BoardPalette {
   }
 }
 
-class LineClearFlashComponent extends PositionComponent {
-  LineClearFlashComponent({
-    required this.boardOrigin,
-    required this.boardSize,
-    required this.strength,
-  }) {
-    priority = 200;
-  }
-
-  final Vector2 boardOrigin;
-  final Vector2 boardSize;
-  final int strength;
-  static const double _duration = 0.32 * kEffectTimeScale;
-  double _elapsed = 0;
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    _elapsed += dt;
-    if (_elapsed >= _duration) {
-      removeFromParent();
-    }
-  }
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-    final double t = (_elapsed / _duration).clamp(0, 1);
-    final double baseAlpha = (1 - t) * (0.22 + (strength * 0.07));
-    final double motionFactor = Step6Benchmark.reducedMotion.value ? 0.25 : 1.0;
-    final double alpha = (baseAlpha * motionFactor).clamp(0, 0.6);
-    final Paint paint = Paint()
-      ..color = Color.fromRGBO(92, 210, 255, alpha);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          boardOrigin.x,
-          boardOrigin.y,
-          boardSize.x,
-          boardSize.y,
-        ),
-        const Radius.circular(18),
-      ),
-      paint,
-    );
-  }
-}
-
-class ComboPulseComponent extends PositionComponent {
-  ComboPulseComponent({
-    required this.text,
-    required this.startPosition,
-  }) {
-    priority = 210;
-  }
-
-  final String text;
-  final Vector2 startPosition;
-  static const double _duration = 0.85;
-  double _elapsed = 0;
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    _elapsed += dt;
-    if (_elapsed >= _duration) {
-      removeFromParent();
-    }
-  }
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-    final double t = (_elapsed / _duration).clamp(0, 1);
-    final double opacity;
-    if (t < 0.12) {
-      opacity = (t / 0.12).clamp(0.0, 1.0);
-    } else if (t < 0.76) {
-      opacity = 1.0;
-    } else {
-      opacity = ((1.0 - t) / 0.24).clamp(0.0, 1.0);
-    }
-    final double yOffset = t * 26;
-    final TextPaint textPaint = TextPaint(
-      style: TextStyle(
-        fontSize: 24 - (t * 4),
-        fontWeight: FontWeight.w800,
-        color: Color.fromRGBO(188, 236, 255, opacity),
-        shadows: <Shadow>[
-          Shadow(
-            color: Color.fromRGBO(86, 202, 255, opacity * 0.9),
-            blurRadius: 12,
-          ),
-        ],
-      ),
-    );
-    textPaint.render(
-      canvas,
-      text,
-      Vector2(startPosition.x, startPosition.y - yOffset),
-      anchor: Anchor.center,
-    );
-  }
-}
-
-class ScorePopComponent extends PositionComponent {
-  ScorePopComponent({
-    required this.text,
-    required this.startPosition,
-    this.duration = 0.85,
-  }) {
-    priority = 212;
-    _initTextPainter();
-  }
-
-  final String text;
-  final Vector2 startPosition;
-  final double duration;
-  double _elapsed = 0;
-
-  late final TextPainter _painter;
-  late final double _halfWidth;
-  late final double _halfHeight;
-  final Paint _textPaint = Paint();
-
-  void _initTextPainter() {
-    _textPaint.color = const Color.fromRGBO(214, 255, 224, 1.0);
-    _painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: 20.0,
-          fontWeight: FontWeight.w800,
-          foreground: _textPaint,
-          shadows: const <Shadow>[
-            Shadow(
-              color: Color.fromRGBO(76, 217, 100, 0.8),
-              blurRadius: 6,
-            ),
-          ],
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    _halfWidth = _painter.width / 2;
-    _halfHeight = _painter.height / 2;
-  }
-
-  bool get isFinished => _elapsed >= duration;
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    _elapsed += dt;
-    if (_elapsed >= duration) {
-      removeFromParent();
-    }
-  }
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-    final double t = (_elapsed / duration).clamp(0.0, 1.0);
-    final double opacity;
-    if (t < 0.12) {
-      opacity = (t / 0.12).clamp(0.0, 1.0);
-    } else if (t < 0.76) {
-      opacity = 1.0;
-    } else {
-      opacity = ((1.0 - t) / 0.24).clamp(0.0, 1.0);
-    }
-
-    final double progress = EasingPresets.evaluateScorePopupProgress(t);
-    final double yOffset = progress * 40.0;
-
-    _textPaint.color = Color.fromRGBO(214, 255, 224, opacity);
-    _painter.paint(
-      canvas,
-      Offset(
-        startPosition.x - _halfWidth,
-        startPosition.y - yOffset - _halfHeight,
-      ),
-    );
-  }
-}
-
-/// Lightweight vector shockwave ring expanding from centroid, clipped to board.
-/// Implements DEC-0024 step 6 (no fragment shaders, no fullscreen blur, no saveLayer).
-class ShockwaveRingComponent extends Component {
-  ShockwaveRingComponent({
-    required this.center,
-    required this.boardRect,
-    Color? color,
-    this.maxRadius = 140.0,
-    this.duration = 0.8 * kEffectTimeScale,
-  }) : color = color ?? const Color(0xFF64D2FF) {
-    priority = 210;
-  }
-
-  final Vector2 center;
-  final Rect boardRect;
-  final Color color;
-  final double maxRadius;
-  final double duration;
-
-  double _elapsed = 0;
-  bool get isFinished => _elapsed >= duration;
-
-  final Paint _paint = Paint()
-    ..style = PaintingStyle.stroke
-    ..isAntiAlias = true;
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    _elapsed += dt;
-    if (_elapsed >= duration) {
-      removeFromParent();
-    }
-  }
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-    final double t = (_elapsed / duration).clamp(0.0, 1.0);
-    final double progress = 1.0 - math.pow(1.0 - t, 2.0).toDouble();
-    final double radius = progress * maxRadius;
-    final double opacity = (1.0 - t).clamp(0.0, 1.0);
-    final double strokeWidth = (3.5 * (1.0 - t)).clamp(0.5, 3.5);
-
-    _paint.strokeWidth = strokeWidth;
-    _paint.color = color.withValues(alpha: opacity * 0.7);
-
-    canvas.save();
-    canvas.clipRect(boardRect, doAntiAlias: false);
-    canvas.drawCircle(Offset(center.x, center.y), radius, _paint);
-    canvas.restore();
-  }
-}
-
 /// Geometric centroid calculator for cleared cells.
 Vector2 computeClearedCentroid({
   required Iterable<BoardCell> cells,
@@ -2260,28 +2010,6 @@ Vector2 computeClearedCentroid({
   final double cx = boardOrigin.x + (((sumX / cells.length) + 0.5) * cellSize);
   final double cy = boardOrigin.y + (((sumY / cells.length) + 0.5) * cellSize);
   return Vector2(cx, cy);
-}
-
-/// Thin Flame layer that advances and draws the shared [BurstField] on top of
-/// the board.
-class _BurstLayer extends PositionComponent {
-  _BurstLayer(this._field) {
-    priority = 220;
-  }
-
-  final BurstField _field;
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    _field.update(dt);
-  }
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-    _field.render(canvas);
-  }
 }
 
 class _Step6BenchRunnerComponent extends Component {

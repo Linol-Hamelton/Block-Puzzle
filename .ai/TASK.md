@@ -1,6 +1,6 @@
 # Current Task
 
-Status: Completed - VFX Flame Juice Research: Stage 0 audit and Stage 1 easing presets spike
+Status: Completed - Flame VFX Juice: Stage 1 Polish & Stage 2 VfxDirector Event Bus
 Owner: RuslanFomenko
 Last update: 2026-09-25
 
@@ -8,25 +8,28 @@ Last update: 2026-09-25
 
 ## Objective
 
-Formalize the Flame VFX research plan into docs/design/02_VFX_JUICE_RESEARCH_PLAN.md
-and .ai/PLAN.md. Complete Stage 0 animation points audit, and implement Stage 1
-spikes (EasingPresets class, ScorePopComponent overshoot and layout optimization).
+Implement Stage 2 VfxDirector event bus architecture to decouple game loops from VFX,
+modularize visual components, optimize ComboPulseComponent, add landing tactile juice,
+and support dynamic VfxLevel gating and Reduced Motion.
 
 ## Problem & Acceptance
 
-- [x] Save research plan to docs/design/02_VFX_JUICE_RESEARCH_PLAN.md
-- [x] Update .ai/PLAN.md with VFX roadmap (under 200 lines limit)
-- [x] S0.1: Document animation points map across Classic, Tetris, Match-3
-- [x] S1.1-S1.2: Implement EasingPresets in apps/mobile/lib/ui/effects/easing_presets.dart
-- [x] S1.3: Refactor ScorePopComponent in block_puzzle_game.dart (cached TextPainter + easeOutBack/overshoot)
-- [x] Add unit tests for EasingPresets and ScorePopComponent
-- [x] validate-protocol.ps1, flutter analyze, and flutter test pass cleanly
-- [x] Record and verify protocol handoff evidence
+- [x] Create VfxEvent hierarchy and VfxLevel enum in apps/mobile/lib/ui/effects/vfx_events.dart
+- [x] Modularize VFX components (ShockwaveRingComponent, ScorePopComponent, ComboPulseComponent, LineClearFlashComponent) in ui/effects/
+- [x] Optimize ComboPulseComponent (zero per-frame TextPainter/TextStyle allocations)
+- [x] Implement VfxDirector in apps/mobile/lib/ui/effects/vfx_director.dart
+- [x] Integrate VfxDirector into BlockPuzzleGame with piece landing tactile juice
+- [x] Maintain 100% backward compatibility for all existing tests and benchmark scenarios
+- [x] Add unit test suite in test/unit/ui/effects/vfx_director_test.dart
+- [x] Verify flutter analyze, flutter test, and validate-protocol.ps1 pass cleanly
 
 ## Current state
 
-- Stage 0 and Stage 1 spikes complete: EasingPresets implemented, ScorePopComponent optimized with zero per-frame allocations and easeOutBack pop.
-- flutter analyze 0 issues, flutter test 465/465 PASS (+8 new tests), validate-protocol 0 warnings.
+- Stage 1 polish and Stage 2 VfxDirector architecture complete:
+  - VfxEvent hierarchy, VfxLevel enum, and VfxDirector Flame component created.
+  - VFX components extracted and ComboPulseComponent optimized for zero-alloc rendering.
+  - BlockPuzzleGame decoupled from direct component instantiation via event handling.
+- flutter analyze 0 issues, flutter test 478/478 PASS (+13 new tests), validate-protocol 0 warnings.
 
 ## Roles
 
