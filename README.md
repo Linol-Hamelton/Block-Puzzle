@@ -5,7 +5,7 @@ Flutter + Flame block puzzle client with supporting docs, store assets, release 
 ## Current Status
 - Product maturity: `pre-release / external testing ready`
 - Playable modes: `Classic`, `Tetris`, `Match-3`, `Daily Challenge` — all fully wired and playable
-- Quality & test coverage: **453 tests passing** (`flutter test --no-pub`), 0 analyzer issues (`flutter analyze --no-pub`)
+- Quality & test coverage: **540 tests passing** (`flutter test --no-pub`), 0 analyzer issues (`flutter analyze --no-pub`)
 - Active milestone: Stage W3 (First External Test Readiness) complete; Stage W4 (Documentation Hygiene) in progress per [docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md](docs/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md)
 - Distribution: direct release-signed APK for initial external testing cohort (DEC-0012/DEC-0026)
 
@@ -33,6 +33,13 @@ The `services/config-api` and `services/analytics-pipeline` contracts are deferr
   - Tetris: 7-bag, SRS rotation/kicks, ghost piece, hold/next preview, T-spin, combo, dedicated snapshot persistence.
   - Match-3: 8x8 gem grid, cascade resolver, move limits, shuffle, dedicated session store.
   - Daily Challenge: deterministic seed milestone run.
+- **Flame VFX Juice Architecture (DEC-0024 / DEC-0028)**:
+  - Decoupled `VfxDirector` event bus powering particles, shockwaves, score pops, and combo banners across all modes.
+  - Hardware-accelerated `GlassTileAtlas` procedural baking for smooth batch rendering.
+  - Calibrated tactile haptics, landing squashes, camera shakes, and hit-stop physics.
+  - GLSL fragment shader `PieceAuraShader` blooming for active/ghost pieces and charged gems.
+  - Procedural `CelebrationDirector` victory and high-score badge overlays.
+  - Comprehensive `Reduced Motion` accessibility gating (suppression of shockwaves/shakes and flash attenuation).
 - **Audio Overhaul (DEC-0024 / DEC-0026 / DEC-0028)**:
   - 4 mastered AAC-LC CBR 144k stereo tracks (`music_menu`, `music_classic`, `music_tetris`, `music_match3`).
   - Seamless equal-power crossfading (`MusicPlaylistManager`) across screens with audio focus and ducking.

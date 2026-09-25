@@ -4,8 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../../../core/config/remote_config_reader.dart';
-
 import '../../../core/logging/app_logger.dart';
+import '../../diagnostics/step6_benchmark.dart';
+import '../../../ui/effects/vfx_events.dart';
 import '../../../core/observability/guardrail_alert_evaluator.dart';
 import '../../../core/observability/session_observability_tracker.dart';
 import '../../../data/analytics/analytics_tracker.dart';
@@ -192,6 +193,12 @@ class GameLoopController {
     _abBucket = abExperimentService.abBucket;
     _uxVariant = abExperimentService.uxVariant;
     _difficultyVariant = abExperimentService.difficultyVariant;
+
+    final String rawVfxLevel = _configReader.readString(
+      'visual.vfx_level',
+      fallback: _configReader.readString('vfx_level', fallback: 'standard'),
+    );
+    Step6Benchmark.vfxLevel.value = VfxLevel.fromString(rawVfxLevel);
     
     final int initialRewardedToolsCredits = _configReader.readInt(
       'progression.rewarded_tools_initial_credits',

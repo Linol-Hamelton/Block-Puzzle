@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../features/diagnostics/diagnostics_screen.dart';
 import '../../features/diagnostics/frame_timing_recorder.dart';
+import '../../features/diagnostics/step6_benchmark.dart';
 import '../../core/audio/music_controller.dart';
 import '../../core/audio/music_playlist_manager.dart';
 import '../../core/config/app_environment.dart';
@@ -67,6 +68,7 @@ final GetIt sl = GetIt.instance;
 Future<void> configureDependencies({
   AppConfig? overrideAppConfig,
   RemoteConfigRepository? overrideRemoteConfigRepository,
+  bool? isReleaseModeOverride,
 }) async {
   if (sl.isRegistered<AppConfig>()) {
     return;
@@ -75,13 +77,14 @@ Future<void> configureDependencies({
   final AppConfig appConfig = overrideAppConfig ?? AppConfig.fromEnvironment();
   final AppLogger logger = AppLogger();
   final bool useDebugAdapters = appConfig.useDebugAdapters;
+  final bool isReleaseModeActive = isReleaseModeOverride ?? kReleaseMode;
 
   // A release binary must never resolve the debug adapters. Without
   // `--dart-define` the environment falls back to dev/debug, which would give a
   // shipped build DebugIapStoreService (simulated purchases) and
   // NoopCrashReporter (no telemetry) while everything still looks normal.
   // Fail loudly here instead of discovering it from store reviews. See DEC-0007.
-  if (kReleaseMode && useDebugAdapters) {
+  if (isReleaseModeActive && useDebugAdapters) {
     throw StateError(
       'Release build resolved the debug adapters: APP_ENV='
       '${appConfig.environment.wireName}, APP_FLAVOR='
@@ -107,6 +110,15 @@ Future<void> configureDependencies({
     fallback: false,
   );
   final bool includeBundle = _resolveIapBundleEnabled(bootstrapRemoteConfig);
+
+  final String rawVfxLevel = bootstrapConfigReader.readString(
+    'visual.vfx_level',
+    fallback: bootstrapConfigReader.readString(
+      'vfx_level',
+      fallback: 'standard',
+    ),
+  );
+  Step6Benchmark.vfxLevel.value = VfxLevel.fromString(rawVfxLevel);
 
   sl.registerSingleton<AppConfig>(
     appConfig,

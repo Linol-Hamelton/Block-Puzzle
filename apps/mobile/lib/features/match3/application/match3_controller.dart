@@ -45,6 +45,9 @@ class Match3Controller extends ChangeNotifier {
   int _frameIndex = 0;
   int _frameSerial = 0;
   Timer? _frameTimer;
+  bool _playbackPaused = false;
+  Duration _remainingHold = Duration.zero;
+  DateTime? _frameHoldStartedAt;
   bool _started = false;
   bool _gameEndEmitted = false;
   bool _disposed = false;
@@ -80,6 +83,7 @@ class Match3Controller extends ChangeNotifier {
   /// Increments on every frame change, so a view can time its own animation
   /// against the frame without polling the clock.
   int get frameSerial => _frameSerial;
+  bool get isPlaybackPaused => _playbackPaused;
 
   /// How long the current frame is held. Zero when nothing is playing.
   Duration get frameHold => _currentFrame?.hold ?? Duration.zero;
@@ -165,8 +169,41 @@ class Match3Controller extends ChangeNotifier {
     return ok;
   }
 
+  /// Pauses the cascade playback timer while preserving remaining hold duration.
+  void pausePlayback() {
+    if (_disposed || _playbackPaused) {
+      return;
+    }
+    _playbackPaused = true;
+    if (_frameTimer != null) {
+      _frameTimer?.cancel();
+      _frameTimer = null;
+      if (_frameHoldStartedAt != null) {
+        final Duration elapsed = DateTime.now().difference(_frameHoldStartedAt!);
+        if (elapsed < _remainingHold) {
+          _remainingHold -= elapsed;
+        } else {
+          _remainingHold = Duration.zero;
+        }
+      }
+    }
+  }
+
+  /// Resumes the cascade playback timer with the remaining hold duration.
+  void resumePlayback() {
+    if (_disposed || !_playbackPaused) {
+      return;
+    }
+    _playbackPaused = false;
+    if (_frames.isNotEmpty && _frameTimer == null) {
+      _frameHoldStartedAt = DateTime.now();
+      _frameTimer = Timer(_remainingHold, _advanceFrame);
+    }
+  }
+
   void _startPlayback(List<CascadeFrame> frames) {
     _frameTimer?.cancel();
+    _playbackPaused = false;
     _frames = frames;
     _frameIndex = -1;
     _advanceFrame();
@@ -181,6 +218,7 @@ class Match3Controller extends ChangeNotifier {
       _frames = const <CascadeFrame>[];
       _frameIndex = 0;
       _frameTimer = null;
+      _playbackPaused = false;
       notifyListeners();
       return;
     }
@@ -190,7 +228,11 @@ class Match3Controller extends ChangeNotifier {
       _handle(event);
     }
     notifyListeners();
-    _frameTimer = Timer(frame.hold, _advanceFrame);
+    _frameHoldStartedAt = DateTime.now();
+    _remainingHold = frame.hold;
+    if (!_playbackPaused) {
+      _frameTimer = Timer(frame.hold, _advanceFrame);
+    }
   }
 
   /// Ends the animation at once, releasing anything it had left to say.
@@ -201,6 +243,7 @@ class Match3Controller extends ChangeNotifier {
   void _flushPlayback() {
     _frameTimer?.cancel();
     _frameTimer = null;
+    _playbackPaused = false;
     if (_frames.isEmpty) {
       return;
     }
@@ -360,6 +403,7 @@ class Match3Controller extends ChangeNotifier {
   void dispose() {
     _frameTimer?.cancel();
     _frameTimer = null;
+    _playbackPaused = false;
     _frames = const <CascadeFrame>[];
     _disposed = true;
     onVisualEvent = null;

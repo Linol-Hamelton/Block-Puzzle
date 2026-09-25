@@ -2,6 +2,12 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-09-25 (Stage W4 — Multi-Game Flame VFX Juice Adoption & Documentation Hygiene)
+- Formally reconciled documentation following complete implementation and audit acceptance of the Flame VFX Juice system ([design/02_VFX_JUICE_RESEARCH_PLAN.md](design/02_VFX_JUICE_RESEARCH_PLAN.md)).
+- Updated [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md) and `README.md` reflecting 540 passing tests (100% green), 0 analyzer issues, and full multi-game VFX coverage (Classic, Tetris, Match-3).
+- Closed adversarial audit findings via DeepSeek (commit `eca6187` and `f6c53c0`, verdict: **ACCEPT**): resolved Match-3 ScorePop cascade points, AllClear Reduced Motion shockwave gating, hardened drop progress assertions, and calibrated feedback.
+- Confirmed architectural annotations across all 10 feature skeletons in `apps/mobile/lib/features/` per DEC-0026 / F6.
+
 ## 2026-09-25 (Flame VFX Juice Research: Stage 0 Audit & Stage 1 Easing Spikes)
 - Documented full VFX research plan in `design/02_VFX_JUICE_RESEARCH_PLAN.md` and updated `.ai/PLAN.md`.
 - Implemented `EasingPresets` (`apps/mobile/lib/ui/effects/easing_presets.dart`) with standardized curves (`pieceDropCurve`, `scorePopupCurve`, `rackSpawnCurve`, `cascadeDropCurve`, `squashCurve`) and controller helpers.

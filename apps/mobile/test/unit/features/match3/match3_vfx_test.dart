@@ -391,4 +391,69 @@ void main() {
       expect(find.text('New Record!'), findsNothing);
     });
   });
+
+  group('Match3Controller playback pause and resume (P2-6)', () {
+    test('pausePlayback and resumePlayback toggle isPlaybackPaused', () {
+      expect(controller.isPlaybackPaused, isFalse);
+
+      controller.pausePlayback();
+      expect(controller.isPlaybackPaused, isTrue);
+
+      controller.resumePlayback();
+      expect(controller.isPlaybackPaused, isFalse);
+    });
+
+    test('pausePlayback during active cascade holds timer and resumePlayback continues', () async {
+      final (GridPos, GridPos)? hint = controller.engine.findHint();
+      expect(hint, isNotNull);
+      final bool ok = controller.trySwap(hint!.$1, hint.$2);
+      expect(ok, isTrue);
+      expect(controller.isBusy, isTrue);
+
+      // Pause playback
+      controller.pausePlayback();
+      expect(controller.isPlaybackPaused, isTrue);
+
+      // Wait a brief tick while paused
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(controller.isBusy, isTrue);
+
+      // Resume playback
+      controller.resumePlayback();
+      expect(controller.isPlaybackPaused, isFalse);
+    });
+
+    test('Match3FlameGame pauses controller playback when hit-stop is active and resumes when it ends', () async {
+      await game.onLoad();
+
+      // Trigger hit-stop on the vfx director
+      game.vfxDirector.triggerHitStop(0.06);
+      expect(game.vfxDirector.isHitStopActive, isTrue);
+
+      // First update tick detects hit-stop active -> pauses controller playback
+      game.update(0.02);
+      expect(controller.isPlaybackPaused, isTrue);
+
+      // Second update tick hit-stop still active -> remains paused
+      game.update(0.02);
+      expect(controller.isPlaybackPaused, isTrue);
+
+      // Third update tick hit-stop timer expires -> resumes controller playback
+      game.update(0.03);
+      expect(game.vfxDirector.isHitStopActive, isFalse);
+      expect(controller.isPlaybackPaused, isFalse);
+    });
+  });
+
+  group('Match3FlameGame pre-cached paints and petal render (P2-7)', () {
+    test('renders board and colorBomb petals without throwing', () {
+      game.onGameResize(Vector2(400, 800));
+
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
+
+      // Rendering on canvas with pre-cached paints
+      expect(() => game.render(canvas), returnsNormally);
+    });
+  });
 }

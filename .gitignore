@@ -20,6 +20,9 @@ apps/mobile/windows/flutter/ephemeral/
 
 # Android / Gradle local
 apps/mobile/android/local.properties
+apps/mobile/android/key.properties
+*.jks
+*.keystore
 apps/mobile/android/.gradle/
 
 # AI collaboration protocol

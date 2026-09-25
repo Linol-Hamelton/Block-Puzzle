@@ -21,6 +21,7 @@ import '../application/match3_controller.dart';
 
 /// Gem colors (neon palette consistent with the Lumina look).
 const Map<TileColor, Color> gemColors = defaultGemColors;
+final List<Color> _gemColorWheel = gemColors.values.toList(growable: false);
 
 /// Flame view for Match-3. Renders the gem grid, the current selection, and the
 /// clear/cascade juice. Input arrives from the Flutter layer (see
@@ -83,6 +84,14 @@ class Match3FlameGame extends FlameGame {
   int _cachedGemsCols = 0;
   int _cachedGemsRows = 0;
   GlassTileAtlas<TileColor>? _tileAtlas;
+  bool _wasHitStopActive = false;
+  final Paint _colorBombPetalPaint = Paint();
+  final Paint _colorBombCenterPaint = Paint();
+  final Paint _specialFillPaint = Paint();
+  final Paint _specialStrokePaint = Paint()..style = PaintingStyle.stroke;
+  final Paint _selectionPaint = Paint()..style = PaintingStyle.stroke;
+  final Paint _hintPaint = Paint()..style = PaintingStyle.stroke;
+  final Paint _hintInnerPaint = Paint()..style = PaintingStyle.stroke;
 
   int get _cols => controller.engine.width;
   int get _rows => controller.engine.height;
@@ -105,6 +114,10 @@ class Match3FlameGame extends FlameGame {
     // controller at a removed game holding disposed surfaces.
     if (identical(controller.onVisualEvent, _onVisualEvent)) {
       controller.onVisualEvent = null;
+    }
+    if (_wasHitStopActive) {
+      _wasHitStopActive = false;
+      controller.resumePlayback();
     }
     _vfxDirector.clearAll();
     dropCachedSurfaces();
@@ -276,6 +289,10 @@ class Match3FlameGame extends FlameGame {
           const VfxEvent.screenShake(amplitude: 2.8, zoomPunch: true),
         );
         _vfxDirector.triggerHitStop(0.045);
+        if (_vfxDirector.isHitStopActive) {
+          controller.pausePlayback();
+          _wasHitStopActive = true;
+        }
         break;
       case Match3EventType.roundComplete:
         _flash = math.max(_flash, 0.8);
@@ -435,7 +452,15 @@ class Match3FlameGame extends FlameGame {
   void update(double dt) {
     super.update(dt);
     if (_vfxDirector.isHitStopActive) {
+      if (!_wasHitStopActive) {
+        _wasHitStopActive = true;
+        controller.pausePlayback();
+      }
       return;
+    }
+    if (_wasHitStopActive) {
+      _wasHitStopActive = false;
+      controller.resumePlayback();
     }
     _clock += dt;
     if (_flash > 0) {
@@ -844,9 +869,8 @@ class Match3FlameGame extends FlameGame {
     // A slow shared shimmer, so bonuses read as "alive" against plain gems.
     final double glow = 0.72 + (0.28 * math.sin((_clock * 3.4) + x + y));
     final Color ink = Color.lerp(Colors.white, color, 0.12) ?? Colors.white;
-    final Paint fill = Paint()..color = ink.withValues(alpha: glow);
-    final Paint stroke = Paint()
-      ..style = PaintingStyle.stroke
+    final Paint fill = _specialFillPaint..color = ink.withValues(alpha: glow);
+    final Paint stroke = _specialStrokePaint
       ..strokeWidth = math.max(1.6, cell * 0.055)
       ..color = ink.withValues(alpha: glow);
 
@@ -904,22 +928,23 @@ class Match3FlameGame extends FlameGame {
       case SpecialKind.colorBomb:
         // Every gem colour in one rosette - the only gem on the board that is
         // not about its own colour.
-        final List<Color> wheel = gemColors.values.toList(growable: false);
         final double radius = cell * 0.3;
-        for (int i = 0; i < wheel.length; i++) {
+        for (int i = 0; i < _gemColorWheel.length; i++) {
           final double angle =
-              ((math.pi * 2) / wheel.length) * i - (math.pi / 2) + (_clock * 0.8);
+              ((math.pi * 2) / _gemColorWheel.length) * i - (math.pi / 2) + (_clock * 0.8);
+          _colorBombPetalPaint.color = _gemColorWheel[i].withValues(alpha: glow);
           canvas.drawCircle(
             Offset(cx + (math.cos(angle) * radius),
                 cy + (math.sin(angle) * radius)),
             cell * 0.085,
-            Paint()..color = wheel[i].withValues(alpha: glow),
+            _colorBombPetalPaint,
           );
         }
+        _colorBombCenterPaint.color = Colors.white.withValues(alpha: glow);
         canvas.drawCircle(
           Offset(cx, cy),
           cell * 0.13,
-          Paint()..color = Colors.white.withValues(alpha: glow),
+          _colorBombCenterPaint,
         );
     }
   }
@@ -941,8 +966,7 @@ class Match3FlameGame extends FlameGame {
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, Radius.circular(cell * 0.28)),
-      Paint()
-        ..style = PaintingStyle.stroke
+      _selectionPaint
         ..strokeWidth = math.max(2.0, cell * 0.08)
         ..color = Colors.white.withValues(alpha: (0.55 + 0.45 * pulse).clamp(0, 1).toDouble()),
     );
@@ -970,16 +994,14 @@ class Match3FlameGame extends FlameGame {
           RRect.fromRectAndRadius(rect, Radius.circular(cell * 0.28));
       canvas.drawRRect(
         rr.inflate(cell * 0.03 * pulse),
-        Paint()
-          ..style = PaintingStyle.stroke
+        _hintPaint
           ..strokeWidth = math.max(1.8, cell * 0.055)
           ..color = const Color(0xFFC5F2FF).withValues(alpha: alpha)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.1),
       );
       canvas.drawRRect(
         rr,
-        Paint()
-          ..style = PaintingStyle.stroke
+        _hintInnerPaint
           ..strokeWidth = math.max(1.2, cell * 0.04)
           ..color = Colors.white.withValues(alpha: alpha),
       );

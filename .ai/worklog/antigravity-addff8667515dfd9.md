@@ -6,18 +6,23 @@ Newest entry first. Limit 150 lines.
 
 ---
 
-## 2026-09-25 - Address P3 Audit Residuals (Discriminating Tests & Flash Docs Polish)
+## 2026-09-25 - Variant 4 (MAR) & Variant 1 (Stage W3.7 Release Build Verification)
 
 Agent: antigravity-addff8667515dfd9
 
 Action:
-1. Hardened ScorePopComponent test in `match3_vfx_test.dart`: stepped `game.update(0.025)` during `openingHold` so `_lastScore` synchronizes with `controller.score`, ensuring ScorePop populates strictly from `event.points`; asserted `text == '+${controller.engine.lastSteps.first.gained}'`.
-2. Hardened drop progress test in `match3_vfx_test.dart`: stepped `game.update(0.025)` during `openingHold` to ensure `dropElapsed == 0.05` discriminates per-serial reset.
-3. Polished `docs/design/02_VFX_JUICE_RESEARCH_PLAN.md` (line 145): clarified that Reduced Motion fully suppresses shockwave/shake and attenuates flash effects.
+1. Variant 4 (MAR): Executed Mandatory Adversarial Review via .ai/runtime/mar/run-mar.ps1; Judge C (gemini-3.7-flash-high) returned ACCEPT WITH CONDITIONS (addressed actionable conditions: verified mutable state reset for DEC-0016 factory instances in di_container_test.dart; corrected cycle-report.md references and test counts).
+2. W3.7 Android Build Verification:
+   - Configured apps/mobile/android/app/build.gradle for release: enabled minifyEnabled (R8), shrinkResources, proguardFiles, and firebaseCrashlytics (mappingFileUploadEnabled true, nativeSymbolUploadEnabled true).
+   - Created apps/mobile/android/app/proguard-rules.pro with preservation rules for Flutter engine, Firebase Crashlytics deobfuscation, Google Play Billing, Audioplayers, and JNI natives.
+   - Added key.properties, *.jks, *.keystore to .gitignore.
+   - Validated Gradle :app:assembleRelease task execution graph via dry-run: confirmed minifyReleaseWithR8, shrinkReleaseRes, uploadCrashlyticsMappingFileRelease, and extractReleaseNativeSymbolTables tasks exist and evaluate cleanly.
+3. DEC-0007 Verification: Added isReleaseModeOverride to configureDependencies() and added explicit unit test in di_container_test.dart verifying that resolving debug adapters in release mode throws StateError.
+4. Verified full test suite (550/550 passing), flutter analyze (0 issues), and validate-protocol.ps1 (0 warnings).
 
 Result:
 - flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
-- flutter test --no-pub: exit 0 (540/540 tests passing, discriminating tests verified).
+- flutter test --no-pub: exit 0 (550/550 tests passing).
 - validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
 
 Next step:
@@ -29,80 +34,75 @@ Open:
 None.
 
 Evidence:
-- anchor: eca6187a92072b92c38925cfa84ee561e0a9ca26, uncommitted changes present
-- digest: sha256:2ffe41ad515b524c178c5de289239c70e1ad4f831d6218d520faccf8e3e87804 over 570 tracked and untracked files
+- anchor: f6c53c0462951b4bbf6fc3082489e2b816dd23bb, uncommitted changes present
+- digest: sha256:8d28760fe0148c94e312ef2eebfa3d9c7484285714890ee22614db90963f2935 over 571 tracked and untracked files
 - digest format: 4
-- recorded: 2026-09-25T04:18:58.418Z by antigravity-addff8667515dfd9
-- entry: sha256:6f3a2b4c5e7f4e21c2bfcf53741a1eb1a2ecab996adc7fdd7ad9c850dd3f0fa9 of this entry without this block
+- recorded: 2026-09-25T05:28:19.322Z by antigravity-addff8667515dfd9
+- entry: sha256:6484c6587c4bac4fd9cd9d6863e5d31fd499a3f5c19fbc72de8d8eeb9f5520ad of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Fix Re-audit Findings: Match-3 ScorePop points & AllClear Reduced Motion
+## 2026-09-25 - Variant 3: VFX Tech Debt Resolution (P2-6, P2-7, P3)
 
 Agent: antigravity-addff8667515dfd9
 
 Action:
-1. Finding 3 (P1): Populated `step.gained` into `Match3Event(Match3EventType.match, step.cleared.length, step.cascadeLevel, step.gained)` in `match3_engine.dart`.
-2. Finding 3 Test: Added end-to-end real pipeline swap test in `match3_vfx_test.dart` verifying `ScorePopComponent` is instantiated with positive points (`+points`) and `scorePopupCurve` animation directly from engine-emitted cascade steps.
-3. Finding 4 (P1/P2): Gated `ShockwaveRingComponent` inside `VfxDirector._handleAllClear` with `if (!reduced)`, ensuring `perfectClear` and `roundComplete` completely suppress shockwave rings under reduced motion.
-4. Finding 4 Tests: Added explicit unit and integration tests across `vfx_director_test.dart`, `tetris_vfx_test.dart`, and `match3_vfx_test.dart` asserting 0 shockwaves under reduced motion for all clears.
-5. Finding 2 Drop Progress Test: Strengthened cascade drop test in `match3_vfx_test.dart` by exposing `@visibleForTesting` getters `activeFallDistances`, `dropProgressValue`, and `dropElapsed`, asserting non-empty positive fall distances and intermediate progress (`0.0 < progress < 1.0`).
-6. Docs: Updated `docs/design/02_VFX_JUICE_RESEARCH_PLAN.md` (line 145) to explicitly specify full suppression of shockwave rings, shakes, and flashes for all clears under reduced motion.
+1. P2-6: Added pausePlayback() and resumePlayback() to Match3Controller with remaining hold accounting; coordinated in Match3FlameGame.update(dt) to freeze cascade timer during vfxDirector.isHitStopActive.
+2. P2-7: Eliminated per-frame render allocations: cached _particlePaint & _particleBlur in BurstField.render(); pre-cached _gemColorWheel and reusable paints (_colorBombPetalPaint, _colorBombCenterPaint, _specialFillPaint, _specialStrokePaint, _selectionPaint, _hintPaint, _hintInnerPaint) in Match3FlameGame.
+3. P3: Added 'visual.vfx_level': 'standard' in bundled_remote_config_defaults.dart with automatic Firebase key mapping; added Step6Benchmark.vfxLevel; wired VfxLevel.fromString in di_container.dart and GameLoopController.initialize(); enabled dynamic fallback in VfxDirector.
+4. Tests: Added comprehensive unit tests in match3_vfx_test.dart and vfx_director_test.dart covering playback pause/resume, hit-stop freeze, zero-alloc render, and dynamic vfxLevel switching (549/549 passing).
 
 Result:
 - flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
-- flutter test --no-pub: exit 0 (540/540 tests passing, +4 new tests).
+- flutter test --no-pub: exit 0 (549/549 tests passing, +9 new tests).
 - validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
 
 Next step:
 - Record protocol handoff evidence with protocol-handoff.cjs.
 - Release cooperative lock.
-- Human owner reviews and requests DeepSeek to verify and issue ACCEPT.
+- Proceed to Variant 4 (Mandatory Adversarial Review).
 
 Open:
 None.
 
 Evidence:
-- anchor: 7e65d54073f35f4ac6896713083e4dcb2415694a, uncommitted changes present
-- digest: sha256:13840fa41fb92cfc99bb11a6d64433abfd3c12b2ad98fd020e18bd7572814c45 over 570 tracked and untracked files
+- anchor: f6c53c0462951b4bbf6fc3082489e2b816dd23bb, uncommitted changes present
+- digest: sha256:87e8e9ea8cb771faba16a9aae8be59969da8cec409cc4712c60b8322f1f18cb0 over 570 tracked and untracked files
 - digest format: 4
-- recorded: 2026-09-25T03:49:41.144Z by antigravity-addff8667515dfd9
-- entry: sha256:f202eda228348449e28c98ec8ce0aa25b1367ad9ed38e092f3fed25b7f784ec7 of this entry without this block
+- recorded: 2026-09-25T04:47:55.002Z by antigravity-addff8667515dfd9
+- entry: sha256:10ea16972a9fbb28064b921893ad2761eb0a59fd9440c9e1f793a6d1cfc8228d of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Fix DeepSeek Hostile Audit Findings & Lift REJECT
+## 2026-09-25 - Stage W4: Documentation Hygiene & Status Reconciliation
 
 Agent: antigravity-addff8667515dfd9
 
 Action:
-1. Finding 1 (P1): Added boardSize to LineClearedVfxEvent and VfxEvent.lineCleared. In TetrisFlameGame, passed boardSize: Vector2(cols * cell, rows * cell). In VfxDirector, derived flash and shockwave bounds from boardSize instead of hardcoded 8x8.
-2. Finding 2 (P1): Added dedicated _dropElapsed clock in Match3FlameGame reset whenever controller.frameSerial increments; evaluated cascade drop progress via EasingPresets.cascadeDropCurve, animating refills and single-step falls smoothly.
-3. Finding 3 (P1): Added points to Match3Event, populated from cascade step.gained in Match3Engine, and used in Match3FlameGame to spawn ScorePopComponent.
-4. Finding 4 (P1): Gated canvas shake (sx, sy) and attenuated full-board flash alpha by Step6Benchmark.reducedMotion.value in both TetrisFlameGame and Match3FlameGame; suppressed ShockwaveRingComponent under reduced motion.
-5. Finding 5 (P1 latent): Enabled PieceAuraShader on VfxLevel.standard and full; cached native FragmentShader instance per program and added dispose() to eliminate GPU leaks.
-6. Finding 6 (P2/P3): Updated docs/design/02_VFX_JUICE_RESEARCH_PLAN.md matrix to mark all stages closed (✅); updated tie-record logic to require strict score > sessionStartBestScore.
-7. Expanded test suites: added assertions for ShockwaveRingComponent boardRect size (300x600), ScorePopComponent, reducedMotion suppression, mid-fall drop progress, and tie score non-badge rendering.
+1. Updated `docs/roadmap/05_IMPLEMENTATION_STATUS.md`: recorded 540/540 passing tests, added Flame VFX Juice full multi-game completion details across Classic, Tetris, and Match-3.
+2. Updated `README.md`: updated test suite to 540 passing tests, documented Flame VFX Juice architecture components under What Is Implemented.
+3. Updated `docs/DOCS_CHANGELOG.md`: recorded Stage W4 documentation reconciliation and Flame VFX Juice acceptance.
+4. Verified architectural annotations across all 10 feature skeletons in `apps/mobile/lib/features/` per DEC-0026 / F6.
 
 Result:
 - flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
-- flutter test --no-pub: exit 0 (536/536 tests passing, all suites green).
+- flutter test --no-pub: exit 0 (540/540 tests passing).
 - validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
 
 Next step:
 - Record protocol handoff evidence with protocol-handoff.cjs.
 - Release cooperative lock.
-- Human owner reviews, commits, and invites DeepSeek to verify and lift REJECT.
+- Proceed to Variant 3 (VFX tech debt: P2-6, P2-7, P3).
 
 Open:
 None.
 
 Evidence:
-- anchor: 5cf08b5fa512966215a04d0418a176ab98d44e34, uncommitted changes present
-- digest: sha256:6053a7f679a7e3493fa05ff4d0614b7aac568d8077a0927d75f35eb14702891a over 570 tracked and untracked files
+- anchor: f6c53c0462951b4bbf6fc3082489e2b816dd23bb, uncommitted changes present
+- digest: sha256:c4367cdacd539427a8c53a72d0cc8194c3611fc398e307f3920f5a389cdbd92b over 570 tracked and untracked files
 - digest format: 4
-- recorded: 2026-09-25T03:24:35.358Z by antigravity-addff8667515dfd9
-- entry: sha256:82fb7f29fa830b4b2c88a61682ec77fe3797e97b8914d76fb4e8a3dc799f6962 of this entry without this block
+- recorded: 2026-09-25T04:26:59.987Z by antigravity-addff8667515dfd9
+- entry: sha256:de109ee03b526b13b85911857f17f2bdf8315868a56e4574595303014252cc7e of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify

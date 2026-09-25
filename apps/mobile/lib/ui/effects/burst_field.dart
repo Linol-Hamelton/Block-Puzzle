@@ -24,6 +24,8 @@ class BurstField {
   final double timeScale;
   final List<_BurstParticle> _particles = <_BurstParticle>[];
   final List<_BurstParticle> _pool = <_BurstParticle>[];
+  static const MaskFilter _particleBlur = MaskFilter.blur(BlurStyle.normal, 1.2);
+  final Paint _particlePaint = Paint()..maskFilter = _particleBlur;
 
   bool get isEmpty => _particles.isEmpty;
   int get pooledCount => _pool.length;
@@ -111,10 +113,8 @@ class BurstField {
     }
     for (final _BurstParticle p in _particles) {
       final double a = (p.life / p.maxLife).clamp(0, 1).toDouble();
-      final Paint paint = Paint()
-        ..color = p.color.withValues(alpha: a)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2);
-      canvas.drawCircle(Offset(p.x, p.y), p.size * (0.4 + (0.6 * a)), paint);
+      _particlePaint.color = p.color.withValues(alpha: a);
+      canvas.drawCircle(Offset(p.x, p.y), p.size * (0.4 + (0.6 * a)), _particlePaint);
     }
   }
 }

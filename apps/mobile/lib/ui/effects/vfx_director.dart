@@ -22,14 +22,16 @@ class VfxDirector extends Component {
   VfxDirector({
     BurstField? burstField,
     this.viewfinder,
-    this.vfxLevel = VfxLevel.standard,
+    VfxLevel? vfxLevel,
+    this.vfxLevelResolver,
     this.isReducedMotion,
     this.onScreenShake,
     this.onHapticFeedback,
-  }) : burst = burstField ?? BurstField() {
+  })  : burst = burstField ?? BurstField(),
+        _vfxLevel = vfxLevel {
     priority = 205;
     auraShader = PieceAuraShader(
-      vfxLevel: vfxLevel,
+      vfxLevel: this.vfxLevel,
       isReducedMotion: () => _reducedMotion,
     );
   }
@@ -40,8 +42,18 @@ class VfxDirector extends Component {
   /// Optional Flame camera viewfinder to attach camera shake and zoom punch effects directly.
   final Viewfinder? viewfinder;
 
+  /// Explicitly overridden visual effects density tier, or null to resolve dynamically.
+  VfxLevel? _vfxLevel;
+
+  /// Optional custom resolver for visual effects density. Defaults to [Step6Benchmark.vfxLevel.value].
+  final VfxLevel Function()? vfxLevelResolver;
+
   /// Active visual effects density tier.
-  VfxLevel vfxLevel;
+  VfxLevel get vfxLevel =>
+      _vfxLevel ?? vfxLevelResolver?.call() ?? Step6Benchmark.vfxLevel.value;
+  set vfxLevel(VfxLevel value) {
+    _vfxLevel = value;
+  }
 
   /// Accessibility motion preference resolver. Defaults to [Step6Benchmark.reducedMotion.value].
   final bool Function()? isReducedMotion;

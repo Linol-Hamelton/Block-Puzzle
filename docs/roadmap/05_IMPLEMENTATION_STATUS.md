@@ -1,8 +1,8 @@
 # Implementation Status (Source Of Truth)
 
-Last updated: 2026-09-25 (reconciled against codebase after DEC-0024, DEC-0026, DEC-0028, Sprint G1 and Stage W3 completion)
+Last updated: 2026-09-25 (reconciled against codebase after DEC-0024, DEC-0026, DEC-0028, Sprint G1, Stage W3, and Flame VFX Juice full multi-game completion)
 
-> Reconciliation note (2026-09-25): Product status updated following the multi-game merge (Classic, Tetris, Match-3), audio overhaul (4 AAC-LC masters, unstealable SFX channels), Stage W3 readiness (C5 `game_id: 'classic'`, D1 signing fail-fast, C6 factory-scoped services, F4 RU l10n, C7 test DI & 8 integration widget tests), and Sprint G1 gameplay integration (Fair Bag deal fairness, anti-chunking deal generator, ScreenWakeManager). The false claim regarding an automated `cold_kill_recovery_test` has been corrected: cold recovery is verified manually on device, automated unit tests for it remain pending.
+> Reconciliation note (2026-09-25): Product status updated following the multi-game merge (Classic, Tetris, Match-3), audio overhaul (4 AAC-LC masters, unstealable SFX channels), Stage W3 readiness (C5 `game_id: 'classic'`, D1 signing fail-fast, C6 factory-scoped services, F4 RU l10n, C7 test DI & 8 integration widget tests), Sprint G1 gameplay integration (Fair Bag deal fairness, anti-chunking deal generator, ScreenWakeManager), and the full Flame VFX Juice adoption (Stages 0–6, Tracks A & B across Classic, Tetris, Match-3 with 540 passing tests verified by DeepSeek hostile audit). The false claim regarding an automated `cold_kill_recovery_test` has been corrected: cold recovery is verified manually on device, automated unit tests for it remain pending.
 
 ## Overall
 - Product maturity: `pre-release / external testing ready`
@@ -13,7 +13,7 @@ Last updated: 2026-09-25 (reconciled against codebase after DEC-0024, DEC-0026, 
 - Monetization model: fully ad-free; in v1.0 monetization surfaces are completely gated / hidden per DEC-0026 / DEC-0028
 - Production data plane: Firebase-first (Crashlytics, Analytics + BigQuery, Remote Config, Cloud Messaging, Auth, Cloud Functions)
 - `services/config-api` and `services/analytics-pipeline` — deferred; superseded by Firebase
-- Quality status: `flutter analyze --no-pub` reports 0 issues; `flutter test --no-pub` passes **465/465 tests**
+- Quality status: `flutter analyze --no-pub` reports 0 issues; `flutter test --no-pub` passes **540/540 tests**
 
 ## Implemented In Code
 - **Multi-Game Core**:
@@ -21,6 +21,14 @@ Last updated: 2026-09-25 (reconciled against codebase after DEC-0024, DEC-0026, 
   - Tetris loop with 7-bag, SRS rotation/kicks, ghost piece, hold/next preview, T-spin, combo, and dedicated session snapshot persistence.
   - Match-3 loop with 8x8 gem grid, cascade resolver, move limits, shuffle, and session store.
   - Daily Challenge mode (deterministic seed milestone run).
+- **Flame VFX Juice System (DEC-0024 / DEC-0028, 02_VFX_JUICE_RESEARCH_PLAN.md)**:
+  - Procedural GPU-resident tile atlas (`GlassTileAtlas`) baked at startup and batched across Classic, Tetris, and Match-3.
+  - Event-driven `VfxDirector` bus decoupled from core engines with strongly-typed `VfxEvent` hierarchy across all modes.
+  - High-juice animations: `EasingPresets` (`cascadeDropCurve`, `scorePopupCurve`), `ScorePopComponent`, `ComboPulseComponent`.
+  - Haptics & tactile feel: calibrated tiered haptics (`light`, `medium`, `heavy`, `doubleHeavy`), `LandingSquashComponent`, camera shake, zoom punch, hit-stop freezing.
+  - GLSL fragment shaders: `PieceAuraShader` chromatic blooming on active/ghost tetrominoes and special/igniting gems.
+  - Celebration badges: `CelebrationDirector` procedural badge integration on game over screens.
+  - Full accessibility compliance with `Reduced Motion` (suppression of shockwaves, camera shakes, and flash attenuation).
 - **Audio System (DEC-0024 / DEC-0026 / DEC-0028)**:
   - 4 mastered AAC-LC CBR 144k stereo music tracks (`music_menu`, `music_classic`, `music_tetris`, `music_match3`).
   - Seamless equal-power crossfading (`MusicPlaylistManager`) across screen navigation with audio focus and ducking.
@@ -67,7 +75,6 @@ These are allowed only for `dev/debug` builds and rejected in release mode via `
 - Release builds send `game_session_start`, `game_start`, `game_end`, and `ops_*` via Firebase Analytics with correct `game_id`.
 - Crashlytics receives real crash events from release builds.
 - Store metadata matches shipped functionality.
-- `flutter analyze --fatal-infos --fatal-warnings` green (0 issues) and `flutter test` green (all 465 tests passing).
+- `flutter analyze --fatal-infos --fatal-warnings` green (0 issues) and `flutter test` green (all 540 tests passing).
 - Early game-over rate <= 0.30 for Classic, runtime error session rate <= 0.02, `ops_alert_critical_count == 0`.
 - No open P0/P1 bugs.
-

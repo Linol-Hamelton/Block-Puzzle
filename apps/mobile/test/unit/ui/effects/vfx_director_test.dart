@@ -3,6 +3,8 @@ import 'package:flame/extensions.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:block_puzzle_mobile/domain/gameplay/board_state.dart';
+import 'package:block_puzzle_mobile/features/diagnostics/step6_benchmark.dart';
+import 'package:block_puzzle_mobile/ui/effects/burst_field.dart';
 import 'package:block_puzzle_mobile/ui/effects/combo_pulse_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/line_clear_flash_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/score_pop_component.dart';
@@ -343,6 +345,84 @@ void main() {
       // Exceed duration
       combo.update(0.2);
       expect(combo.isFinished, isTrue);
+    });
+  });
+
+  group('Dynamic vfxLevel and Remote Config integration', () {
+    tearDown(() {
+      Step6Benchmark.vfxLevel.value = VfxLevel.standard;
+    });
+
+    test('VfxDirector defaults to Step6Benchmark.vfxLevel.value dynamically', () {
+      Step6Benchmark.vfxLevel.value = VfxLevel.full;
+      final VfxDirector director = VfxDirector();
+      expect(director.vfxLevel, equals(VfxLevel.full));
+
+      Step6Benchmark.vfxLevel.value = VfxLevel.off;
+      expect(director.vfxLevel, equals(VfxLevel.off));
+    });
+
+    test('explicit vfxLevel overrides Step6Benchmark.vfxLevel', () {
+      Step6Benchmark.vfxLevel.value = VfxLevel.off;
+      final VfxDirector director = VfxDirector(vfxLevel: VfxLevel.full);
+      expect(director.vfxLevel, equals(VfxLevel.full));
+    });
+
+    test('vfxLevel.off completely suppresses event handling and hit-stop', () {
+      final VfxDirector director = VfxDirector(vfxLevel: VfxLevel.off);
+
+      director.triggerHitStop(0.05);
+      expect(director.isHitStopActive, isFalse);
+
+      director.handleEvent(
+        VfxEvent.piecePlaced(
+          position: Vector2(100, 100),
+          color: const Color(0xFF00FF00),
+        ),
+      );
+      expect(director.burst.activeCount, equals(0));
+    });
+
+    test('vfxLevel.full spawns higher particle counts than standard', () {
+      final VfxDirector stdDirector = VfxDirector(vfxLevel: VfxLevel.standard);
+      stdDirector.handleEvent(
+        VfxEvent.piecePlaced(
+          position: Vector2(100, 100),
+          color: const Color(0xFF00FF00),
+        ),
+      );
+      final int stdParticles = stdDirector.burst.activeCount;
+
+      final VfxDirector fullDirector = VfxDirector(vfxLevel: VfxLevel.full);
+      fullDirector.handleEvent(
+        VfxEvent.piecePlaced(
+          position: Vector2(100, 100),
+          color: const Color(0xFF00FF00),
+        ),
+      );
+      final int fullParticles = fullDirector.burst.activeCount;
+
+      expect(fullParticles, greaterThan(stdParticles));
+    });
+  });
+
+  group('BurstField.render optimization', () {
+    test('renders active particles with reusable Paint without crashing', () {
+      final BurstField burst = BurstField();
+      burst.spawnBurst(
+        x: 100,
+        y: 100,
+        color: const Color(0xFFFF5500),
+        count: 10,
+      );
+      expect(burst.activeCount, equals(10));
+
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
+
+      expect(() => burst.render(canvas), returnsNormally);
+      burst.update(0.1);
+      expect(() => burst.render(canvas), returnsNormally);
     });
   });
 }

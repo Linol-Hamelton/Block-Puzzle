@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../domain/gameplay/board_state.dart';
+import '../../ui/effects/vfx_events.dart';
 import 'diagnostics_screen.dart';
 
 enum Step6BenchmarkScenario {
@@ -18,6 +19,8 @@ abstract final class Step6Benchmark {
   static final ValueNotifier<Step6BenchmarkScenario> scenario =
       ValueNotifier<Step6BenchmarkScenario>(Step6BenchmarkScenario.singleClear);
   static final ValueNotifier<bool> reducedMotion = ValueNotifier<bool>(false);
+  static final ValueNotifier<VfxLevel> vfxLevel =
+      ValueNotifier<VfxLevel>(VfxLevel.standard);
 
   static bool get isDiagnosticsEnabled => kDiagnosticsEnabled;
 

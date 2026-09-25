@@ -38,6 +38,7 @@ const Map<String, Object?> bundledRemoteConfigDefaults = <String, Object?>{
   'ab.difficulty_variant': 'balanced_v1',
   'ab.ux_variant': 'hud_standard_v1',
   'visual.blocks_preset': 'soft',
+  'visual.vfx_level': 'standard',
   'social.share_enabled': true,
   'social.share_score_hashtag': '#BlockPuzzle',
   'onboarding.enabled': true,

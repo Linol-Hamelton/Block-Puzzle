@@ -20,6 +20,7 @@ import 'package:block_puzzle_mobile/infra/billing/google_play_billing_service.da
 import 'package:block_puzzle_mobile/infra/monitoring/crash_reporter.dart';
 import 'package:block_puzzle_mobile/infra/monitoring/firebase_crash_reporter.dart';
 import 'package:block_puzzle_mobile/infra/monitoring/noop_crash_reporter.dart';
+import 'package:block_puzzle_mobile/domain/progression/player_progress_state.dart';
 import 'package:block_puzzle_mobile/features/game_loop/application/services/ab_experiment_service.dart';
 import 'package:block_puzzle_mobile/features/game_loop/application/services/onboarding_flow_controller.dart';
 import 'package:block_puzzle_mobile/features/game_loop/application/services/progression_sync_service.dart';
@@ -140,12 +141,41 @@ void main() {
       expect(identical(exp1, exp2), isFalse);
 
       final OnboardingFlowController onb1 = sl<OnboardingFlowController>();
+      onb1.restoreFromProgress(
+        PlayerProgressState.initialForDay(DateTime.utc(2026, 9, 25)).copyWith(
+          onboardingStatus: const OnboardingStatus(completed: true),
+        ),
+      );
+      expect(onb1.isCompleted, isTrue);
+
       final OnboardingFlowController onb2 = sl<OnboardingFlowController>();
       expect(identical(onb1, onb2), isFalse);
+      expect(onb2.isCompleted, isFalse);
 
       final ProgressionSyncService prog1 = sl<ProgressionSyncService>();
       final ProgressionSyncService prog2 = sl<ProgressionSyncService>();
       expect(identical(prog1, prog2), isFalse);
+    });
+
+    test('DEC-0007: throws StateError in release mode if debug adapters would be resolved', () async {
+      final AppConfig devConfig = makeConfig(AppEnvironment.dev, BuildFlavor.debug);
+      final InMemoryRemoteConfigRepository stubRemoteConfig =
+          InMemoryRemoteConfigRepository(appConfig: devConfig);
+
+      expect(
+        () => configureDependencies(
+          overrideAppConfig: devConfig,
+          overrideRemoteConfigRepository: stubRemoteConfig,
+          isReleaseModeOverride: true,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (StateError e) => e.message,
+            'message',
+            contains('Release build resolved the debug adapters'),
+          ),
+        ),
+      );
     });
   });
 }

@@ -8,40 +8,37 @@ Last update: 2026-09-25
 
 ## Objective
 
-Fix all 6 blocking/actionable findings from DeepSeek's adversarial audit:
-1. Fix Tetris LineClear flash and shockwave hardcoded 8x8 size; derive from boardSize.
-2. Fix Match-3 cascadeDropCurve by using a dedicated drop clock reset per frame serial.
-3. Fix Match-3 ScorePop by carrying points on Match3Event and asserting ScorePopComponent.
-4. Gate game-level canvas shake/flash and shockwaves by reduced motion.
-5. Enable PieceAuraShader on standard tier, reuse/dispose FragmentShader to prevent GPU leak.
-6. Update tech-debt matrix in docs/design/02 and ensure strict score > best for new record.
+Execute release pipeline sequence:
+1. Variant 2 (Stage W4): Documentation hygiene & status synchronization.
+2. Variant 3: VFX tech debt resolution (P2-6, P2-7, P3).
+3. Variant 4: Mandatory Adversarial Review (MAR) per DEC-0027.
+4. Variant 1 (Stage W3.7): Release build preparation & verification (R8/ProGuard, Crashlytics mapping/NDK, DEC-0007).
 
 ## Problem & Acceptance
 
-- [x] 1. Tetris: boardSize passed to LineClearedVfxEvent, flash/shockwave covers 10x20
-- [x] 2. Match-3: cascade drop clock resets per serial, animate refills; drop progress tested on active fall distances & intermediate progress
-- [x] 3. Match-3: step.gained wired to Match3Event, score pop spawns and verified via real swap pipeline test
-- [x] 4. Accessibility: Canvas shakes/flashes & shockwaves fully gated by reducedMotion (including AllClear perfectClear & roundComplete)
-- [x] 5. Shader: Aura enabled on standard/full, FragmentShader cached & disposed
-- [x] 6. Docs & Badges: strict score > best for tie fixed; docs line 145 accurately specifies full Reduced Motion gating
-- [x] 7. Full suite passes (flutter test 540/540, analyze 0, validate-protocol clean)
+- [x] 1. Stage W4 documentation hygiene: 05_IMPLEMENTATION_STATUS.md, README.md, DOCS_CHANGELOG.md synchronized, 10 feature skeletons annotated.
+- [x] 2. Variant 3 VFX tech debt: cascade hit-stop pause (P2-6), zero per-frame allocations (P2-7), Remote Config vfx_level (P3).
+- [x] 3. Variant 4 MAR executed: Judge C voted ACCEPT WITH CONDITIONS; actionable conditions addressed and verified.
+- [x] 4. Stage W3.7: R8 minification, resource shrinking, proguard-rules.pro, Crashlytics mapping & NDK symbol upload configured and validated via Gradle dry-run.
+- [x] 5. DEC-0007 verified: release mode throws StateError if debug adapters are resolved.
+- [x] 6. Test suite: 550/550 passing (`flutter test --no-pub`), analyzer: 0 issues, protocol validator: 0 warnings.
 
 ## Current state
 
-- DeepSeek adversarial re-audit verdict: ACCEPT on commit eca6187.
-- P3 residuals hardened: ScorePop test and drop progress test now strictly discriminate mechanisms; docs line 145 wording polished for flash attenuation.
-- Checks: `flutter analyze` exit 0 (0 issues); `flutter test --no-pub` exit 0 (540/540); `validate-protocol.ps1` exit 0.
+- All four variants (Variant 2, Variant 3, Variant 4, Variant 1) completed and verified.
+- Repository ready for owner review and release commit.
 
 ## Roles
 
 - implementer: antigravity
-- reviewer: deepseek (hostile audit after Track B completion)
+- reviewer: deepseek
 - owner: RuslanFomenko
 
 ## Open questions
 
-- P2-6/P2-7 from initial audit remain outside the selected six; owner to schedule in future sprints.
+- None. Ready for human owner sign-off and commit.
 
 ---
 
 Keep this file under 80 lines. It describes the current task only.
+
