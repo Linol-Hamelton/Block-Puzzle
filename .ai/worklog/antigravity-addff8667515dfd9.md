@@ -6,6 +6,40 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Flame VFX Juice: Stage 4 Shaders (FragmentProgram Piece & Gem Aura)
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Created GLSL runtime effect in shaders/piece_aura.frag: pulsing chromatic aura with 6-fold radial wave perturbation and smooth glow envelope.
+2. Declared shaders/piece_aura.frag under flutter.shaders in apps/mobile/pubspec.yaml.
+3. Created PieceAuraShader in apps/mobile/lib/ui/effects/piece_aura_shader.dart: manages FragmentProgram loading, uniforms (resolution, time, color, intensity), and provides a procedural radial gradient fallback for headless test runners and unsupported GPUs.
+4. Integrated PieceAuraShader into VfxDirector with free-running clock and dynamic VfxLevel gating.
+5. Wired PieceAuraShader through RackPieceComponent in block_puzzle_game.dart: pulses dynamic aura behind dragged piece in player's hand when vfxLevel == VfxLevel.full.
+6. Added unit test suite in test/unit/ui/effects/piece_aura_shader_test.dart (5/5 tests passing).
+
+Result:
+- flutter analyze --no-pub --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (498/498 tests passing, +5 new tests).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews, commits, and pushes changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: 9d5fc45126618c85cea197fdbea8ebb4005ba339, uncommitted changes present
+- digest: sha256:ff8ed0cdb25ad97703b37beee805e924c7345b6d0a6762a6eecbbecf420993db over 565 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T01:00:57.017Z by antigravity-addff8667515dfd9
+- entry: sha256:a64040cb9593a853eb6dda13236f4ba6c2c544d73ff5d0d3e26ab0f8eac4a8bf of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Flame VFX Juice: Stage 6 Procedural Tile Atlas Baking & Batching
 
 Agent: antigravity-addff8667515dfd9

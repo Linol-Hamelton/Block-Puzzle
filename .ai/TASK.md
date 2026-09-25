@@ -1,6 +1,6 @@
 # Current Task
 
-Status: Completed - Flame VFX Juice: Stage 6 Procedural Tile Atlas Baking & Render Batching
+Status: Completed - Flame VFX Juice: Stage 4 Shaders (FragmentProgram Piece & Gem Aura)
 Owner: RuslanFomenko
 Last update: 2026-09-25
 
@@ -8,27 +8,27 @@ Last update: 2026-09-25
 
 ## Objective
 
-Elevate rendering performance and eliminate multi-pass vector canvas bottlenecks by:
-- Creating `GlassTileAtlas` to pre-bake procedural `paintGlassFacet` facets into a GPU `ui.Image` texture atlas at runtime.
-- Supporting tile shapes (rounded square, circle, hexagon, diamond, pentagon, star) and game palettes (Tetris 7-mino colors, Match-3 6-gem colors).
-- Integrating atlas blitting into `TetrisFlameGame` and `Match3Game` with graceful fallback for custom glows/clearing squashes.
-- Providing lifecycle-safe disposal and recreation on `dropCachedSurfaces()`.
-- Verifying frame rate benefits and ensuring 100% green tests (493+ tests) with 0 static analysis issues.
+Elevate visual juice and dynamic lighting via hardware-accelerated fragment shaders:
+- Compile organic pulsing chromatic aura fragment shader (`shaders/piece_aura.frag`).
+- Implement `PieceAuraShader` manager with runtime shader compilation and graceful procedural radial gradient fallback.
+- Integrate into `VfxDirector` and active dragged piece in `RackPieceComponent` when `vfxLevel == VfxLevel.full`.
+- Strictly gate behind `vfxLevel == VfxLevel.full` and `Reduced Motion` user settings.
+- Ensure 100% green test suite (498+ tests) and 0 static analysis issues.
 
 ## Problem & Acceptance
 
-- [x] Create `apps/mobile/lib/ui/effects/glass_tile_atlas.dart` with atlas generation and `drawTile` / batching APIs
-- [x] Support physical pixel scaling via `devicePixelRatio` to prevent blurriness
-- [x] Integrate atlas into `TetrisFlameGame` mino rendering
-- [x] Integrate atlas into `Match3Game` gem rendering
-- [x] Ensure safe GPU surface cleanup in `dropCachedSurfaces()`
-- [x] Add unit test suite in `apps/mobile/test/unit/ui/effects/glass_tile_atlas_test.dart`
+- [x] Create GLSL fragment shader in `shaders/piece_aura.frag` and declare in `pubspec.yaml`
+- [x] Implement `PieceAuraShader` in `apps/mobile/lib/ui/effects/piece_aura_shader.dart`
+- [x] Provide graceful fallback for headless test runners and unsupported GPUs
+- [x] Integrate `PieceAuraShader` into `VfxDirector` and `RackPieceComponent`
+- [x] Strictly gate behind `VfxLevel.full` and reduced motion settings
+- [x] Add unit test suite in `apps/mobile/test/unit/ui/effects/piece_aura_shader_test.dart`
 - [x] Verify `flutter analyze`, `flutter test`, and `validate-protocol.ps1` pass cleanly
 
 ## Current state
 
-- Stage 0, Stage 1, Stage 2, Stage 3 and Stage 6 complete.
-- 493/493 tests passing, flutter analyze 0 issues, protocol valid.
+- Stage 0, Stage 1, Stage 2, Stage 3, Stage 4 and Stage 6 complete.
+- 498/498 tests passing, flutter analyze 0 issues, protocol valid.
 - Ready for owner review and commit.
 
 ## Roles

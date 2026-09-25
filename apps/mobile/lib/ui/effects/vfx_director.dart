@@ -8,6 +8,7 @@ import 'camera_shake_effect.dart';
 import 'combo_pulse_component.dart';
 import 'landing_squash_component.dart';
 import 'line_clear_flash_component.dart';
+import 'piece_aura_shader.dart';
 import 'score_pop_component.dart';
 import 'shockwave_ring_component.dart';
 import 'vfx_events.dart';
@@ -26,6 +27,10 @@ class VfxDirector extends Component {
     this.onScreenShake,
   }) : burst = burstField ?? BurstField() {
     priority = 205;
+    auraShader = PieceAuraShader(
+      vfxLevel: vfxLevel,
+      isReducedMotion: () => _reducedMotion,
+    );
   }
 
   /// Shared pooled particle field.
@@ -48,6 +53,14 @@ class VfxDirector extends Component {
 
   late final _BurstRendererComponent _burstRenderer;
 
+  /// Organic fragment shader aura manager for pieces and gems.
+  late final PieceAuraShader auraShader;
+
+  double _clock = 0;
+
+  /// Free-running simulation clock (seconds) used for shader animation.
+  double get clock => _clock;
+
   double _hitStopTimer = 0;
 
   /// Whether simulation / VFX are temporarily frozen for high-impact hit-stop.
@@ -66,10 +79,13 @@ class VfxDirector extends Component {
     await super.onLoad();
     _burstRenderer = _BurstRendererComponent(burst);
     add(_burstRenderer);
+    await auraShader.loadShader();
   }
 
   @override
   void update(double dt) {
+    _clock += dt;
+    auraShader.vfxLevel = vfxLevel;
     if (_hitStopTimer > 0) {
       _hitStopTimer -= dt;
       return;

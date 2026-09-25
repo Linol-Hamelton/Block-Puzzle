@@ -33,6 +33,7 @@ export '../../../ui/effects/camera_shake_effect.dart';
 export '../../../ui/effects/combo_pulse_component.dart';
 export '../../../ui/effects/landing_squash_component.dart';
 export '../../../ui/effects/line_clear_flash_component.dart';
+export '../../../ui/effects/piece_aura_shader.dart';
 export '../../../ui/effects/score_pop_component.dart';
 export '../../../ui/effects/shockwave_ring_component.dart';
 export '../../../ui/effects/vfx_director.dart';
@@ -571,6 +572,7 @@ class BlockPuzzleGame extends FlameGame {
         baseColor: palette.rackColor,
         dragColor: palette.rackDragColor,
         haptics: haptics,
+        vfxDirector: vfxDirector,
         onDragMoved: onRackPieceDragged,
         onDropped: onRackPieceDropped,
       );
@@ -1652,6 +1654,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
     required Color baseColor,
     required Color dragColor,
     required this.haptics,
+    this.vfxDirector,
     required this.onDragMoved,
     required this.onDropped,
   })  : _homePosition = homePosition.clone(),
@@ -1671,6 +1674,7 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
   final double dragActivationDistance;
   final double touchDragLiftPixels;
   final HapticsController haptics;
+  final VfxDirector? vfxDirector;
   final void Function(RackPieceComponent component) onDragMoved;
   final Future<void> Function(RackPieceComponent component) onDropped;
   Vector2 _homePosition;
@@ -1823,6 +1827,18 @@ class RackPieceComponent extends PositionComponent with DragCallbacks {
         canvas.translate(cx, cy);
         canvas.scale(scale, scale);
         canvas.translate(-cx, -cy);
+
+        if (_dragging && (vfxDirector?.auraShader.isEnabled ?? false)) {
+          final Rect pieceBounds = Rect.fromLTWH(0, 0, size.x, size.y);
+          vfxDirector!.auraShader.drawAura(
+            canvas,
+            targetBounds: pieceBounds,
+            color: _dragColor,
+            time: vfxDirector!.clock,
+            intensity: _dragVisualProgress,
+          );
+        }
+
         canvas.drawPicture(piecePicture);
         canvas.restore();
       } else {

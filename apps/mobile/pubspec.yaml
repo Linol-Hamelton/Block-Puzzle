@@ -69,3 +69,6 @@ flutter:
   assets:
     - assets/audio/
     - assets/branding/
+  shaders:
+    - shaders/piece_aura.frag
+
