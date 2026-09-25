@@ -8,6 +8,7 @@ import '../../../core/di/di_container.dart';
 import '../../../data/analytics/analytics_tracker.dart';
 import '../../../domain/tetris/tetris_engine.dart';
 import '../../../domain/tetris/tetromino.dart';
+import '../../../ui/effects/celebration_director.dart';
 import '../../../ui/theme/app_theme.dart';
 import '../../../ui/widgets/nebula_background.dart';
 import '../../game_loop/audio/game_sfx_player.dart';
@@ -603,8 +604,11 @@ class _PadButtonState extends State<_PadButton> {
   }
 }
 
-class _GameOverCard extends StatelessWidget {
-  const _GameOverCard({
+typedef _GameOverCard = TetrisGameOverCard;
+
+class TetrisGameOverCard extends StatelessWidget {
+  const TetrisGameOverCard({
+    super.key,
     required this.score,
     required this.best,
     required this.lines,
@@ -624,6 +628,7 @@ class _GameOverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isNewBest = score >= best && score > 0;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 32),
       padding: const EdgeInsets.all(24),
@@ -635,13 +640,29 @@ class _GameOverCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          const Text(
-            'Game Over',
+          if (isNewBest) ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: CelebrationDirector.instance.activeProvider.buildCelebrationWidget(
+                context: context,
+                type: CelebrationType.newRecord,
+                score: score,
+                size: 80.0,
+              ),
+            ),
+          ],
+          Text(
+            isNewBest ? 'New Record!' : 'Game Over',
             style: TextStyle(
-              color: Color(0xFFFF7E97),
+              color: isNewBest ? const Color(0xFFFFD54F) : const Color(0xFFFF7E97),
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              shadows: <Shadow>[Shadow(color: Color(0x66FF7E97), blurRadius: 18)],
+              shadows: <Shadow>[
+                Shadow(
+                  color: isNewBest ? const Color(0x66FFD54F) : const Color(0x66FF7E97),
+                  blurRadius: 18,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),

@@ -4,12 +4,16 @@ import 'dart:ui' as ui;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../../../domain/gameplay/board_state.dart';
 import '../../../domain/tetris/falling_piece.dart';
 import '../../../domain/tetris/tetris_engine.dart';
 import '../../../domain/tetris/tetromino.dart';
+import '../../../features/diagnostics/step6_benchmark.dart';
 import '../../../ui/effects/burst_field.dart';
 import '../../../ui/effects/glass_board.dart';
 import '../../../ui/effects/glass_tile_atlas.dart';
+import '../../../ui/effects/vfx_director.dart';
+import '../../../ui/effects/vfx_events.dart';
 import '../application/tetris_controller.dart';
 
 /// Mino colors (neon palette consistent with the Lumina look).
@@ -28,14 +32,19 @@ class TetrisFlameGame extends FlameGame {
   double _flash = 0;
   int _flashStrength = 0;
   double _shake = 0;
-  String? _pulseText;
-  double _pulseElapsed = 0;
-  int _pulsePriority = 0;
-  String? _scorePopText;
-  double _scorePopElapsed = 0;
   double _clock = 0; // free-running clock for pulsing effects
   final BurstField _burst = BurstField();
   final List<_LockFlash> _lockFlashes = <_LockFlash>[];
+
+  late final VfxDirector _vfxDirector = VfxDirector(
+    burstField: _burst,
+    viewfinder: camera.viewfinder,
+    isReducedMotion: () => Step6Benchmark.reducedMotion.value,
+    onScreenShake: (double amplitude) {
+      _shake = math.max(_shake, (amplitude / 4.0).clamp(0.2, 1.0));
+    },
+  );
+  VfxDirector get vfxDirector => _vfxDirector;
 
   // Last computed board layout (screen space), so event handlers can place
   // particles / popups without recomputing geometry.
@@ -61,6 +70,7 @@ class TetrisFlameGame extends FlameGame {
   @override
   Future<void> onLoad() async {
     controller.onVisualEvent = _onVisualEvent;
+    add(_vfxDirector);
     await super.onLoad();
   }
 
@@ -69,6 +79,7 @@ class TetrisFlameGame extends FlameGame {
     if (identical(controller.onVisualEvent, _onVisualEvent)) {
       controller.onVisualEvent = null;
     }
+    _vfxDirector.clearAll();
     dropCachedSurfaces();
     super.onRemove();
   }
@@ -87,104 +98,178 @@ class TetrisFlameGame extends FlameGame {
   }
 
   void _onVisualEvent(TetrisEvent event) {
+    final TetrisEngine engine = controller.engine;
+    final int cols = engine.board.width;
+    final int rows = engine.board.height;
+    final double cell = _lcell > 0 ? _lcell : 20.0;
+
     switch (event.type) {
       case TetrisEventType.lineClear:
         _flash = 1;
         _flashStrength = event.value;
-        _spawnClearParticles();
-        if (event.detail > 0) {
-          _spawnScorePop('+${event.detail}');
-        }
-        // Scaled, not switched on at four. A double should feel like more than
-        // a single, or three quarters of the game's clears feel identical.
         const List<double> shakeByRows = <double>[0, 0.22, 0.4, 0.62, 1];
         _shake = math.max(
           _shake,
           shakeByRows[event.value.clamp(0, 4)],
         );
+
+        final List<int> clearingRows = engine.clearingRows;
+        final double cx = _lox + (cols * cell * 0.5);
+        final double avgY = clearingRows.isNotEmpty
+            ? clearingRows.reduce((int a, int b) => a + b) / clearingRows.length
+            : (rows * 0.5);
+        final double cy = _loy + ((avgY + 0.5) * cell);
+        final Vector2 centroid = Vector2(cx, cy);
+
+        final Set<BoardCell> clearedCells = <BoardCell>{
+          for (final int r in clearingRows)
+            for (int c = 0; c < cols; c++)
+              BoardCell(x: c, y: r),
+        };
+
+        _vfxDirector.handleEvent(
+          VfxEvent.lineCleared(
+            cells: clearedCells,
+            centroid: centroid,
+            strength: event.value,
+            color: const Color(0xFF00E5FF),
+            boardOrigin: Vector2(_lox, _loy),
+            cellSize: cell,
+          ),
+        );
+
+        if (event.detail > 0) {
+          _vfxDirector.handleEvent(
+            VfxEvent.scorePopped(
+              text: '+${event.detail}',
+              position: centroid,
+              color: const Color(0xFFD6FFE0),
+            ),
+          );
+        }
+
         if (event.value >= 4) {
-          _pulse('TETRIS!', 3);
+          _vfxDirector.handleEvent(
+            VfxEvent.comboPulse(
+              text: 'TETRIS!',
+              position: Vector2(cx, _loy + (cell * 6)),
+              comboStreak: 4,
+            ),
+          );
         }
         break;
+
       case TetrisEventType.combo:
-        _pulse('COMBO x${event.value + 1}', 2);
-        break;
-      case TetrisEventType.tSpin:
-        _shake = math.max(_shake, 0.7);
-        _pulse(
-          event.value > 0 ? 'T-SPIN ${_clearWord(event.value)}' : 'T-SPIN',
-          4,
+        _vfxDirector.handleEvent(
+          VfxEvent.comboPulse(
+            text: 'COMBO x${event.value + 1}',
+            position: Vector2(_lox + (cols * cell * 0.5), _loy + (cell * 6)),
+            comboStreak: event.value + 1,
+          ),
         );
         break;
+
+      case TetrisEventType.tSpin:
+        _shake = math.max(_shake, 0.7);
+        _vfxDirector.handleEvent(
+          VfxEvent.comboPulse(
+            text: event.value > 0 ? 'T-SPIN ${_clearWord(event.value)}' : 'T-SPIN',
+            position: Vector2(_lox + (cols * cell * 0.5), _loy + (cell * 6)),
+            comboStreak: 3,
+          ),
+        );
+        _vfxDirector.handleEvent(
+          const VfxEvent.screenShake(amplitude: 2.8, zoomPunch: true),
+        );
+        break;
+
       case TetrisEventType.perfectClear:
         _shake = math.max(_shake, 1);
-        _pulse('PERFECT CLEAR!', 5);
+        _vfxDirector.handleEvent(
+          VfxEvent.allClear(
+            boardOrigin: Vector2(_lox, _loy),
+            boardSize: Vector2(cols * cell, rows * cell),
+          ),
+        );
         if (event.detail > 0) {
-          _spawnScorePop('+${event.detail}');
+          _vfxDirector.handleEvent(
+            VfxEvent.scorePopped(
+              text: '+${event.detail}',
+              position: Vector2(_lox + (cols * cell * 0.5), _loy + (rows * cell * 0.5)),
+              color: const Color(0xFFFFD54F),
+            ),
+          );
         }
         break;
+
       case TetrisEventType.levelUp:
-        _pulse('LEVEL ${event.value}', 1);
+        _vfxDirector.handleEvent(
+          VfxEvent.comboPulse(
+            text: 'LEVEL ${event.value}',
+            position: Vector2(_lox + (cols * cell * 0.5), _loy + (cell * 6)),
+            comboStreak: 2,
+          ),
+        );
         break;
+
       case TetrisEventType.hardDrop:
         _shake = math.max(_shake, 0.22);
+        _vfxDirector.handleEvent(
+          const VfxEvent.screenShake(amplitude: 1.8, zoomPunch: true),
+        );
         break;
+
       case TetrisEventType.gameOver:
         _shake = math.max(_shake, 0.8);
+        _vfxDirector.handleEvent(
+          const VfxEvent.screenShake(amplitude: 3.5),
+        );
         break;
+
       case TetrisEventType.lock:
-        // Flash exactly where the piece locked. Read the engine's captured
-        // locked cells (not the last rendered active cells) so a hard drop —
-        // which locks before any render at the landed position — flashes the
-        // landing spot, not the stale mid-air position.
-        for (final TCell c in controller.engine.lastLockedCells) {
+        final List<Rect> cellRects = <Rect>[];
+        final List<Vector2> cellCenters = <Vector2>[];
+        double minX = double.infinity;
+        double minY = double.infinity;
+        for (final TCell c in engine.lastLockedCells) {
           _lockFlashes.add(_LockFlash(c.x, c.y));
+          final double cx = _lox + (c.x * cell);
+          final double cy = _loy + (c.y * cell);
+          if (cx < minX) minX = cx;
+          if (cy < minY) minY = cy;
+          cellRects.add(Rect.fromLTWH(cx, cy, cell, cell));
+          cellCenters.add(Vector2(cx + (cell / 2), cy + (cell / 2)));
+        }
+
+        final TetrominoType? lockedType = engine.lastLockedCells.isNotEmpty
+            ? engine.board.cellAt(
+                engine.lastLockedCells.first.x,
+                engine.lastLockedCells.first.y,
+              )
+            : null;
+        final Color pieceColor = lockedType != null
+            ? (tetrominoColors[lockedType] ?? const Color(0xFF00E5FF))
+            : const Color(0xFF00E5FF);
+
+        if (cellRects.isNotEmpty) {
+          _vfxDirector.handleEvent(
+            VfxEvent.piecePlaced(
+              position: Vector2(minX.isFinite ? minX : _lox, minY.isFinite ? minY : _loy),
+              cellCenters: cellCenters,
+              cellRects: cellRects,
+              cellSize: cell,
+              color: pieceColor,
+            ),
+          );
         }
         break;
+
       case TetrisEventType.spawn:
       case TetrisEventType.move:
       case TetrisEventType.rotate:
       case TetrisEventType.softDrop:
       case TetrisEventType.hold:
         break;
-    }
-  }
-
-  void _pulse(String text, int priority) {
-    if (_pulseText != null &&
-        priority < _pulsePriority &&
-        _pulseElapsed < 0.5) {
-      return;
-    }
-    _pulseText = text;
-    _pulsePriority = priority;
-    _pulseElapsed = 0;
-  }
-
-  void _spawnScorePop(String text) {
-    _scorePopText = text;
-    _scorePopElapsed = 0;
-  }
-
-  void _spawnClearParticles() {
-    final TetrisEngine engine = controller.engine;
-    if (!engine.isClearing || _lcell <= 0) {
-      return;
-    }
-    for (final int row in engine.clearingRows) {
-      for (int x = 0; x < engine.board.width; x++) {
-        final TetrominoType? type = engine.board.cellAt(x, row);
-        if (type == null) {
-          continue;
-        }
-        _burst.spawnBurst(
-          x: _lox + (x * _lcell) + (_lcell / 2),
-          y: _loy + (row * _lcell) + (_lcell / 2),
-          color: tetrominoColors[type]!,
-          sizeBase: _lcell * 0.12,
-          sizeJitter: _lcell * 0.1,
-        );
-      }
     }
   }
 
@@ -204,6 +289,9 @@ class TetrisFlameGame extends FlameGame {
   @override
   void update(double dt) {
     super.update(dt);
+    if (_vfxDirector.isHitStopActive) {
+      return;
+    }
     controller.tick(Duration(microseconds: (dt * 1000000).round()));
     if (_flash > 0) {
       _flash = math.max(0, _flash - (dt * 3.0));
@@ -211,21 +299,6 @@ class TetrisFlameGame extends FlameGame {
     if (_shake > 0) {
       _shake = math.max(0, _shake - (dt * 3.6));
     }
-    if (_pulseText != null) {
-      _pulseElapsed += dt;
-      if (_pulseElapsed > 1.1) {
-        _pulseText = null;
-        _pulseElapsed = 0;
-      }
-    }
-    if (_scorePopText != null) {
-      _scorePopElapsed += dt;
-      if (_scorePopElapsed > 0.9) {
-        _scorePopText = null;
-        _scorePopElapsed = 0;
-      }
-    }
-    _burst.update(dt);
     _clock += dt;
     if (_lockFlashes.isNotEmpty) {
       for (final _LockFlash f in _lockFlashes) {
@@ -237,7 +310,6 @@ class TetrisFlameGame extends FlameGame {
 
   @override
   void render(Canvas canvas) {
-    super.render(canvas);
     if (size.x <= 0 || size.y <= 0) {
       return;
     }
@@ -302,6 +374,36 @@ class TetrisFlameGame extends FlameGame {
     if (ghost != null && active != null) {
       final Color color = tetrominoColors[active.type]!;
       _paintDropShaft(canvas, ox, oy, cell, color, active, ghost);
+
+      if (_vfxDirector.auraShader.isEnabled) {
+        final List<TCell> ghostCells = ghost.absoluteCells();
+        if (ghostCells.isNotEmpty) {
+          double gminX = double.infinity;
+          double gminY = double.infinity;
+          double gmaxX = -double.infinity;
+          double gmaxY = -double.infinity;
+          for (final TCell c in ghostCells) {
+            if (c.y >= 0) {
+              final double cx = ox + (c.x * cell);
+              final double cy = oy + (c.y * cell);
+              if (cx < gminX) gminX = cx;
+              if (cy < gminY) gminY = cy;
+              if (cx + cell > gmaxX) gmaxX = cx + cell;
+              if (cy + cell > gmaxY) gmaxY = cy + cell;
+            }
+          }
+          if (gmaxX > gminX && gmaxY > gminY) {
+            _vfxDirector.auraShader.drawAura(
+              canvas,
+              targetBounds: Rect.fromLTRB(gminX, gminY, gmaxX, gmaxY),
+              color: color.withValues(alpha: 0.4),
+              time: _vfxDirector.clock,
+              intensity: 0.35,
+            );
+          }
+        }
+      }
+
       for (final TCell c in ghost.absoluteCells()) {
         if (c.y >= 0) {
           _paintGhost(canvas, ox, oy, c.x, c.y, cell, color);
@@ -310,6 +412,36 @@ class TetrisFlameGame extends FlameGame {
     }
     if (active != null) {
       final Color color = tetrominoColors[active.type]!;
+
+      if (_vfxDirector.auraShader.isEnabled) {
+        final List<TCell> activeCells = active.absoluteCells();
+        if (activeCells.isNotEmpty) {
+          double minX = double.infinity;
+          double minY = double.infinity;
+          double maxX = -double.infinity;
+          double maxY = -double.infinity;
+          for (final TCell c in activeCells) {
+            if (c.y >= 0) {
+              final double cx = ox + (c.x * cell);
+              final double cy = oy + (c.y * cell);
+              if (cx < minX) minX = cx;
+              if (cy < minY) minY = cy;
+              if (cx + cell > maxX) maxX = cx + cell;
+              if (cy + cell > maxY) maxY = cy + cell;
+            }
+          }
+          if (maxX > minX && maxY > minY) {
+            _vfxDirector.auraShader.drawAura(
+              canvas,
+              targetBounds: Rect.fromLTRB(minX, minY, maxX, maxY),
+              color: color,
+              time: _vfxDirector.clock,
+              intensity: 0.85,
+            );
+          }
+        }
+      }
+
       for (final TCell c in active.absoluteCells()) {
         if (c.y >= 0) {
           _paintCell(
@@ -378,91 +510,7 @@ class TetrisFlameGame extends FlameGame {
 
     canvas.restore();
 
-    _burst.render(canvas);
-    _renderScorePop(canvas, ox, oy, boardW, boardH);
-    _renderPulse(canvas, ox, oy, boardW, boardH);
-  }
-
-  void _renderScorePop(
-    Canvas canvas,
-    double ox,
-    double oy,
-    double boardW,
-    double boardH,
-  ) {
-    final String? text = _scorePopText;
-    if (text == null) {
-      return;
-    }
-    final double t = (_scorePopElapsed / 0.9).clamp(0, 1).toDouble();
-    final double opacity = (1 - t).clamp(0, 1).toDouble();
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Color.fromRGBO(214, 255, 224, opacity),
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.5,
-          shadows: <Shadow>[
-            Shadow(
-              color: Color.fromRGBO(95, 224, 138, opacity * 0.9),
-              blurRadius: 14,
-            ),
-          ],
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: boardW);
-    painter.paint(
-      canvas,
-      Offset(
-        ox + ((boardW - painter.width) / 2),
-        oy + (boardH * 0.5) - (t * 46),
-      ),
-    );
-  }
-
-  void _renderPulse(
-    Canvas canvas,
-    double ox,
-    double oy,
-    double boardW,
-    double boardH,
-  ) {
-    final String? text = _pulseText;
-    if (text == null) {
-      return;
-    }
-    final double t = (_pulseElapsed / 1.1).clamp(0, 1).toDouble();
-    final double opacity = (1 - t).clamp(0, 1).toDouble();
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: Color.fromRGBO(196, 240, 255, opacity),
-          fontSize: 30,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
-          shadows: <Shadow>[
-            Shadow(
-              color: Color.fromRGBO(86, 212, 255, opacity * 0.9),
-              blurRadius: 18,
-            ),
-          ],
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: boardW);
-    painter.paint(
-      canvas,
-      Offset(
-        ox + ((boardW - painter.width) / 2),
-        oy + (boardH * 0.34) - (t * 22),
-      ),
-    );
+    super.render(canvas);
   }
 
   int _topOccupiedRow(TetrisEngine engine) {
