@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/game_loop/application/game_loop_view_state.dart';
+import '../effects/celebration_director.dart';
 
 /// Game-over overlay card showing round summary and action buttons.
 ///
@@ -12,6 +13,7 @@ class GameOverOverlayCard extends StatelessWidget {
     required this.onRestartPressed,
     this.onRevivePressed,
     this.onSharePressed,
+    this.celebrationProvider,
     super.key,
   });
 
@@ -19,6 +21,7 @@ class GameOverOverlayCard extends StatelessWidget {
   final VoidCallback onRestartPressed;
   final VoidCallback? onRevivePressed;
   final VoidCallback? onSharePressed;
+  final CelebrationProvider? celebrationProvider;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +40,9 @@ class GameOverOverlayCard extends StatelessWidget {
       ),
     );
 
+    final CelebrationProvider provider =
+        celebrationProvider ?? CelebrationDirector.instance.activeProvider;
+
     return Card(
       margin: const EdgeInsets.all(20),
       color: const Color(0xFFF0F6FF),
@@ -52,6 +58,19 @@ class GameOverOverlayCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
+              if (isNewBest || state.isDailyChallenge) ...<Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10.0),
+                  child: provider.buildCelebrationWidget(
+                    context: context,
+                    type: isNewBest
+                        ? CelebrationType.newRecord
+                        : CelebrationType.dailyChallengeVictory,
+                    score: state.scoreState.totalScore,
+                    size: 92.0,
+                  ),
+                ),
+              ],
               Row(
                 children: <Widget>[
                   const Icon(

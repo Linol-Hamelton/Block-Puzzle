@@ -1,6 +1,6 @@
 # Current Task
 
-Status: Completed - Flame VFX Juice: Stage 4 Shaders (FragmentProgram Piece & Gem Aura)
+Status: Completed - Flame VFX Juice: Stage 5 Rive Animations & Celebration Architecture Spike
 Owner: RuslanFomenko
 Last update: 2026-09-25
 
@@ -8,28 +8,28 @@ Last update: 2026-09-25
 
 ## Objective
 
-Elevate visual juice and dynamic lighting via hardware-accelerated fragment shaders:
-- Compile organic pulsing chromatic aura fragment shader (`shaders/piece_aura.frag`).
-- Implement `PieceAuraShader` manager with runtime shader compilation and graceful procedural radial gradient fallback.
-- Integrate into `VfxDirector` and active dragged piece in `RackPieceComponent` when `vfxLevel == VfxLevel.full`.
-- Strictly gate behind `vfxLevel == VfxLevel.full` and `Reduced Motion` user settings.
-- Ensure 100% green test suite (498+ tests) and 0 static analysis issues.
+Evaluate vector animation runtimes (Rive/rive_flame) and establish the celebration architecture:
+- Synthesize technical evaluation in `docs/design/03_RIVE_RUNTIME_SPIKE_EVALUATION.md` (APK size, cold start, memory, C++ ABI overhead).
+- Implement pluggable `CelebrationDirector` and `CelebrationProvider` in `apps/mobile/lib/ui/effects/celebration_director.dart`.
+- Provide high-performance `ProceduralCelebrationProvider` (starburst, trophy badge, gold particle fanfare) and `RiveCelebrationAdapter` state machine interface.
+- Integrate victory celebration into `GameOverOverlayCard` on New Best Score and Daily Challenge completion.
+- Respect `Reduced Motion` and verify 100% green tests (514/514 tests) with 0 static analysis issues.
 
 ## Problem & Acceptance
 
-- [x] Create GLSL fragment shader in `shaders/piece_aura.frag` and declare in `pubspec.yaml`
-- [x] Implement `PieceAuraShader` in `apps/mobile/lib/ui/effects/piece_aura_shader.dart`
-- [x] Provide graceful fallback for headless test runners and unsupported GPUs
-- [x] Integrate `PieceAuraShader` into `VfxDirector` and `RackPieceComponent`
-- [x] Strictly gate behind `VfxLevel.full` and reduced motion settings
-- [x] Add unit test suite in `apps/mobile/test/unit/ui/effects/piece_aura_shader_test.dart`
+- [x] Synthesize technical evaluation in `docs/design/03_RIVE_RUNTIME_SPIKE_EVALUATION.md`
+- [x] Create `apps/mobile/lib/ui/effects/celebration_director.dart` with pluggable providers
+- [x] Implement `ProceduralCelebrationProvider` with zero-allocation easing and particle bursts
+- [x] Implement `RiveCelebrationAdapter` with state machine contract and asset hooks
+- [x] Connect celebration feedback to `GameOverOverlayCard` for New Best and Daily Challenge
+- [x] Add unit test suite in `apps/mobile/test/unit/ui/effects/celebration_director_test.dart`
 - [x] Verify `flutter analyze`, `flutter test`, and `validate-protocol.ps1` pass cleanly
 
 ## Current state
 
-- Stage 0, Stage 1, Stage 2, Stage 3, Stage 4 and Stage 6 complete.
-- 498/498 tests passing, flutter analyze 0 issues, protocol valid.
-- Ready for owner review and commit.
+- All stages (0, 1, 2, 3, 4, 5, 6) of Flame VFX Juice system completed.
+- Full test suite: 514/514 tests green (+16 new tests for Stage 5).
+- Ready for owner review, commit, and push.
 
 ## Roles
 
