@@ -19,16 +19,19 @@ Fix all 6 blocking/actionable findings from DeepSeek's adversarial audit:
 ## Problem & Acceptance
 
 - [x] 1. Tetris: boardSize passed to LineClearedVfxEvent, flash/shockwave covers 10x20
-- [x] 2. Match-3: cascade drop clock resets per serial, animate terminal/common refills
-- [x] 3. Match-3: Match3Event carries points, score pop spawns and tested
-- [x] 4. Accessibility: Canvas shakes/flashes & shockwaves fully gated by reducedMotion
+- [x] 2. Match-3: cascade drop clock resets per serial, animate refills; drop progress tested on active fall distances & intermediate progress
+- [x] 3. Match-3: step.gained wired to Match3Event, score pop spawns and verified via real swap pipeline test
+- [x] 4. Accessibility: Canvas shakes/flashes & shockwaves fully gated by reducedMotion (including AllClear perfectClear & roundComplete)
 - [x] 5. Shader: Aura enabled on standard/full, FragmentShader cached & disposed
-- [x] 6. Docs & Badges: Update matrix in docs/design/02, strict score > best for tie
-- [x] 7. Full suite passes (flutter test 536/536, analyze 0, validate-protocol clean)
+- [x] 6. Docs & Badges: strict score > best for tie fixed; docs line 145 accurately specifies full Reduced Motion gating
+- [x] 7. Full suite passes (flutter test 540/540, analyze 0, validate-protocol clean)
 
 ## Current state
 
-- All 6 DeepSeek audit findings resolved with regression tests. Ready for DeepSeek re-review and acceptance.
+- All 6 audit items addressed and verified with comprehensive unit & widget tests (540/540 passing).
+- `step.gained` wired in `match3_engine.dart`; real swap test asserts `ScorePopComponent` points > 0.
+- `_handleAllClear` gates `ShockwaveRingComponent` with `if (!reduced)`; verified by 3 tests.
+- Checks: `flutter analyze` exit 0 (0 issues); `flutter test --no-pub` exit 0 (540/540); `validate-protocol.ps1` exit 0.
 
 ## Roles
 
@@ -38,10 +41,8 @@ Fix all 6 blocking/actionable findings from DeepSeek's adversarial audit:
 
 ## Open questions
 
-None.
+- P2-6/P2-7 from initial audit (hit-stop model advance, per-frame allocations) remain outside the selected six; owner to schedule in future sprints.
 
 ---
 
 Keep this file under 80 lines. It describes the current task only.
-
-

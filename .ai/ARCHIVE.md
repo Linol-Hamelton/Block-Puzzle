@@ -15,6 +15,45 @@ Information needed to understand an accepted decision belongs in
 
 ### From .ai/worklog/antigravity-addff8667515dfd9.md, archived 2026-09-25
 
+## 2026-09-25 - Track B.1: Tetris Flame VFX Juice & Celebration Adoption
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Integrated VfxDirector into TetrisFlameGame: attached camera viewfinder, BurstField particle bus, Reduced Motion gating, and camera shake / zoom punch feedback.
+2. Wired TetrisEvent pipeline to VfxDirector:
+   - LineClear: dispatches LineClearedVfxEvent with cleared row centroids, ShockwaveRingComponent, LineClearFlashComponent, ScorePopComponent, and 4-line 'TETRIS!' ComboPulse with 45ms hit-stop.
+   - Lock / HardDrop: captures last locked tetromino cells and dispatches PiecePlacedVfxEvent with LandingSquashComponent and landing dust burst; triggers ScreenShakeVfxEvent with zoomPunch.
+   - PerfectClear: dispatches AllClearVfxEvent with fanfare fireworks and 60ms hit-stop freeze.
+   - Combo / TSpin / LevelUp: dispatches verbal tier ComboPulseComponent and camera punch.
+3. Implemented PieceAuraShader on falling active piece and ghost piece aiming footprint: calculates screen-space bounding boxes and renders organic chromatic glow envelope.
+4. Integrated CelebrationDirector celebration badge into TetrisGameOverCard for New Record flair.
+5. Added comprehensive test suite in test/unit/features/tetris/tetris_vfx_test.dart covering VfxDirector attachment, LandingSquash, LineClear, AllClear, shader rendering, and celebration badges (7/7 tests passing).
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (522/522 tests passing, +7 new tests).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews, commits, and pushes changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: 758e63e01eca5362d18b8e88cf17195efead8317, uncommitted changes present
+- digest: sha256:4bd22044d73a585423da5cce5b27cc669d99443a594ebd46765ca2a65790acc5 over 569 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T02:09:32.450Z by antigravity-addff8667515dfd9
+- entry: sha256:b20fe69f0578d3befbe9a2cad47ab4ae4b4b5e7b3dcd62ca3583b816adb615d5 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+
 ## 2026-09-25 - Flame VFX Juice: Feedback Calibration & Multi-Game Tech Debt Formalization
 
 Agent: antigravity-addff8667515dfd9

@@ -76,6 +76,10 @@ void main() {
     game = Match3FlameGame(controller: controller);
   });
 
+  tearDown(() {
+    controller.dispose();
+  });
+
   group('Match3FlameGame VFX Integration', () {
     test('initializes and attaches VfxDirector as child component', () async {
       await game.onLoad();
@@ -118,6 +122,32 @@ void main() {
       expect(dists2[const GridPos(1, 2)], 2.0);
       expect(dists2[const GridPos(1, 1)], 2.0); // newly refilled
       expect(dists2[const GridPos(1, 0)], 2.0); // newly refilled
+    });
+
+    test('real pipeline trySwap generates ScorePopComponent from engine step.gained points', () async {
+      await game.onLoad();
+      game.onGameResize(Vector2(400, 400));
+      game.render(Canvas(PictureRecorder()));
+
+      final (GridPos, GridPos)? hint = controller.engine.findHint();
+      expect(hint, isNotNull);
+      final bool ok = controller.trySwap(hint!.$1, hint.$2);
+      expect(ok, isTrue);
+
+      // Wait for Frame 1 to appear (openingHold ≈ 300ms)
+      for (int i = 0; i < 40 && controller.frameBurst.isEmpty; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
+
+      // Verify that engine generated Match3Event with points and VfxDirector spawned ScorePopComponent
+      final List<ScorePopComponent> scorePops =
+          game.vfxDirector.children.whereType<ScorePopComponent>().toList();
+      expect(scorePops, isNotEmpty);
+      expect(scorePops.first.text, startsWith('+'));
+      expect(int.parse(scorePops.first.text.substring(1)), greaterThan(0));
+      for (int i = 0; i < 40 && controller.isBusy; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
     });
 
     test('match event dispatches LineClearedVfxEvent with Shockwave and ScorePop', () async {
@@ -165,7 +195,7 @@ void main() {
       }
     });
 
-    test('drop progress animates fall distances across frames after swap', () async {
+    test('drop progress animates fall distances and progress curve mid-fall across frames', () async {
       await game.onLoad();
       game.onGameResize(Vector2(400, 400));
       game.render(Canvas(PictureRecorder()));
@@ -175,11 +205,24 @@ void main() {
       final bool ok = controller.trySwap(hint!.$1, hint.$2);
       expect(ok, isTrue);
 
-      // Advance frames so drop progress clock runs
-      game.update(0.016);
+      // Wait for Frame 1 to appear (openingHold ≈ 300ms)
+      for (int i = 0; i < 40 && controller.frameBurst.isEmpty; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
+
+      // Render initial frame to trigger _dropProgress calculation
+      game.render(Canvas(PictureRecorder()));
+      expect(game.activeFallDistances, isNotEmpty);
+      expect(game.activeFallDistances.values.any((double d) => d > 0), isTrue);
+
+      // Mid-fall at dt = 0.05s
+      game.update(0.05);
       game.render(Canvas(PictureRecorder()));
 
-      expect(game.vfxDirector.isHitStopActive, isFalse);
+      expect(game.dropElapsed, equals(0.05));
+      expect(game.dropProgressValue, greaterThan(0.0));
+      expect(game.dropProgressValue, lessThan(1.0));
+
     });
 
     test('combo event dispatches ComboPulseVfxEvent, ScreenShake, and Hit-Stop', () async {
@@ -220,6 +263,31 @@ void main() {
         game.vfxDirector.children.whereType<ComboPulseComponent>(),
         isNotEmpty,
       );
+    });
+
+    test('roundComplete event with reduced motion suppresses shockwave ring', () async {
+      Step6Benchmark.reducedMotion.value = true;
+      try {
+        await game.onLoad();
+        game.onGameResize(Vector2(400, 400));
+        game.render(Canvas(PictureRecorder()));
+
+        controller.onVisualEvent?.call(
+          const Match3Event(Match3EventType.roundComplete, 1, 5),
+        );
+        game.update(0.016);
+
+        expect(
+          game.vfxDirector.children.whereType<ShockwaveRingComponent>(),
+          isEmpty,
+        );
+        expect(
+          game.vfxDirector.children.whereType<ComboPulseComponent>(),
+          isNotEmpty,
+        );
+      } finally {
+        Step6Benchmark.reducedMotion.value = false;
+      }
     });
 
     test('renders without errors including PieceAuraShader on special and igniting gems', () async {

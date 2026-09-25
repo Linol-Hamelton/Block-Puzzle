@@ -244,6 +244,7 @@ class Match3Engine {
         Match3EventType.match,
         step.cleared.length,
         step.cascadeLevel,
+        step.gained,
       ));
       for (final Tile bonus in step.spawned.values) {
         _events.add(Match3Event.spawned(bonus.special));

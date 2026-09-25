@@ -178,6 +178,21 @@ void main() {
       expect(director.burst.activeCount, greaterThan(10));
     });
 
+    test('AllClearVfxEvent with reducedMotion suppresses shockwave ring', () {
+      final VfxDirector quietDirector = VfxDirector(
+        isReducedMotion: () => true,
+      );
+      quietDirector.handleEvent(
+        VfxEvent.allClear(
+          boardOrigin: Vector2.zero(),
+          boardSize: Vector2.all(320),
+        ),
+      );
+
+      expect(quietDirector.children.whereType<ShockwaveRingComponent>(), isEmpty);
+      expect(quietDirector.children.whereType<ComboPulseComponent>().length, 1);
+    });
+
     test('VfxLevel.off ignores all events completely', () {
       final VfxDirector offDirector = VfxDirector(
         vfxLevel: VfxLevel.off,

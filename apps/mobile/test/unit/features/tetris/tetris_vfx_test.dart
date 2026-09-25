@@ -178,6 +178,31 @@ void main() {
       );
     });
 
+    test('perfectClear event with reduced motion suppresses shockwave ring', () async {
+      Step6Benchmark.reducedMotion.value = true;
+      try {
+        await game.onLoad();
+        game.onGameResize(Vector2(300, 600));
+        game.render(Canvas(PictureRecorder()));
+
+        controller.onVisualEvent?.call(
+          const TetrisEvent(TetrisEventType.perfectClear, 1, 1000),
+        );
+        game.update(0.016);
+
+        expect(
+          game.vfxDirector.children.whereType<ShockwaveRingComponent>(),
+          isEmpty,
+        );
+        expect(
+          game.vfxDirector.children.whereType<ComboPulseComponent>(),
+          isNotEmpty,
+        );
+      } finally {
+        Step6Benchmark.reducedMotion.value = false;
+      }
+    });
+
     test('renders without errors across multiple frames including aura shader fallback', () async {
       await game.onLoad();
       game.onGameResize(Vector2(300, 600));

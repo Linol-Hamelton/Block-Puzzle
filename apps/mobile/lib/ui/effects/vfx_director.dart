@@ -343,18 +343,20 @@ class VfxDirector extends Component {
       ),
     );
 
-    add(
-      ShockwaveRingComponent(
-        center: center,
-        boardRect: Rect.fromLTWH(
-          event.boardOrigin.x,
-          event.boardOrigin.y,
-          event.boardSize.x,
-          event.boardSize.y,
+    if (!reduced) {
+      add(
+        ShockwaveRingComponent(
+          center: center,
+          boardRect: Rect.fromLTWH(
+            event.boardOrigin.x,
+            event.boardOrigin.y,
+            event.boardSize.x,
+            event.boardSize.y,
+          ),
+          color: event.color ?? const Color(0xFFFFD700),
         ),
-        color: event.color ?? const Color(0xFFFFD700),
-      ),
-    );
+      );
+    }
 
     add(
       ComboPulseComponent(

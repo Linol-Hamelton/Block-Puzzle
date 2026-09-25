@@ -422,6 +422,15 @@ class Match3FlameGame extends FlameGame {
     return EasingPresets.evaluateProgress(t, EasingPresets.cascadeDropCurve);
   }
 
+  @visibleForTesting
+  Map<GridPos, double> get activeFallDistances => _fallDistances;
+
+  @visibleForTesting
+  double get dropProgressValue => _dropProgress();
+
+  @visibleForTesting
+  double get dropElapsed => _dropElapsed;
+
   @override
   void update(double dt) {
     super.update(dt);

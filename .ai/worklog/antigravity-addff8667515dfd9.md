@@ -6,6 +6,40 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Fix Re-audit Findings: Match-3 ScorePop points & AllClear Reduced Motion
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Finding 3 (P1): Populated `step.gained` into `Match3Event(Match3EventType.match, step.cleared.length, step.cascadeLevel, step.gained)` in `match3_engine.dart`.
+2. Finding 3 Test: Added end-to-end real pipeline swap test in `match3_vfx_test.dart` verifying `ScorePopComponent` is instantiated with positive points (`+points`) and `scorePopupCurve` animation directly from engine-emitted cascade steps.
+3. Finding 4 (P1/P2): Gated `ShockwaveRingComponent` inside `VfxDirector._handleAllClear` with `if (!reduced)`, ensuring `perfectClear` and `roundComplete` completely suppress shockwave rings under reduced motion.
+4. Finding 4 Tests: Added explicit unit and integration tests across `vfx_director_test.dart`, `tetris_vfx_test.dart`, and `match3_vfx_test.dart` asserting 0 shockwaves under reduced motion for all clears.
+5. Finding 2 Drop Progress Test: Strengthened cascade drop test in `match3_vfx_test.dart` by exposing `@visibleForTesting` getters `activeFallDistances`, `dropProgressValue`, and `dropElapsed`, asserting non-empty positive fall distances and intermediate progress (`0.0 < progress < 1.0`).
+6. Docs: Updated `docs/design/02_VFX_JUICE_RESEARCH_PLAN.md` (line 145) to explicitly specify full suppression of shockwave rings, shakes, and flashes for all clears under reduced motion.
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (540/540 tests passing, +4 new tests).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews and requests DeepSeek to verify and issue ACCEPT.
+
+Open:
+None.
+
+Evidence:
+- anchor: 7e65d54073f35f4ac6896713083e4dcb2415694a, uncommitted changes present
+- digest: sha256:13840fa41fb92cfc99bb11a6d64433abfd3c12b2ad98fd020e18bd7572814c45 over 570 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T03:49:41.144Z by antigravity-addff8667515dfd9
+- entry: sha256:f202eda228348449e28c98ec8ce0aa25b1367ad9ed38e092f3fed25b7f784ec7 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Fix DeepSeek Hostile Audit Findings & Lift REJECT
 
 Agent: antigravity-addff8667515dfd9
@@ -77,43 +111,6 @@ Evidence:
 - digest format: 4
 - recorded: 2026-09-25T02:50:52.912Z by antigravity-addff8667515dfd9
 - entry: sha256:e8469f8f2e574d40f724abff4e653a0ac733945a7f990eff9e424d4aefdf44f6 of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Track B.1: Tetris Flame VFX Juice & Celebration Adoption
-
-Agent: antigravity-addff8667515dfd9
-
-Action:
-1. Integrated VfxDirector into TetrisFlameGame: attached camera viewfinder, BurstField particle bus, Reduced Motion gating, and camera shake / zoom punch feedback.
-2. Wired TetrisEvent pipeline to VfxDirector:
-   - LineClear: dispatches LineClearedVfxEvent with cleared row centroids, ShockwaveRingComponent, LineClearFlashComponent, ScorePopComponent, and 4-line 'TETRIS!' ComboPulse with 45ms hit-stop.
-   - Lock / HardDrop: captures last locked tetromino cells and dispatches PiecePlacedVfxEvent with LandingSquashComponent and landing dust burst; triggers ScreenShakeVfxEvent with zoomPunch.
-   - PerfectClear: dispatches AllClearVfxEvent with fanfare fireworks and 60ms hit-stop freeze.
-   - Combo / TSpin / LevelUp: dispatches verbal tier ComboPulseComponent and camera punch.
-3. Implemented PieceAuraShader on falling active piece and ghost piece aiming footprint: calculates screen-space bounding boxes and renders organic chromatic glow envelope.
-4. Integrated CelebrationDirector celebration badge into TetrisGameOverCard for New Record flair.
-5. Added comprehensive test suite in test/unit/features/tetris/tetris_vfx_test.dart covering VfxDirector attachment, LandingSquash, LineClear, AllClear, shader rendering, and celebration badges (7/7 tests passing).
-
-Result:
-- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
-- flutter test --no-pub: exit 0 (522/522 tests passing, +7 new tests).
-- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
-
-Next step:
-- Record protocol handoff evidence with protocol-handoff.cjs.
-- Release cooperative lock.
-- Human owner reviews, commits, and pushes changes.
-
-Open:
-None.
-
-Evidence:
-- anchor: 758e63e01eca5362d18b8e88cf17195efead8317, uncommitted changes present
-- digest: sha256:4bd22044d73a585423da5cce5b27cc669d99443a594ebd46765ca2a65790acc5 over 569 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-25T02:09:32.450Z by antigravity-addff8667515dfd9
-- entry: sha256:b20fe69f0578d3befbe9a2cad47ab4ae4b4b5e7b3dcd62ca3583b816adb615d5 of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
