@@ -120,5 +120,30 @@ void main() {
       expect(comboPulse.text, 'Combo x2');
       expect(scorePop.priority, isNot(equals(comboPulse.priority)));
     });
+
+    test('ScorePopComponent renders cleanly without throwing across animation phases', () {
+      final ScorePopComponent scorePop = ScorePopComponent(
+        text: '+250',
+        startPosition: Vector2(120, 180),
+        duration: 0.85,
+      );
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
+
+      // Render at t=0
+      scorePop.render(canvas);
+
+      // Render at mid-point (overshoot peak)
+      scorePop.update(0.425);
+      scorePop.render(canvas);
+
+      // Render near completion (fade out)
+      scorePop.update(0.35);
+      scorePop.render(canvas);
+
+      final Picture picture = recorder.endRecording();
+      expect(picture, isNotNull);
+      picture.dispose();
+    });
   });
 }

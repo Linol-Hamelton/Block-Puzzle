@@ -16,6 +16,7 @@ import '../../../domain/gameplay/move.dart';
 import '../../../domain/gameplay/piece.dart';
 import '../../../l10n/verbal_tiers.dart';
 import '../../../ui/effects/burst_field.dart';
+import '../../../ui/effects/easing_presets.dart';
 import '../../../ui/effects/effect_timing.dart';
 import '../../../ui/effects/glass_board.dart';
 import '../../diagnostics/diagnostics_screen.dart';
@@ -2113,12 +2114,41 @@ class ScorePopComponent extends PositionComponent {
     this.duration = 0.85,
   }) {
     priority = 212;
+    _initTextPainter();
   }
 
   final String text;
   final Vector2 startPosition;
   final double duration;
   double _elapsed = 0;
+
+  late final TextPainter _painter;
+  late final double _halfWidth;
+  late final double _halfHeight;
+  final Paint _textPaint = Paint();
+
+  void _initTextPainter() {
+    _textPaint.color = const Color.fromRGBO(214, 255, 224, 1.0);
+    _painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontSize: 20.0,
+          fontWeight: FontWeight.w800,
+          foreground: _textPaint,
+          shadows: const <Shadow>[
+            Shadow(
+              color: Color.fromRGBO(76, 217, 100, 0.8),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    _halfWidth = _painter.width / 2;
+    _halfHeight = _painter.height / 2;
+  }
 
   bool get isFinished => _elapsed >= duration;
 
@@ -2143,29 +2173,16 @@ class ScorePopComponent extends PositionComponent {
     } else {
       opacity = ((1.0 - t) / 0.24).clamp(0.0, 1.0);
     }
-    final double yOffset = t * 36.0;
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: 20.0,
-          fontWeight: FontWeight.w800,
-          color: Color.fromRGBO(214, 255, 224, opacity),
-          shadows: <Shadow>[
-            Shadow(
-              color: Color.fromRGBO(76, 217, 100, opacity * 0.8),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(
+
+    final double progress = EasingPresets.evaluateScorePopupProgress(t);
+    final double yOffset = progress * 40.0;
+
+    _textPaint.color = Color.fromRGBO(214, 255, 224, opacity);
+    _painter.paint(
       canvas,
       Offset(
-        startPosition.x - (painter.width / 2),
-        startPosition.y - yOffset - (painter.height / 2),
+        startPosition.x - _halfWidth,
+        startPosition.y - yOffset - _halfHeight,
       ),
     );
   }

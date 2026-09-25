@@ -2,6 +2,12 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-09-25 (Flame VFX Juice Research: Stage 0 Audit & Stage 1 Easing Spikes)
+- Documented full VFX research plan in `design/02_VFX_JUICE_RESEARCH_PLAN.md` and updated `.ai/PLAN.md`.
+- Implemented `EasingPresets` (`apps/mobile/lib/ui/effects/easing_presets.dart`) with standardized curves (`pieceDropCurve`, `scorePopupCurve`, `rackSpawnCurve`, `cascadeDropCurve`, `squashCurve`) and controller helpers.
+- Refactored `ScorePopComponent` in `block_puzzle_game.dart`: eliminated per-frame `TextPainter` and `layout()` allocations in `render()`, applied `easeOutBack` overshoot trajectory via `EasingPresets`.
+- Added unit test suite `easing_presets_test.dart` and render lifecycle test in `shockwave_and_score_test.dart`. Total test suite increased from 457 to 465 passing tests.
+
 ## 2026-09-25 (Comprehensive Documentation Synthesis & Repository Cleanup)
 - Synthesized DEC-0024 performance profiling, frame bisection and 4 falsified hypotheses into `design/01_PERFORMANCE_AND_GRAPHICS_LESSONS.md`.
 - Synthesized evaluated and rejected gameplay hypotheses (P2W, rubber-band RNG, fever mode, social bloat) into `product/03_GAMEPLAY_HYPOTHESES_AND_DECISIONS.md`.
