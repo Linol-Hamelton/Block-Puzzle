@@ -1,9 +1,12 @@
 import 'dart:ui';
+import 'package:flame/camera.dart';
 import 'package:flame/components.dart';
 import '../../domain/gameplay/board_state.dart';
 import '../../features/diagnostics/step6_benchmark.dart';
 import 'burst_field.dart';
+import 'camera_shake_effect.dart';
 import 'combo_pulse_component.dart';
+import 'landing_squash_component.dart';
 import 'line_clear_flash_component.dart';
 import 'score_pop_component.dart';
 import 'shockwave_ring_component.dart';
@@ -17,6 +20,7 @@ import 'vfx_events.dart';
 class VfxDirector extends Component {
   VfxDirector({
     BurstField? burstField,
+    this.viewfinder,
     this.vfxLevel = VfxLevel.standard,
     this.isReducedMotion,
     this.onScreenShake,
@@ -27,13 +31,16 @@ class VfxDirector extends Component {
   /// Shared pooled particle field.
   final BurstField burst;
 
+  /// Optional Flame camera viewfinder to attach camera shake and zoom punch effects directly.
+  final Viewfinder? viewfinder;
+
   /// Active visual effects density tier.
   VfxLevel vfxLevel;
 
   /// Accessibility motion preference resolver. Defaults to [Step6Benchmark.reducedMotion.value].
   final bool Function()? isReducedMotion;
 
-  /// Callback to shake the game camera/viewfinder.
+  /// Callback to shake the game camera/viewfinder when direct [viewfinder] is not bound.
   final void Function(double amplitude)? onScreenShake;
 
   bool get _reducedMotion =>
@@ -41,11 +48,33 @@ class VfxDirector extends Component {
 
   late final _BurstRendererComponent _burstRenderer;
 
+  double _hitStopTimer = 0;
+
+  /// Whether simulation / VFX are temporarily frozen for high-impact hit-stop.
+  bool get isHitStopActive => _hitStopTimer > 0;
+
+  /// Triggers a brief micro-pause (40-60ms) to heighten explosion punch.
+  void triggerHitStop(double durationSeconds) {
+    if (_reducedMotion || vfxLevel.isOff) {
+      return;
+    }
+    _hitStopTimer = durationSeconds.clamp(0.02, 0.08);
+  }
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     _burstRenderer = _BurstRendererComponent(burst);
     add(_burstRenderer);
+  }
+
+  @override
+  void update(double dt) {
+    if (_hitStopTimer > 0) {
+      _hitStopTimer -= dt;
+      return;
+    }
+    super.update(dt);
   }
 
   /// Dispatches a typed [VfxEvent] to trigger the appropriate effect pipeline.
@@ -76,6 +105,18 @@ class VfxDirector extends Component {
     if (_reducedMotion) {
       return;
     }
+
+    // 1. Tactile landing squash & stretch on placed cells
+    if (event.cellRects != null && event.cellRects!.isNotEmpty) {
+      add(
+        LandingSquashComponent(
+          cellRects: event.cellRects!,
+          color: event.color,
+        ),
+      );
+    }
+
+    // 2. Micro particle burst at cell centers
     final int particleCount = vfxLevel == VfxLevel.full ? 4 : 2;
     if (event.cellCenters != null && event.cellCenters!.isNotEmpty) {
       for (final Vector2 center in event.cellCenters!) {
@@ -109,10 +150,11 @@ class VfxDirector extends Component {
     final double cellSize = event.cellSize;
     final Color color = event.color;
 
-    // 1. Screen Shake
+    // 1. Screen Shake & Zoom punch
     if (!reduced) {
-      final double shake = (2.0 + (event.strength - 1) * 0.6).clamp(2.0, 4.0);
-      onScreenShake?.call(shake);
+      final double shake = (2.0 + (event.strength - 1) * 0.6).clamp(2.0, 4.5);
+      final bool zoomPunch = event.strength >= 3;
+      _handleScreenShake(ScreenShakeVfxEvent(amplitude: shake, zoomPunch: zoomPunch));
     }
 
     // 2. Full-board flash
@@ -198,7 +240,34 @@ class VfxDirector extends Component {
   }
 
   void _handleScreenShake(ScreenShakeVfxEvent event) {
-    if (!_reducedMotion) {
+    if (_reducedMotion) {
+      return;
+    }
+
+    if (viewfinder != null) {
+      final existingShakes = children.whereType<CameraShakeEffect>().toList(growable: false);
+      for (final s in existingShakes) {
+        s.removeFromParent();
+      }
+      add(
+        CameraShakeEffect(
+          viewfinder: viewfinder!,
+          amplitude: event.amplitude,
+        ),
+      );
+
+      if (event.zoomPunch) {
+        final existingZoom = children.whereType<ZoomPunchEffect>().toList(growable: false);
+        for (final z in existingZoom) {
+          z.removeFromParent();
+        }
+        add(
+          ZoomPunchEffect(
+            viewfinder: viewfinder!,
+          ),
+        );
+      }
+    } else {
       onScreenShake?.call(event.amplitude);
     }
   }
@@ -211,7 +280,8 @@ class VfxDirector extends Component {
     );
 
     if (!reduced) {
-      onScreenShake?.call(4.0);
+      triggerHitStop(0.06);
+      _handleScreenShake(const ScreenShakeVfxEvent(amplitude: 4.5, zoomPunch: true));
     }
 
     add(
@@ -279,6 +349,9 @@ class VfxDirector extends Component {
     removeAll(children.whereType<ScorePopComponent>().toList(growable: false));
     removeAll(children.whereType<ComboPulseComponent>().toList(growable: false));
     removeAll(children.whereType<LineClearFlashComponent>().toList(growable: false));
+    removeAll(children.whereType<LandingSquashComponent>().toList(growable: false));
+    removeAll(children.whereType<CameraShakeEffect>().toList(growable: false));
+    removeAll(children.whereType<ZoomPunchEffect>().toList(growable: false));
   }
 }
 

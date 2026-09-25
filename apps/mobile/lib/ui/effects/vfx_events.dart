@@ -47,6 +47,7 @@ sealed class VfxEvent {
     required Vector2 position,
     required Color color,
     List<Vector2>? cellCenters,
+    List<Rect>? cellRects,
     double cellSize,
   }) = PiecePlacedVfxEvent;
 
@@ -82,6 +83,7 @@ sealed class VfxEvent {
 
   const factory VfxEvent.screenShake({
     required double amplitude,
+    bool zoomPunch,
   }) = ScreenShakeVfxEvent;
 
   const factory VfxEvent.allClear({
@@ -97,12 +99,14 @@ class PiecePlacedVfxEvent extends VfxEvent {
     required this.position,
     required this.color,
     this.cellCenters,
+    this.cellRects,
     this.cellSize = 36.0,
   });
 
   final Vector2 position;
   final Color color;
   final List<Vector2>? cellCenters;
+  final List<Rect>? cellRects;
   final double cellSize;
 }
 
@@ -174,9 +178,11 @@ class ComboPulseVfxEvent extends VfxEvent {
 class ScreenShakeVfxEvent extends VfxEvent {
   const ScreenShakeVfxEvent({
     required this.amplitude,
+    this.zoomPunch = false,
   });
 
   final double amplitude;
+  final bool zoomPunch;
 }
 
 /// Dispatched during an All Clear (board cleared of all blocks).

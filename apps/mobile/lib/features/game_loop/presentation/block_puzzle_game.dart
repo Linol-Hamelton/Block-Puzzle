@@ -29,7 +29,9 @@ import '../application/game_loop_controller.dart';
 import '../application/game_loop_view_state.dart';
 import '../application/models/models.dart';
 
+export '../../../ui/effects/camera_shake_effect.dart';
 export '../../../ui/effects/combo_pulse_component.dart';
+export '../../../ui/effects/landing_squash_component.dart';
 export '../../../ui/effects/line_clear_flash_component.dart';
 export '../../../ui/effects/score_pop_component.dart';
 export '../../../ui/effects/shockwave_ring_component.dart';
@@ -56,6 +58,7 @@ class BlockPuzzleGame extends FlameGame {
   final BurstField _burst = BurstField();
   late final VfxDirector _vfxDirector = VfxDirector(
     burstField: _burst,
+    viewfinder: camera.viewfinder,
     isReducedMotion: () => Step6Benchmark.reducedMotion.value,
     onScreenShake: (double amplitude) => _playScreenShake(amplitude: amplitude),
   );
@@ -371,12 +374,18 @@ class BlockPuzzleGame extends FlameGame {
     unawaited(haptics.mediumImpact());
 
     final List<Vector2> cellCenters = <Vector2>[];
+    final List<Rect> cellRects = <Rect>[];
     for (final PieceCellOffset offset in pieceComponent.piece.cells) {
+      final double cellLeft = _boardOrigin.x + ((anchor.x + offset.dx) * _boardCellSize);
+      final double cellTop = _boardOrigin.y + ((anchor.y + offset.dy) * _boardCellSize);
       cellCenters.add(
         Vector2(
-          _boardOrigin.x + ((anchor.x + offset.dx) * _boardCellSize) + (_boardCellSize / 2),
-          _boardOrigin.y + ((anchor.y + offset.dy) * _boardCellSize) + (_boardCellSize / 2),
+          cellLeft + (_boardCellSize / 2),
+          cellTop + (_boardCellSize / 2),
         ),
+      );
+      cellRects.add(
+        Rect.fromLTWH(cellLeft, cellTop, _boardCellSize, _boardCellSize),
       );
     }
     _vfxDirector.handleEvent(
@@ -386,6 +395,7 @@ class BlockPuzzleGame extends FlameGame {
           _boardOrigin.y + (anchor.y * _boardCellSize),
         ),
         cellCenters: cellCenters,
+        cellRects: cellRects,
         cellSize: _boardCellSize,
         color: _currentPalette.occupiedColor,
       ),
@@ -419,6 +429,9 @@ class BlockPuzzleGame extends FlameGame {
     if (result.comboStreak > 1) {
       unawaited(sfxPlayer.playCombo(comboStreak: result.comboStreak));
       _playComboAnimation(comboStreak: result.comboStreak);
+      if (result.comboStreak >= 4) {
+        _vfxDirector.triggerHitStop(0.045);
+      }
     }
 
     if (result.isGameOver) {

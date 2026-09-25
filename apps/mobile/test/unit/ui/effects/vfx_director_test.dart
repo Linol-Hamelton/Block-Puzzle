@@ -39,7 +39,7 @@ void main() {
       director = VfxDirector(
         vfxLevel: VfxLevel.standard,
         isReducedMotion: () => false,
-        onScreenShake: (double amp) => cameraShakes.add(amp),
+        onScreenShake: cameraShakes.add,
       );
     });
 
@@ -156,7 +156,7 @@ void main() {
 
       final VfxDirector quietDirector = VfxDirector(
         isReducedMotion: () => true,
-        onScreenShake: (double amp) => cameraShakes.add(amp),
+        onScreenShake: cameraShakes.add,
       );
       quietDirector.handleEvent(const VfxEvent.screenShake(amplitude: 3.5));
       // No new shake added
@@ -181,7 +181,7 @@ void main() {
     test('VfxLevel.off ignores all events completely', () {
       final VfxDirector offDirector = VfxDirector(
         vfxLevel: VfxLevel.off,
-        onScreenShake: (double amp) => cameraShakes.add(amp),
+        onScreenShake: cameraShakes.add,
       );
 
       offDirector.handleEvent(

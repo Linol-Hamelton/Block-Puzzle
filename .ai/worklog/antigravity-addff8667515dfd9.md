@@ -6,6 +6,41 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Flame VFX Juice: Stage 3 Game Feel (Camera Shake, Zoom Punch, Squash & Stretch, Hit-stop)
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Created CameraShakeEffect and ZoomPunchEffect in apps/mobile/lib/ui/effects/camera_shake_effect.dart: isotropic damped harmonic oscillation (exp(-3.2 * t) * (1 - t)) with guaranteed drift-free return on completion/disposal, and smooth quadratic elastic micro-zoom (1.0 -> 1.025 -> 1.0).
+2. Created LandingSquashComponent in apps/mobile/lib/ui/effects/landing_squash_component.dart: bounds-centered vertical squash (scaleY 0.88 -> 1.0, scaleX 1.08 -> 1.0) with translucent glass glow when pieces snap to grid.
+3. Added evaluateProgress(t, curve) helper to apps/mobile/lib/ui/effects/easing_presets.dart.
+4. Extended VfxEvent in ui/effects/vfx_events.dart: cellRects on PiecePlacedVfxEvent and zoomPunch flag on ScreenShakeVfxEvent.
+5. Upgraded VfxDirector in ui/effects/vfx_director.dart: bound Viewfinder camera, implemented micro hit-stop freeze-frame support (45ms for mega combo, 60ms for All Clear), landing squash spawning, and screen shake / zoom punch dispatching with Reduced Motion and VfxLevel gating.
+6. Integrated camera viewfinder and hit-stop in BlockPuzzleGame.
+7. Added unit test suite in test/unit/ui/effects/camera_shake_test.dart and verified clean static analysis.
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (487/487 tests passing, +9 new tests).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews, commits, and pushes changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: 9c7db64c9fdca9eb9b51d692e8f7f6b5ad56facd, uncommitted changes present
+- digest: sha256:7d0f23956ca67ce18c2f35663b18f37554a1de4c99a985e491d1349c75e25b32 over 560 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T00:44:08.503Z by antigravity-addff8667515dfd9
+- entry: sha256:be2094edc035a3a15544df43c4a3e3ccfea4451b2303d269778bf75d3e4aaac0 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Flame VFX Juice: Stage 1 Polish & Stage 2 VfxDirector Architecture
 
 Agent: antigravity-addff8667515dfd9
@@ -75,39 +110,4 @@ Evidence:
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 4s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Comprehensive documentation synthesis and repository cleanup
 
-Agent: antigravity-addff8667515dfd9
-
-Action:
-1. Synthesized DEC-0024 performance profiling, frame bisection, and 4 falsified hypotheses (nebula, blurs, clipPath, gem vs well) into docs/design/01_PERFORMANCE_AND_GRAPHICS_LESSONS.md.
-2. Synthesized evaluated and rejected gameplay hypotheses (P2W, rubber-band difficulty, fever mode, social bloat) into docs/product/03_GAMEPLAY_HYPOTHESES_AND_DECISIONS.md.
-3. Synthesized development history and completed plans (Plans 12-15, Sprints 1-9) into docs/roadmap/02_HISTORICAL_PLANS_SUMMARY.md.
-4. Moved completed raw plans, architecture specs, and step reviews into docs/archive/ (roadmap, design, architecture, audit).
-5. Deleted obsolete files: 48 diagnostic PNG screenshots (35 MB) from docs/design/, duplicate date-suffixed audio docs, obsolete sprint issue scripts, generate_placeholders.py, and early sprint backlogs.
-6. Updated docs/archive/README.md, docs/DOCS_CHANGELOG.md, and docs/roadmap/05_IMPLEMENTATION_STATUS.md.
-
-Result:
-- Repository clean: 35 MB of heavy intermediate images and redundant documents removed.
-- docs/ streamlined and authoritative.
-- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
-- flutter test --no-pub: exit 0 (457/457 tests passing).
-- validate-protocol.ps1: exit 0 (0 warnings).
-
-Next step:
-- Record and verify protocol handoff evidence.
-- Release protocol lock.
-- Human owner reviews, commits, and pushes changes.
-
-Open:
-None.
-
-Evidence:
-- anchor: 475bbd2fc6ec43740e391941c9fd80c28ad8b184, uncommitted changes present
-- digest: sha256:0c0a4d7f63e6fc81f116b2a5c8b9cf9530c85742d4871f625ef3e04040c3f9cb over 547 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-25T00:12:08.991Z by antigravity-addff8667515dfd9
-- entry: sha256:72c42a372973b8243af6aefa2d12613481184ed0f494f64d7b0fbf34e47a595e of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify

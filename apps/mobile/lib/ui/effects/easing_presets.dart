@@ -100,4 +100,10 @@ abstract final class EasingPresets {
     final double clamped = t.clamp(0.0, 1.0);
     return pieceDropCurve.transform(clamped);
   }
+
+  /// Evaluates progress [t] (0.0..1.0) along an arbitrary [curve].
+  static double evaluateProgress(double t, Curve curve) {
+    final double clamped = t.clamp(0.0, 1.0);
+    return curve.transform(clamped);
+  }
 }
