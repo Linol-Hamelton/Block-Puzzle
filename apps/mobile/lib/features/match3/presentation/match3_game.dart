@@ -11,22 +11,11 @@ import '../../../domain/match3/tile_grid.dart';
 import '../../../ui/effects/burst_field.dart';
 import '../../../ui/effects/effect_timing.dart';
 import '../../../ui/effects/glass_board.dart';
+import '../../../ui/effects/glass_tile_atlas.dart';
 import '../application/match3_controller.dart';
 
 /// Gem colors (neon palette consistent with the Lumina look).
-const Map<TileColor, Color> gemColors = <TileColor, Color>{
-  TileColor.ruby: Color(0xFFF0566E),
-  // Amber and citrine were F0A24E and F2D24E: about eighteen degrees of hue
-  // apart and almost identical in lightness, which on a small tile in motion
-  // reads as one colour. They are now separated on two axes rather than one -
-  // a deeper orange against a brighter lemon - so they stay distinguishable at
-  // speed, at a glance, and for a player who sees hue poorly.
-  TileColor.amber: Color(0xFFEF7A21),
-  TileColor.citrine: Color(0xFFFFE94A),
-  TileColor.emerald: Color(0xFF5FE08A),
-  TileColor.sapphire: Color(0xFF4DA6F0),
-  TileColor.amethyst: Color(0xFFB672EC),
-};
+const Map<TileColor, Color> gemColors = defaultGemColors;
 
 /// Flame view for Match-3. Renders the gem grid, the current selection, and the
 /// clear/cascade juice. Input arrives from the Flutter layer (see
@@ -79,6 +68,7 @@ class Match3FlameGame extends FlameGame {
   double _cachedGemsCell = 0;
   int _cachedGemsCols = 0;
   int _cachedGemsRows = 0;
+  GlassTileAtlas<TileColor>? _tileAtlas;
 
   int get _cols => controller.engine.width;
   int get _rows => controller.engine.height;
@@ -120,6 +110,10 @@ class Match3FlameGame extends FlameGame {
     _staticGemsPicture = null;
     staleGems?.dispose();
     _cachedGemsGrid = null;
+
+    final GlassTileAtlas<TileColor>? staleAtlas = _tileAtlas;
+    _tileAtlas = null;
+    staleAtlas?.dispose();
   }
 
   /// Maps a local pixel offset (within the GameWidget) to a cell, or null.
@@ -324,6 +318,18 @@ class Match3FlameGame extends FlameGame {
     canvas.translate(sx, sy);
 
     _renderBackground(canvas, ox, oy, boardW, boardH, cell);
+
+    final double ratio = boardWellPixelRatio();
+    if (_tileAtlas == null || !_tileAtlas!.isValidFor(unit: cell, devicePixelRatio: ratio)) {
+      final GlassTileAtlas<TileColor>? staleAtlas = _tileAtlas;
+      _tileAtlas = null;
+      staleAtlas?.dispose();
+      _tileAtlas = GlassTileAtlas.bakeMatch3(
+        cell: cell,
+        devicePixelRatio: ratio,
+        palette: gemColors,
+      );
+    }
 
     _updateStaticGemsPicture(grid, igniting, cell, _cols, _rows);
     if (_staticGemsPicture != null) {
@@ -537,65 +543,7 @@ class Match3FlameGame extends FlameGame {
   /// run reads silhouette faster than hue, the board stays legible through
   /// motion and a cascade, and it keeps working for a player who sees colour
   /// poorly. Colour and shape say the same thing twice.
-  Path _gemPath(TileColor color, Rect rect) {
-    final Offset c = rect.center;
-    final double rx = rect.width / 2;
-    final double ry = rect.height / 2;
-
-    switch (color) {
-      case TileColor.ruby:
-        return roundedSquarePath(rect, rect.width * 0.26);
-      case TileColor.citrine:
-        return Path()..addOval(rect);
-      case TileColor.amber:
-        // Flat-top hexagon.
-        return _polygon(c, rx, ry, 6, math.pi / 6);
-      case TileColor.emerald:
-        // Diamond standing on a point.
-        return _polygon(c, rx, ry, 4, 0);
-      case TileColor.sapphire:
-        // Pentagon, point up.
-        return _polygon(c, rx, ry, 5, 0);
-      case TileColor.amethyst:
-        // Six-point star, spikes shallow enough to survive a small cell.
-        return _star(c, rx, ry, 6, 0.62);
-    }
-  }
-
-  /// A regular polygon inscribed in the ellipse ([rx], [ry]), first vertex at
-  /// the top and rotated by [phase].
-  Path _polygon(Offset c, double rx, double ry, int sides, double phase) {
-    final Path path = Path();
-    for (int i = 0; i < sides; i++) {
-      final double a = ((math.pi * 2) / sides) * i - (math.pi / 2) + phase;
-      final double x = c.dx + (math.cos(a) * rx);
-      final double y = c.dy + (math.sin(a) * ry);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    return path..close();
-  }
-
-  /// A star with [points] spikes, whose valleys sit at [inner] of the radius.
-  Path _star(Offset c, double rx, double ry, int points, double inner) {
-    final Path path = Path();
-    final int steps = points * 2;
-    for (int i = 0; i < steps; i++) {
-      final double a = ((math.pi * 2) / steps) * i - (math.pi / 2);
-      final double scale = i.isEven ? 1.0 : inner;
-      final double x = c.dx + (math.cos(a) * rx * scale);
-      final double y = c.dy + (math.sin(a) * ry * scale);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    return path..close();
-  }
+  Path _gemPath(TileColor color, Rect rect) => match3GemPath(color, rect);
 
   /// One gem, cut from the shared glass to its colour's silhouette.
   ///
@@ -613,6 +561,15 @@ class Match3FlameGame extends FlameGame {
     Color color, {
     double charge = 0,
   }) {
+    if (charge == 0 && _tileAtlas != null) {
+      _tileAtlas!.drawTile(
+        canvas,
+        key: tileColor,
+        dstCellRect: Rect.fromLTWH(ox + (x * cell), oy + (y * cell), cell, cell),
+      );
+      return;
+    }
+
     // Inset enough that the socket shows as a ring around the gem. An earlier
     // pass filled 83% of the cell and hid the board it was meant to sit in.
     final double inset = cell * 0.115;

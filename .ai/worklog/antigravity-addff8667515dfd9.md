@@ -6,6 +6,41 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Flame VFX Juice: Stage 6 Procedural Tile Atlas Baking & Batching
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Created GlassTileAtlas in apps/mobile/lib/ui/effects/glass_tile_atlas.dart: pre-bakes procedural paintGlassFacet tiles into a GPU-resident ui.Image texture atlas with physical-pixel scaling (devicePixelRatio) and transparent gutters.
+2. Implemented drawTile (single-blit drawImageRect) and drawBatch (single-call drawRawAtlas with RSTransform scaling) for high-performance rendering.
+3. Provided pre-configured factories bakeTetris (7 neon tetromino types) and bakeMatch3 (6 distinct geometric gem shapes and colors).
+4. Integrated GlassTileAtlas into TetrisFlameGame: cached _tileAtlas, replaced per-frame multi-pass paintGlassFacet calls for locked and active minos with instant atlas blits, with graceful fallback for clearing squash animations.
+5. Integrated GlassTileAtlas into Match3Game: cached _tileAtlas, optimized gem rendering in _paintGem with instant atlas blits, with graceful fallback for charged ignitions.
+6. Handled surface lifecycle safety in dropCachedSurfaces() across both TetrisFlameGame and Match3Game.
+7. Added unit test suite in test/unit/ui/effects/glass_tile_atlas_test.dart (6/6 tests passing).
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (493/493 tests passing, +6 new tests).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews, commits, and pushes changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: 5ff3aeae33ca375c94989766bd501c29e98a4ff8, uncommitted changes present
+- digest: sha256:2b0476c0cb62803b327cfcf278933d086b19097bc885acf48faace413cd5e348 over 562 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T00:53:41.952Z by antigravity-addff8667515dfd9
+- entry: sha256:5ae2e56aa83a410060b6961c27ac11f2a0df5785751d5f99921d1dbbcc16f50b of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Flame VFX Juice: Stage 3 Game Feel (Camera Shake, Zoom Punch, Squash & Stretch, Hit-stop)
 
 Agent: antigravity-addff8667515dfd9
@@ -75,39 +110,5 @@ Evidence:
 - entry: sha256:2144ca1365166005e337dbdd4aeb6cc5fce7a5376ba4ae5f709a4f70345fa68c of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Flame VFX Juice Research: Stage 0 audit and Stage 1 easing spikes
-
-Agent: antigravity-addff8667515dfd9
-
-Action:
-1. Formalized the comprehensive research plan in docs/design/02_VFX_JUICE_RESEARCH_PLAN.md and updated .ai/PLAN.md (53 lines, within limits).
-2. Stage 0 Audit: Mapped animation points across Classic, Tetris, Match-3. Verified Flame 1.18.0 EffectController APIs and confirmed procedural vector rendering pipeline (glass_board.dart, ui.Image baking).
-3. Stage 1 Spike: Implemented EasingPresets in apps/mobile/lib/ui/effects/easing_presets.dart with standardized curves (pieceDropCurve, scorePopupCurve, rackSpawnCurve, cascadeDropCurve, squashCurve).
-4. Stage 1 Optimization: Refactored ScorePopComponent in block_puzzle_game.dart — eliminated per-frame TextPainter and layout() allocations in render(), applied easeOutBack overshoot trajectory via EasingPresets.
-5. Added unit test suites in easing_presets_test.dart and shockwave_and_score_test.dart.
-6. Archived oldest MAR worklog entry into .ai/ARCHIVE.md to stay within 150-line journal limit.
-
-Result:
-- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
-- flutter test --no-pub: exit 0 (465/465 tests passing, +8 new tests).
-- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
-
-Next step:
-- Record protocol handoff evidence with protocol-handoff.cjs.
-- Release protocol lock.
-- Human owner reviews and commits the checkpoint.
-
-Open:
-None.
-
-Evidence:
-- anchor: 3ecc715dd04a945c95810030df9763e9f050d944, uncommitted changes present
-- digest: sha256:c4d4b853962181ef8b199e080be220f4396d56c29833734f5f41b7f67195a98c over 550 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-25T00:20:21.834Z by antigravity-addff8667515dfd9
-- entry: sha256:851eceebb08e0667c21c8c5be2bbe3c1d28ce2b12bf4e01ca04d843eebf975bc of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 4s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
 

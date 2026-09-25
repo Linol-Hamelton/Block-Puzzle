@@ -9,18 +9,11 @@ import '../../../domain/tetris/tetris_engine.dart';
 import '../../../domain/tetris/tetromino.dart';
 import '../../../ui/effects/burst_field.dart';
 import '../../../ui/effects/glass_board.dart';
+import '../../../ui/effects/glass_tile_atlas.dart';
 import '../application/tetris_controller.dart';
 
 /// Mino colors (neon palette consistent with the Lumina look).
-const Map<TetrominoType, Color> tetrominoColors = <TetrominoType, Color>{
-  TetrominoType.i: Color(0xFF44E0EA),
-  TetrominoType.o: Color(0xFFF2D24E),
-  TetrominoType.t: Color(0xFFB672EC),
-  TetrominoType.s: Color(0xFF5FE08A),
-  TetrominoType.z: Color(0xFFF06A86),
-  TetrominoType.j: Color(0xFF5A8CEC),
-  TetrominoType.l: Color(0xFFF0A44E),
-};
+const Map<TetrominoType, Color> tetrominoColors = defaultTetrominoColors;
 
 /// Flame view for Tetris. Renders the board, locked cells, ghost, and the
 /// active piece in screen space, and drives the model clock by forwarding each
@@ -60,6 +53,7 @@ class TetrisFlameGame extends FlameGame {
   double _bgRatio = 0;
   int _bgCols = 0;
   int _bgRows = 0;
+  GlassTileAtlas<TetrominoType>? _tileAtlas;
 
   @override
   Color backgroundColor() => const Color(0x00000000);
@@ -86,6 +80,10 @@ class TetrisFlameGame extends FlameGame {
     final ui.Image? staleBg = _bgImage;
     _bgImage = null;
     staleBg?.dispose();
+
+    final GlassTileAtlas<TetrominoType>? staleAtlas = _tileAtlas;
+    _tileAtlas = null;
+    staleAtlas?.dispose();
   }
 
   void _onVisualEvent(TetrisEvent event) {
@@ -267,6 +265,18 @@ class TetrisFlameGame extends FlameGame {
 
     _renderBackground(canvas, ox, oy, boardW, boardH, cell, cols, rows);
 
+    final double ratio = boardWellPixelRatio();
+    if (_tileAtlas == null || !_tileAtlas!.isValidFor(unit: cell, devicePixelRatio: ratio)) {
+      final GlassTileAtlas<TetrominoType>? staleAtlas = _tileAtlas;
+      _tileAtlas = null;
+      staleAtlas?.dispose();
+      _tileAtlas = GlassTileAtlas.bakeTetris(
+        cell: cell,
+        devicePixelRatio: ratio,
+        palette: tetrominoColors,
+      );
+    }
+
     for (int y = 0; y < rows; y++) {
       for (int x = 0; x < cols; x++) {
         final TetrominoType? type = engine.board.cellAt(x, y);
@@ -280,6 +290,7 @@ class TetrisFlameGame extends FlameGame {
             y,
             cell,
             tetrominoColors[type]!,
+            type: type,
             beats: isClearing ? beats : null,
           );
         }
@@ -301,7 +312,16 @@ class TetrisFlameGame extends FlameGame {
       final Color color = tetrominoColors[active.type]!;
       for (final TCell c in active.absoluteCells()) {
         if (c.y >= 0) {
-          _paintCell(canvas, ox, oy, c.x, c.y, cell, color);
+          _paintCell(
+            canvas,
+            ox,
+            oy,
+            c.x,
+            c.y,
+            cell,
+            color,
+            type: active.type,
+          );
         }
       }
     }
@@ -527,8 +547,17 @@ class TetrisFlameGame extends FlameGame {
     int y,
     double cell,
     Color color, {
+    TetrominoType? type,
     _ClearBeats? beats,
   }) {
+    if (beats == null && type != null && _tileAtlas != null) {
+      _tileAtlas!.drawTile(
+        canvas,
+        key: type,
+        dstCellRect: Rect.fromLTWH(ox + (x * cell), oy + (y * cell), cell, cell),
+      );
+      return;
+    }
     final double inset = cell * 0.075;
     Rect rect = Rect.fromLTWH(
       ox + (x * cell) + inset,
