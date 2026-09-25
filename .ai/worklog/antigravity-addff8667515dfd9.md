@@ -6,6 +6,37 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Address P3 Audit Residuals (Discriminating Tests & Flash Docs Polish)
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Hardened ScorePopComponent test in `match3_vfx_test.dart`: stepped `game.update(0.025)` during `openingHold` so `_lastScore` synchronizes with `controller.score`, ensuring ScorePop populates strictly from `event.points`; asserted `text == '+${controller.engine.lastSteps.first.gained}'`.
+2. Hardened drop progress test in `match3_vfx_test.dart`: stepped `game.update(0.025)` during `openingHold` to ensure `dropElapsed == 0.05` discriminates per-serial reset.
+3. Polished `docs/design/02_VFX_JUICE_RESEARCH_PLAN.md` (line 145): clarified that Reduced Motion fully suppresses shockwave/shake and attenuates flash effects.
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (540/540 tests passing, discriminating tests verified).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews and commits.
+
+Open:
+None.
+
+Evidence:
+- anchor: eca6187a92072b92c38925cfa84ee561e0a9ca26, uncommitted changes present
+- digest: sha256:2ffe41ad515b524c178c5de289239c70e1ad4f831d6218d520faccf8e3e87804 over 570 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T04:18:58.418Z by antigravity-addff8667515dfd9
+- entry: sha256:6f3a2b4c5e7f4e21c2bfcf53741a1eb1a2ecab996adc7fdd7ad9c850dd3f0fa9 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Fix Re-audit Findings: Match-3 ScorePop points & AllClear Reduced Motion
 
 Agent: antigravity-addff8667515dfd9
@@ -72,45 +103,6 @@ Evidence:
 - digest format: 4
 - recorded: 2026-09-25T03:24:35.358Z by antigravity-addff8667515dfd9
 - entry: sha256:82fb7f29fa830b4b2c88a61682ec77fe3797e97b8914d76fb4e8a3dc799f6962 of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Track B.2: Match-3 Flame VFX Juice & Celebration Adoption
-
-Agent: antigravity-addff8667515dfd9
-
-Action:
-1. Integrated VfxDirector into Match3FlameGame: attached camera viewfinder, BurstField particle bus, Reduced Motion gating, and camera shake / zoom punch feedback.
-2. Implemented dynamic cascade gravity drop animation using EasingPresets.cascadeDropCurve: calculated per-cell fall distances across intermediate frames and smoothly interpolated refill gem descent into board sockets.
-3. Connected Match3Event pipeline to VfxDirector:
-   - Match: computed centroid of clearing burst keys, dispatched LineClearedVfxEvent, ShockwaveRingComponent, ScorePopComponent, and verbal tier ComboPulseComponent.
-   - Combo: triggered ComboPulseComponent with combo label, ScreenShakeVfxEvent with zoom punch, and 45ms hit-stop.
-   - RoundComplete: dispatched AllClearVfxEvent with board-wide fanfare shockwave and golden fireworks.
-   - InvalidSwap & GameOver: dispatched screen shake effects.
-4. Rendered PieceAuraShader around special crystals (bombs, line sweeps, color bombs) and igniting cells with chromatic blooming.
-5. Integrated CelebrationDirector celebration badge into Match3GameOverCard for New Record achievements.
-6. Created dedicated unit and widget test suite in apps/mobile/test/unit/features/match3/match3_vfx_test.dart (8/8 tests passing). Fixed minor lint warnings in tetris_vfx_test.dart.
-
-Result:
-- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues across whole project).
-- flutter test: exit 0 (530/530 tests passing, +8 new tests).
-- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
-
-Next step:
-- Update .ai/TASK.md to complete Track B.2 and prepare handoff for DeepSeek hostile audit.
-- Record protocol handoff evidence with protocol-handoff.cjs.
-- Release cooperative lock.
-- Human owner commits and pushes changes to main.
-
-Open:
-None.
-
-Evidence:
-- anchor: e10e829dfa3ca65316b551d1d4a8e42c22326f63, uncommitted changes present
-- digest: sha256:f9c30a3e01fdf90c0a5ce862be6ca2cd7af7366752e3912389c1711a398f489b over 570 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-25T02:50:52.912Z by antigravity-addff8667515dfd9
-- entry: sha256:e8469f8f2e574d40f724abff4e653a0ac733945a7f990eff9e424d4aefdf44f6 of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify

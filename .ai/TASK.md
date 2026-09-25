@@ -28,9 +28,8 @@ Fix all 6 blocking/actionable findings from DeepSeek's adversarial audit:
 
 ## Current state
 
-- All 6 audit items addressed and verified with comprehensive unit & widget tests (540/540 passing).
-- `step.gained` wired in `match3_engine.dart`; real swap test asserts `ScorePopComponent` points > 0.
-- `_handleAllClear` gates `ShockwaveRingComponent` with `if (!reduced)`; verified by 3 tests.
+- DeepSeek adversarial re-audit verdict: ACCEPT on commit eca6187.
+- P3 residuals hardened: ScorePop test and drop progress test now strictly discriminate mechanisms; docs line 145 wording polished for flash attenuation.
 - Checks: `flutter analyze` exit 0 (0 issues); `flutter test --no-pub` exit 0 (540/540); `validate-protocol.ps1` exit 0.
 
 ## Roles
@@ -41,7 +40,7 @@ Fix all 6 blocking/actionable findings from DeepSeek's adversarial audit:
 
 ## Open questions
 
-- P2-6/P2-7 from initial audit (hit-stop model advance, per-frame allocations) remain outside the selected six; owner to schedule in future sprints.
+- P2-6/P2-7 from initial audit remain outside the selected six; owner to schedule in future sprints.
 
 ---
 

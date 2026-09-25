@@ -135,7 +135,11 @@ void main() {
       expect(ok, isTrue);
 
       // Wait for Frame 1 to appear (openingHold ≈ 300ms)
+      // Call game.update on each iteration to synchronize _lastScore to controller.score
+      // so that ScorePopComponent MUST be populated from event.points (step.gained),
+      // rather than the fallback `controller.score - _lastScore`.
       for (int i = 0; i < 40 && controller.frameBurst.isEmpty; i++) {
+        game.update(0.025);
         await Future<void>.delayed(const Duration(milliseconds: 25));
       }
 
@@ -143,8 +147,7 @@ void main() {
       final List<ScorePopComponent> scorePops =
           game.vfxDirector.children.whereType<ScorePopComponent>().toList();
       expect(scorePops, isNotEmpty);
-      expect(scorePops.first.text, startsWith('+'));
-      expect(int.parse(scorePops.first.text.substring(1)), greaterThan(0));
+      expect(scorePops.first.text, equals('+${controller.engine.lastSteps.first.gained}'));
       for (int i = 0; i < 40 && controller.isBusy; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 25));
       }
@@ -205,8 +208,10 @@ void main() {
       final bool ok = controller.trySwap(hint!.$1, hint.$2);
       expect(ok, isTrue);
 
-      // Wait for Frame 1 to appear (openingHold ≈ 300ms)
+      // Advance game time during openingHold to accumulate pre-drop elapsed time
+      // so that missing per-serial reset would fail dropElapsed == 0.05
       for (int i = 0; i < 40 && controller.frameBurst.isEmpty; i++) {
+        game.update(0.025);
         await Future<void>.delayed(const Duration(milliseconds: 25));
       }
 
