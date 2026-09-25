@@ -2022,6 +2022,1149 @@ Evidence:
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify
 
+## Archived 2026-09-25 from .ai/worklog/codex-d56f1c2c371b35a6.md
+
+# Worklog: codex-d56f1c2c371b35a6
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-14 - Independent review of Claude changes and media preparation
+
+Agent: Codex / codex-d56f1c2c371b35a6.
+
+Action: Reviewed current diff, Claude plans/operations documents, decisions,
+journals and related product contracts; checked primary platform/model sources.
+Inspected D:/AI installations read-only while Claude continued preparation.
+Wrote docs/audit/04_CLAUDE_CHANGES_REVIEW_2026-09-14.md with R1-R12, assessment
+of all fifteen decisions, revised execution order and media acceptance criteria.
+Updated TASK under the shared lock; did not edit Claude's journal or decisions.
+Assumption: user requested review, not implementation or media generation.
+
+Result: Strict Flutter analyze exit 0; unit/widget run exit 0, 195 tests passed.
+Excluded the simulation test that writes tracked JSON in this repeat run.
+ComfyUI imports/CUDA, CLI help and uv pip check passed. Stable Audio initially
+lacked torch/audio; Claude installed them during review. Final torch 2.7.1,
+torchaudio 2.7.1 and flash-attn 2.8.3 imports/CUDA and pip check passed; that
+transient missing-dependency finding is closed. Inference was not run.
+First final validator found TASK at 81 lines; shortened it below the 80-line
+limit before recording the final receipt.
+Claude's protocol receipt verified before our edits. Git diff/check and the
+new report diff were reviewed. Product code and external installations were
+not changed by this review. Detailed findings distinguish inherited defects,
+documentation gaps, upstream launcher behavior and unverified acceptance.
+
+Next step: Claude addresses R1-R12 as applicable, accepts a bounded generated
+asset sample, and consolidates the approved plans before executing S0/A.
+
+Open: Real inference/VRAM/quality, runtime service account, RC transport keys,
+recoverable identity before purchase, SDK/device/cloud/store checks and ADR-004
+lifetime choice. Existing DEC blocks stay binding; proposals need applicable
+owner approval if they change a decision. No commits, pushes or deployments.
+
+Evidence:
+- anchor: 357300ccddff7f7c62bda8639dc966419442453a, uncommitted changes present
+- digest: sha256:40db0ae056c001c55c5238bef5266075bc418c6bc09e9ba108cc8c52fd1e53db over 435 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-14T18:33:38.036Z by codex-d56f1c2c371b35a6
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-14 - Repository development plan and handoff
+
+Agent: Codex / codex-d56f1c2c371b35a6.
+
+Action: Read task, Git state/logs, journals, decisions and product/roadmap/audit/
+architecture/operations/release documents; checked relevant runtime and tests.
+Created docs/development-plan-2026-09-14 from 357300c. Wrote plan 13 and updated
+TASK/PLAN under the shared lock. Preserved parallel plan 12 and recorded
+disagreements. Assumptions: planning only, one engineer, Google Play first,
+one non-consumable cosmetic, existing modes individually gated.
+
+Result: Strict Flutter analyze exit 0; flutter test exit 0, 196 tests passed.
+Initial sandbox analyzer gave no output and was interrupted; escalated run
+passed. Protocol validator initially failed Bash inside sandbox, then passed
+outside sandbox. Product code unchanged. Test-generated run_001 JSON was
+restored from HEAD; later status showed a content-identical line-ending change
+while another session was active, left alone. Pre-existing protocol setup
+and .gitignore edits belong to earlier/concurrent work and were preserved.
+Confirmed sibling db8d05e contains fixes absent from HEAD; local origin/main
+already includes batch 1 despite stale local main. New plan includes release
+defines/package mismatch, purchase identity recovery, RC limitations,
+snapshot/lifecycle gaps, phased priorities, estimates and acceptance gates.
+Reviewed the new plan with git diff --no-index (exit 1 means new content),
+and tracked changes with git diff. git diff --check passed. Checked all four
+authored files for LF/no BOM, size limits and local Markdown links: passed.
+First final receipt failed because TASK used a free-form status; corrected to
+the validator's allowed Completed status (planning complete, no implementation).
+
+Next step: Owner selects/consolidates proposals and records applicable
+architecture/product decisions; begin A0/A1 from detailed plan after approval
+of implementation scope. Obtain store/device/cloud access for runtime gates.
+
+Open: Shop priority, release modes, account/purchase recovery, shared game
+layer, KPI definitions and team capacity. Cloud deployment, device behavior,
+real billing and cohorts remain unverified. No commits, pushes or deployments.
+
+Evidence:
+- anchor: 357300ccddff7f7c62bda8639dc966419442453a, uncommitted changes present
+- digest: sha256:574c67218996e73673e3f65648edca2f806a26f74a92527bb8e5bdad12ae72cc over 431 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-14T13:16:00.282Z by codex-d56f1c2c371b35a6
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-25 from .ai/worklog/claude-bd0bce05de513f55.md
+
+# Worklog: claude-bd0bce05de513f55
+
+Session journal. Owned by this session. No other session writes here.
+
+## 2026-09-16 - Bisection found it: the board well is 81%, the glass is free
+
+Agent: Claude / claude-bd0bce05de513f55.
+
+Action: Reviewed 1g and 1h against the criteria, scored the floor against its
+pre-registered bands, attributed the cost across the five layers, verified the
+revert and the checks, and specified 1i. Wrote
+docs/design/09_DEC0024_STEP1G1H_REVIEW.md. No product code changed.
+
+Result: **Both accepted. The change of method paid on its first measurement.**
+Three guesses found nothing; one bisection found everything.
+The floor is 5.29 ms at 118.3 fps - band two by the letter of my own thresholds,
+band one in substance, because the device hit the panel's 120 Hz cap rather than
+its own limit. The fear that an empty frame costs 30 ms here is dead: **the
+hardware can do 118 fps.**
+The bisection: control 5.29, + nebula 6.31 (+1.02, 7%), + empty GameWidget 7.90
+(+1.59, 11%), **+ board well 19.25 (+11.35, 81%)**, + 64 glass gems 19.24
+(-0.01, **free**).
+**That inverts my model completely.** I spent three experiments suspecting the
+gems - their blurs, their clipPath, their halo - and the gems cost nothing. The
+cost is the cached board background I had assumed was free by definition. My
+first hypothesis, the nebula, is worth 1 ms out of 26.
+The mechanism I should have understood earlier: `drawPicture` does not draw a
+finished image. A `Picture` is a command list and the GPU re-executes it every
+frame - about 130 gradient shaders in the well, two per socket, plus two blurs.
+Caching into a Picture removes the recording cost on the UI thread and nothing
+else. **Step 1e proved exactly this and I failed to generalise it**: caching the
+gems dropped build 64% and left raster untouched to the hundredth. I read that
+as "different threads" and stopped.
+**For the owner this closes the question they were facing.** Glass versus frame
+rate is not a trade any more: the gems are measured free, the look stays, and
+the earlier recommendation to revert 1f was right - there was nothing to buy
+with it. 1i rasterises the well once into an Image and blits it.
+A second target fell out of the same run: the benchmark's full stack is 19.24 ms
+against the real Classic screen's 31.95, so ~12.7 ms lives in the Flutter chrome
+the benchmark lacks - AppBar, HUD, rack, cards. One target at a time.
+My self-check rule turned out to have a directional blind spot - it flagged a
+perfectly good measurement at 1.60x because fps was *lower* than raster allowed,
+which is what a vsync cap looks like. Reworded in the criteria: only fps
+*exceeding* 1000/raster_p50 by 1.5x invalidates a run. Another fix in the tool
+rather than in a reviewer's vigilance.
+flutter analyze exit 0; flutter test exit 0, 350 tests. validate-protocol.ps1
+exit 0.
+
+Next step: Gemini runs 1i. Claude starts step 3.
+
+Open: 1i's prediction could still fail, though unlike the first three this one
+comes from an isolating measurement and a known mechanism rather than from
+picking a suspect by eye. The ~12.7 ms of widget chrome is unexplained and
+untouched. Six measurement screenshots sit untracked in the repository root and
+belong in docs/design/ or .gitignore. Nothing is committed and main is 28 ahead
+of origin.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:a80695a33d939750d7aa60a304926963a3e31a0d5e06e94e5f92aa47c6fac612 over 526 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T18:14:47.236Z by claude-bd0bce05de513f55
+- entry: sha256:0506aec100e22ce305b845fb74ed7c1c22af49c635944d40f17921a1d50d39e0 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-16 - 1f falsified both guesses; the method was wrong, not the experiments
+
+Agent: Claude / claude-bd0bce05de513f55.
+
+Action: Reviewed 1f-A and 1f-B against their pre-registered thresholds, scored
+them, and specified a change of approach as steps 1g and 1h. Wrote
+docs/design/08_DEC0024_STEP1F_REVIEW.md. No product code changed.
+
+Result: **Both accepted, both falsified.** Blurs cost 11.6% against a 25%
+falsifier, clipPath 5.1% against 15%. Removing both leaves Match-3 near 32.6 ms
+- about 31 fps against a 16.67 ms target, still short by a factor of two. The
+prediction had been below 20 ms.
+**That is three falsified guesses in a row - nebula repaint at 0%, blurs,
+clipPath - and the fault is mine and structural.** I kept guessing *what in the
+drawing* costs money and kept subtracting things from a scene without ever
+measuring what an empty frame costs on this device. Subtraction without a
+baseline is guessing with numbers attached rather than measuring.
+The fact that was in plain sight the whole time: **Classic costs 31.95 ms on an
+EMPTY board** - no pieces, the well cached in a Picture - and removing blurs only
+took it to 29.03. The cost is present where there is almost nothing to draw, so
+it lives in frame composition, not content. That also explains why 1d-B moved
+only 22%: it shrank the game canvas but not the background, the Stack or the
+full-screen layers above it. And one more sign from the fresh numbers: Match-3's
+raster fell 11.6% while its frame rate did not rise at all (31.4 -> 29.9 ->
+29.7), so frames are not bound by raster p50 either.
+Next is not a fourth guess. 1g measures the floor - a diagnostics-only route
+with a solid colour and one animating box, no nebula, no Flame, no glass - with
+thresholds written before the measurement, including a band that says the cost
+is environmental and no edit to our drawing will touch it. 1h bisects by adding
+one layer at a time, five measurements, and terminates.
+Recommended reverting both 1f edits, for a methodological reason more than an
+aesthetic one: the bisection has to run against the real app, and 17% that does
+not change the outcome is not worth paying for in look.
+flutter analyze exit 0; flutter test exit 0, 350 tests. validate-protocol.ps1
+exit 0.
+
+Next step: revert 1f, then Gemini runs 1g and 1h. Claude starts step 3.
+
+Open: the glass-versus-frames question still cannot be answered and I will not
+guess at it a fourth time. If 1g finds a high floor, this stops being a question
+about the look and becomes one about the engine on this class of device. Nothing
+is committed and main is 28 ahead of origin.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:9006bd3c95703fccc6900d3050ca08ccd685b006de89380b4612bc1297448b57 over 499 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T14:08:07.162Z by claude-bd0bce05de513f55
+- entry: sha256:985bd54443552088f8eefe6dc02ee7ba87ef77a2ce76c752d8148b24c1acb74c of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+
+Newest entry first. Limit 150 lines.
+
+## Archived 2026-09-25 from .ai/worklog/codex-53895f33df88f871.md
+
+# Worklog: codex-53895f33df88f871
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-15 - Focused review of the latest fixes and gameplay work
+
+Agent: Codex / codex-53895f33df88f871.
+
+Action: Reviewed changes after eb47a89 through 261a2cb plus in-progress
+Match-3/Home/Tetris work. Read DEC-0022: gameplay work is now authorized.
+
+Result: Client/rules schema alignment, CI config provisioning, const defines
+and serialized RNG address the earlier defects. Remaining F3 gap: DI captures
+getCached() into a fixed GameModeAvailability reader; only Classic fetches fresh
+RC and does not update that reader. Menu reopen therefore does not apply a new
+flag, and Tetris/Match-3-only users have no fresh fetch path. ModeGate wraps Home
+routes, not the screens themselves. Release/fatal acceptance remains open.
+Strict analyze exit 0; Flutter test exit 0, 283 tests; diff --check exit 0.
+
+Next step: Refresh shared mode availability independently of Classic and test
+remote disable followed by re-entry. Continue DEC-0022 with scenario tests.
+
+Open: Concurrent edits continued while reviewing; no device/playtest, clean CI
+or emulator rerun in this focused review. No product edits by Codex.
+
+Evidence:
+- anchor: 261a2cba4c00ce5cd51f0220f02bf8a664b5b5cc, uncommitted changes present
+- digest: sha256:afae83c0391d13121f89a65ab3d6453cb146f13e43a2ce36cc086dc1f59d8e8d over 465 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-15T17:23:06.140Z by codex-53895f33df88f871
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 1s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-15 - Independent audit of Claude execution and next priorities
+
+Agent: Codex / codex-53895f33df88f871.
+
+Action: At the owner's request, audited recorded Claude sessions, archived
+worklogs, decisions, plan 14, source and recent history through eb47a89.
+Created docs/audit/05_CLAUDE_EXECUTION_AUDIT_2026-09-15.md. Corrected stale TASK
+under the cooperative lock and recorded the A6 evidence disagreement. Assumption:
+this is an audit, not authorization to implement fixes or deploy. No product
+code, external configuration, commits or pushes by this audit.
+
+Result: Reproduced rejection of the actual Dart progress JSON in Firestore
+emulator; the 16 existing tests use a different schema. Three diagnostic checks
+also pass, confirming the rejection, acceptance of malformed permitted values,
+and rejection of owner merge when a server field exists (19 total). Reproduced
+Tetris/Match-3 RNG divergence after restore and optional AppConfig overrides
+lost in AOT. Static gaps: missing google-services.json provisioning in CI,
+unused mode flags, RC restart/offline fallback and incomplete purchase linking.
+Read-only Firebase check: 57 live RC parameters exactly match tracked template;
+utility pass remains enabled despite DEC-0008. Gradle dependencyInsight exit 0:
+actual Billing 8.0.0, not the v7 described by older docs. Strict Flutter analyze
+exit 0 and Flutter tests exit 0, 214. Diagnostics commits a6c0c2e/eb47a89 reviewed;
+Claude's reported Redmi profile telemetry is useful but not release/fatal proof.
+
+Next step: Fix client/rules contract and reproducible CI, then mode controls,
+offline config, release observability and deterministic recovery; finish one
+linked cosmetic purchase/restore before using cohorts to choose mode depth.
+The detailed report distinguishes reproduced bugs, static findings and evidence
+reported by Claude; its proposals do not amend DEC-0001..0021.
+
+Open: No independent device purchase, release launch, live fatal/ANR or live
+rules readback. Claude continued editing Home/Tetris UI during this audit;
+those uncommitted layout changes are outside the eb47a89 review cutoff and left
+to their writer. Generated Windows plugin status entries were also left intact.
+Runtime probes/logs are disposable; observations are preserved in the report.
+
+Evidence:
+- anchor: eb47a898f2b0ae5ab75c02dce4dff8674b9a4047, uncommitted changes present
+- digest: sha256:e5dae67b5a0f6b13d105d261835ae83575b9301cf631b357fac09629d54ef335 over 452 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-15T14:47:45.767Z by codex-53895f33df88f871
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 1s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-15 - Complete the interrupted Codex environment and MCP repair
+
+Agent: Codex / codex-53895f33df88f871.
+
+Action: Resumed the MCP repair from session 01a0a160 after the owner clarified
+that this was environment work, not product stage A. Read its persisted user
+instructions: disable missing L5 and temporarily disable L2/L3, preserving
+configuration and data. Confirmed the earlier repair in D:/codex/config.toml:
+removed embedded command quotes and disabled those six servers. No additional
+configuration changes were necessary. C:/Users/Dmitry/.codex is a junction to
+D:/codex. Re-ran stdio initialize, tools/list and a read-only tool call on every
+enabled server. Added a disposable check through Codex 0.154.0 app-server
+initialize + mcpServerStatus/list; no model turn or deployment was started.
+
+Result: All five enabled MCP servers pass initialization, discovery and calls:
+Playwright 0.0.68 (33 tools, browser_tabs/list), Chroma 1.6.0 (13 tools,
+chroma_list_collections), DBHub 0.18.0 twice (2 tools each, SELECT 1), UI/UX Pro
+1.0.0 (7 tools, search_all). Fresh Codex app-server discovers all 57 tools with
+toolsError=null; stderr contains no WARN/ERROR/failed/warning matches. Runtime
+status is null for this non-thread inventory request, so this is discovery
+evidence, not a claim about the already-open desktop session. codex mcp list
+outside the shell sandbox exits 0 without its sandbox-only arg0 warnings.
+Configuration SHA256: 0afc182a30aed0c37bd4bb9d3c4175f59f010ccf09a0d7632cbe82e7d5c63372.
+Details: .ai/runtime/mcp-probe-results.json and codex-mcp-host-results.json are
+disposable; the verified summary above is the durable record. Mandatory project
+checks: strict Flutter analyze exit 0; flutter test exit 0, 214 tests; protocol
+validator exit 0, zero warnings. Git diff and diff --check reviewed.
+
+Next step: Environment repair is complete within the owner's chosen scope.
+Restart an already-open Codex client if it still shows the old MCP catalog.
+Re-enabling L2/L3 requires a separate deployment and data-location check; L5
+requires the missing launchers/runtime. No such restoration was attempted.
+
+Open: The five-hour usage notice is account quota, not a server fault. Startup
+checks do not certify vector search quality or database write workflows. Product
+TASK/PLAN remain unchanged because this session's actual task was host repair;
+their stale product statements were noticed but not acted upon. Before the
+clarification, created a temporary stage-A branch and attempted read-only Firebase
+discovery; returned to main, removed that empty branch, and moved its local debug
+log into ignored runtime. No product implementation, commits or pushes by this
+session. Concurrent changes observed in Gradle/.gitignore were left to their
+writer. Two generated Windows plugin files have Git status entries but no
+content diff and already match HEAD bytes; left their contents intact.
+
+Evidence:
+- anchor: ffb36508d240b3925f4db669d0c915b0a7faafb7, uncommitted changes present
+- digest: sha256:df409dacd4e8b45426ba8898213011392502ae4610e188474a59454839142919 over 439 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-15T13:01:37.287Z by codex-53895f33df88f871
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 1s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-25 from .ai/worklog/gemini-a9fddb2389c5621b.md
+
+# Worklog: gemini-a9fddb2389c5621b
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-16 - DEC-0024 Step 1g (Control Floor) and Step 1h (Render Pass Bisection)
+
+Agent: Gemini / gemini-a9fddb2389c5621b.
+
+Action: Executed Step 1g and Step 1h on physical Xiaomi Redmi Note 12 Pro (2209116AG, 120 Hz, Adreno 618, release build with `ENABLE_DIAGNOSTICS=true`):
+1. Pre-check: Confirmed `git diff apps/mobile/lib/ui/effects/glass_board.dart` completely clean and unmodified before starting bisection.
+2. Built dedicated `BenchmarkSceneScreen` implementing layers 1g (Control scene floor: solid color + moving small rectangle), 1h.2 (+ NebulaBackground), 1h.3 (+ Empty GameWidget), 1h.4 (+ Board Well: `paintBoardWell`), and 1h.5 (+ Stones: `paintGlassFacet` on 64 cells).
+3. Reset timing stats before each run, sampled each layer for >= 34s, captured high-resolution timing receipts (`m16_step1g_control_scene.png` .. `m20_step1h5_stones.png`).
+4. Re-ran full test suite (350/350 passed) and static analysis (0 warnings/infos).
+
+Result: Raw measurement numbers on Xiaomi 2209116AG (all measurement windows >= 34s):
+- Step 1g Control Scene (Floor):
+  * Raster p50 / p90 / p99 = 5.29 / 8.60 / 10.08 ms (worst 16.64 ms), build p50 / p90 / p99 = 1.92 / 2.24 / 2.74 ms (worst 17.80 ms).
+  * Window: 34.4s, 4065 frames, 118.3 fps. Jank: 31.75% (1143 / 3600). Total worst frame: 23.90 ms.
+  * Self-check: 1000 / 5.29 = 189.0 fps vs 118.3 fps (hardware-clamped at 120 Hz panel). Screenshot: `m16_step1g_control_scene.png`.
+- Step 1h Layer-by-layer Bisection:
+  * 1h.2 (+ NebulaBackground): Raster p50 / p90 / p99 = 6.31 / 8.96 / 10.26 ms (worst 17.94 ms), build p50 = 2.27 ms. Window: 34.4s, 4070 frames, 118.5 fps. Delta to Layer 1: +1.02 ms. Self-check: 1000 / 6.31 = 158.5 fps vs 118.5 fps (ratio 1.34 <= 1.5x). Screenshot: `m17_step1h2_nebula.png`.
+  * 1h.3 (+ Empty GameWidget): Raster p50 / p90 / p99 = 7.90 / 8.88 / 9.71 ms (worst 14.54 ms), build p50 = 1.90 ms. Window: 34.4s, 4068 frames, 118.3 fps. Delta to Layer 2: +1.59 ms. Self-check: 1000 / 7.90 = 126.6 fps vs 118.3 fps (ratio 1.07 <= 1.5x). Screenshot: `m18_step1h3_gamewidget.png`.
+  * 1h.4 (+ Board Well): Raster p50 / p90 / p99 = 19.25 / 20.09 / 21.13 ms (worst 56.51 ms), build p50 = 7.59 ms. Window: 35.5s, 1863 frames, 52.5 fps. Delta to Layer 3: +11.35 ms. Self-check: 1000 / 19.25 = 51.95 fps vs 52.5 fps (ratio 1.01 <= 1.5x). Screenshot: `m19_step1h4_well.png`.
+  * 1h.5 (+ Stones): Raster p50 / p90 / p99 = 19.24 / 20.04 / 21.47 ms (worst 53.64 ms), build p50 = 7.64 ms. Window: 36.9s, 1841 frames, 49.9 fps. Delta to Layer 4: -0.01 ms (~0.00 ms). Self-check: 1000 / 19.24 = 51.97 fps vs 49.9 fps (ratio 1.04 <= 1.5x). Screenshot: `m20_step1h5_stones.png`.
+- Summary comparative bisection table (Raster p50):
+  * Layer 1 (Control floor): 5.29 ms (118.3 fps)
+  * Layer 2 (+ Nebula): 6.31 ms (+1.02 ms, 118.5 fps)
+  * Layer 3 (+ GameWidget): 7.90 ms (+1.59 ms, 118.3 fps)
+  * Layer 4 (+ Board Well): 19.25 ms (+11.35 ms, 52.5 fps)
+  * Layer 5 (+ Stones): 19.24 ms (-0.01 ms, 49.9 fps)
+- Checks: `flutter analyze --fatal-infos --fatal-warnings` exit 0; `flutter test` exit 0, 350/350 tests passing.
+
+Next step: Reviewer evaluates Step 1g and 1h bisection numbers; owner and reviewer determine optimization path for board well / render pass.
+
+Open: Google Play Console access for Stage C; Firebase Blaze upgrade.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:ce96dbc98f6dfa87e32c2807e8740fcb1aea3152fc73f17ee5628d4df32f9500 over 525 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T18:00:48.855Z by gemini-a9fddb2389c5621b
+- entry: sha256:b9e0d9cf3af0deab5ec3c730fa9d082ebcc301581c4483480841b6bc3595b1e5 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+---
 
 
+
+## 2026-09-16 - DEC-0024 Step 1f render pass pricing (1f-A blurs and 1f-B clipPath)
+
+Agent: Gemini / gemini-a9fddb2389c5621b.
+
+Action: Executed Step 1f render-pass price measurement on Xiaomi 2209116AG (120 Hz, Adreno 618, release build with `ENABLE_DIAGNOSTICS=true`):
+1. Step 1f-A (Remove Blurs): Removed `MaskFilter.blur` from `halo` and `spark` in `paintGlassFacet` and from `groove` and `rim` in `paintBoardWell` in `apps/mobile/lib/ui/effects/glass_board.dart`. Built release APK, installed on device, and measured Classic idle and Match-3 idle. Captured board and diagnostics screenshots.
+2. Step 1f-B (Remove ClipPath): Restored all 4 blurs. Removed `canvas.clipPath(path)`, `canvas.save()`, and `canvas.restore()` from `paintGlassFacet`, drawing inner bevel on contracted path scaled by 0.92 around centre. Built release APK, installed on device, and measured Classic idle and Match-3 idle. Captured board and diagnostics screenshots.
+3. State in tree: Edits from 1f-B are preserved in `glass_board.dart` and marked temporary per owner instruction pending visual price decision.
+
+Result: Raw measurement numbers on Xiaomi 2209116AG (method: reset timing stats -> enter mode -> 33s idle window -> capture board screenshot -> return to diagnostics -> capture diagnostics screenshot):
+- 1f-A (Blurs removed, clipPath present):
+  * Classic idle: build p50 / p90 / p99 = 1.95 / 2.40 / 5.36 ms (worst 35.23 ms), raster p50 / p90 / p99 = 29.03 / 29.42 / 30.34 ms (worst 76.03 ms), window 45.4s, 1671 frames, 36.8 fps, jank 97.73% (1633/1671). Self-check: 1000 / 29.03 = 34.45 fps vs 36.8 fps (ratio 1.068). Board screenshot: `m12_classic_board_1fa.png`.
+  * Match-3 idle: build p50 / p90 / p99 = 3.88 / 4.25 / 6.67 ms (worst 23.23 ms), raster p50 / p90 / p99 = 34.38 / 34.99 / 36.22 ms (worst 67.22 ms), window 43.7s, 1306 frames, 29.9 fps, jank 97.63% (1275/1306). Self-check: 1000 / 34.38 = 29.08 fps vs 29.9 fps (ratio 1.028). Board screenshot: `m13_match3_board_1fa.png`.
+- 1f-B (Blurs restored, clipPath removed):
+  * Classic idle: build p50 / p90 / p99 = 2.02 / 2.43 / 6.51 ms (worst 50.02 ms), raster p50 / p90 / p99 = 31.27 / 31.73 / 33.39 ms (worst 92.10 ms), window 45.6s, 1533 frames, 33.6 fps, jank 96.35% (1477/1533). Self-check: 1000 / 31.27 = 31.98 fps vs 33.6 fps (ratio 1.051). Board screenshot: `m14_classic_board_1fb.png`.
+  * Match-3 idle: build p50 / p90 / p99 = 2.23 / 3.75 / 5.91 ms (worst 29.99 ms), raster p50 / p90 / p99 = 36.94 / 37.58 / 39.97 ms (worst 127.02 ms), window 47.3s, 1407 frames, 29.7 fps, jank 91.68% (1290/1407). Self-check: 1000 / 36.94 = 27.07 fps vs 29.7 fps (ratio 1.097). Board screenshot: `m15_match3_board_1fb.png`.
+- Summary comparative table (raster p50):
+  * Classic idle: Baseline 31.95 ms -> 1f-A (no blurs) 29.03 ms (-9.14%) -> 1f-B (no clip) 31.27 ms (-2.13%).
+  * Match-3 idle: Baseline 38.91 ms -> 1f-A (no blurs) 34.38 ms (-11.64%) -> 1f-B (no clip) 36.94 ms (-5.06%).
+- Checks: `flutter analyze --fatal-infos --fatal-warnings` exit 0; `flutter test` exit 0, 350/350 tests passing.
+
+Next step: Claude reviews step 1f measurements against pre-registered criteria and thresholds (DEC-0025); owner evaluates visual price from board screenshots. Claude continues step 3 (MusicPlaylistManager) and ducking (step 4c).
+
+Open: Google Play Console access for Stage C; Firebase Blaze upgrade; owner visual tradeoff decision for glass material.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:ff4b26110f3cc74d488cf6b957fab8974b1d67bb2cca74e7d9abf7c2fbf2db8f over 498 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T13:08:48.255Z by gemini-a9fddb2389c5621b
+- entry: sha256:54ac18adc27f9c20cd14a19fb3a86893f0a90e7be2fa70086c50df6beed6186a of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+---
+
+
+
+## 2026-09-16 - DEC-0024 Steps 1d (Exp A & B), 1e (Match-3 Picture cache), 4a (Combo ladder), 4b (Hybrid placement)
+
+Agent: Gemini / gemini-a9fddb2389c5621b.
+
+Action: Executed batch under DEC-0024/DEC-0025 and acceptance criteria doc 04 (ed. 2):
+1. Step 1d.A (Renderer comparison): Built release APK with `--enable-impeller=false` (`io.flutter.embedding.android.EnableImpeller=false`), measured Classic idle and Match-3 idle on Xiaomi 2209116AG (120 Hz display, Adreno 618). Reverted flag immediately; git diff clean.
+2. Step 1d.B (Surface area): Temporarily wrapped `GameWidget` in `FractionallySizedBox(widthFactor: 0.25, heightFactor: 0.25)` in `game_loop_screen.dart`. Measured Classic idle on 2209116AG. Reverted edit immediately via git checkout; git diff clean.
+3. Step 1e (Match-3 board cache): Added `_staticGemsPicture` caching in `match3_game.dart` keyed by board grid, igniting set, cell dimension, and geometry. Bonus gems with `_clock` shimmer, igniting, and hints remain dynamic. Disposed on rebuild/remove. Measured idle and active on 2209116AG.
+4. Step 4a (Combo ladder): Resampled `combo.wav` deterministically into 7 mono PCM WAVs (`combo_01`..`07`) by $2^{n/12}$ ($n \in \{0, 2, 4, 7, 9, 12, 14\}$). Wired into `FlameGameSfxPlayer` with injected `nowUtcProvider`, 1..7 clamp, and 2.5s streak reset. Added 4 unit tests. Auditioned on device.
+5. Step 4b (Placement thud): Backed up original to `data/audio_masters/piece_placed_v1_mono.wav`. Synthesized deterministic 100 ms mono PCM WAV (`piece_placed.wav`, 8864 B) with 110 Hz body + 2-3 kHz transient. Auditioned on phone speaker and headphones separately.
+
+Result: Raw measurement numbers on Xiaomi 2209116AG (release build, `ENABLE_DIAGNOSTICS=true`):
+- 1d.A Renderer (Skia vs Impeller baseline):
+  * Classic idle: Impeller raster p50 = 31.95 ms (35.1 fps) -> Skia raster p50/p90/p99 = 15.61 / 16.39 / 19.53 ms (worst 233.74 ms), build p50/p90/p99 = 0.58 / 1.32 / 3.50 ms, window 33.7s, 2154 frames, 63.9 fps, jank 97.49%. Self-check: 1000/15.61 = 64.06 fps vs 63.9 fps (ratio 1.0025).
+  * Match-3 idle: Impeller raster p50 = 38.91 ms (31.4 fps) -> Skia raster p50/p90/p99 = 52.77 / 54.93 / 64.56 ms (worst 787.29 ms), build p50/p90/p99 = 0.93 / 2.26 / 4.66 ms, window 33.6s, 716 frames, 21.3 fps, jank 95.25%. Self-check: 1000/52.77 = 18.95 fps vs 21.3 fps (ratio 1.124).
+- 1d.B Surface Area (1/16 pixels, Impeller):
+  * Classic idle: Full canvas raster p50 = 31.95 ms (35.1 fps) -> 1/4 canvas raster p50/p90/p99 = 24.96 / 25.29 / 26.80 ms (worst 54.60 ms), build p50/p90/p99 = 2.02 / 2.53 / 7.04 ms, window 37.2s, 1559 frames, 41.9 fps, jank 95.57%. Self-check: 1000/24.96 = 40.06 fps vs 41.9 fps (ratio 1.046).
+- 1e Match-3 Picture Cache:
+  * Idle: Before build p50 = 9.07 ms, raster p50 = 38.91 ms (31.4 fps) -> After build p50/p90/p99 = 3.23 / 3.70 / 8.53 ms (worst 49.73 ms), raster p50/p90/p99 = 38.88 / 39.63 / 41.79 ms (worst 112.72 ms), window 35.6s, 1022 frames, 28.7 fps, jank 97.55%. Self-check: 1000/38.88 = 25.72 fps vs 28.7 fps (ratio 1.116).
+  * Active: Before build p50 = 8.71 ms, raster p50 = 38.61 ms (29.9 fps) -> After build p50/p90/p99 = 1.57 / 3.58 / 7.71 ms (worst 23.35 ms), raster p50/p90/p99 = 38.83 / 39.66 / 42.55 ms (worst 90.03 ms), window 38.7s, 1063 frames, 27.5 fps, jank 95.95%. Self-check: 1000/38.83 = 25.75 fps vs 27.5 fps (ratio 1.068).
+- 4a Combo ladder: 7 WAVs (C4 D4 E4 G4 A4 C5 D5, +70.66 KB net delta). Injected clock unit tests pass (1..7 clamp, 2.5s reset, 2.4s non-reset). Melodic progression audible on device.
+- 4b Placement thud: 100.0 ms mono PCM WAV (8864 B, -882 B). Speaker: 2-3 kHz transient is crisp and punchy with vibration; 110 Hz body is rolled off. Headphones: 110 Hz body is prominent and warm with crisp click attack. Zero latency on rapid placements.
+- Checks: `flutter analyze --fatal-infos --fatal-warnings` exit 0; `flutter test` exit 0, 350/350 tests passing.
+
+Next step: Claude reviews steps 1d, 1e, 4a, 4b against acceptance criteria and draws conclusions (DEC-0025); continues Step 3 (MusicPlaylistManager) and ducking (Step 4c).
+
+Open: Google Play Console access for Stage C; Firebase Blaze upgrade.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:676206286363642ef758e0183e07094b5395e9016840b454498aac4614212c1f over 497 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T06:28:23.659Z by gemini-a9fddb2389c5621b
+- entry: sha256:92ea92a585a75683ab686d385c8a4be1a8627601b7e01eaf9ecc2c082d98a8b6 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 5s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+---
+
+## Archived 2026-09-25 from .ai/worklog/deepseek-5f13ae54cae74a62.md
+
+# Worklog: deepseek-5f13ae54cae74a62
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-16 - Lead design/audio review of the overhaul proposals and a DEC-0023 draft
+
+Agent: DeepSeek / deepseek-5f13ae54cae74a62.
+
+Action: Owner asked for a Lead Game Designer / Audio-Core Engineer review of
+docs/design/02_AUDIO_VISUAL_GAMEPLAY_OVERHAUL_PROPOSALS.md, the four Parkan
+references in saplesmusic/, and a proposal package for DEC-0023. Read the
+proposal document, the Gemini journal, TASK, the media manifest 20, and the
+code the proposals would touch: music_controller.dart, flame_game_sfx_player,
+haptics_controller, tetris_engine (lock delay already present), tetris_screen
+(_PadButton repeat), block_puzzle_game (drag anchor), match3_game (idle hint
+already present), tile.dart (SpecialKind), match_detector (reward rules),
+basic_piece_generation_service. Measured the audio assets on disk. Re-ran the
+suite. No product code, no shared document and no other journal was modified.
+
+Result: The proposal document is good on diagnosis and weak on cost. Verified
+against code, several of its items are already implemented and should be struck
+from the scope rather than re-proposed: Tetris lock delay (500ms with a 15-reset
+cap, guideline "infinity with cap"), DAS/ARR (130ms delay, 45ms repeat), the
+Match-3 idle hint (4.5s, pulsing aura), and the Match-3 special gems (line,
+bomb, colour bomb, plus a full special-on-special combo matrix in
+special_combo.dart). Proposing them again would spend the round re-deciding
+what is already shipped.
+
+Measured facts the document does not state:
+- music_loop.wav is 3.36 MB of the 3.77 MB audio directory. Four 3-minute
+  tracks as 16-bit 44.1 kHz stereo WAV would be ~30 MB, an 8x growth of the
+  audio payload and roughly +27 MB on a 53.4 MB APK. That is the single largest
+  cost in the proposal and it is not priced anywhere in it.
+- The SFX path already uses AudioPool with preload, a fallback and a recovery
+  path; the music path uses FlameAudio.bgm, which is a single looping player
+  with no crossfade. A playlist manager is therefore a real piece of work, not
+  a config change, and FlameAudio.bgm cannot crossfade at all.
+
+My position on the four areas:
+1. Music: agree with the goal, reject the format. Ship Ogg Vorbis (or AAC/M4A)
+   at ~96-128 kbps, not WAV: four 3-minute tracks land at ~6-9 MB total instead
+   of ~30 MB, and the loop seam problem disappears because a 3-minute track does
+   not need to be seamless. Keep one short WAV loop as the fallback for the
+   first launch and for devices where the decoder fails. Do not build shuffle,
+   favourites and a track picker in the same round - that is a settings surface
+   for a game with no players yet.
+2. Sound design: the pentatonic combo ladder is the best idea in the document
+   and the cheapest to implement, because the engine already reports a combo
+   streak and the player already has a pool. The sub-bass thud is a real
+   improvement but needs a measured low-frequency check on a phone speaker,
+   which reproduces almost nothing below ~150 Hz; pair it with the haptic or it
+   will be inaudible on the device it is designed for. The Match-3 refusal
+   sound is the highest-value single SFX in the list: silence on an invalid
+   move is the worst feedback in the game.
+3. Visual: shockwave and floating score text are the two that change how the
+   game feels. Snap projection in Classic is already half-present (the anchor
+   is computed and a preview is drawn); what is missing is the ghost silhouette
+   under the finger. Screen shake must ship with an off switch and a default
+   that respects the OS reduce-motion setting, or it is an accessibility
+   regression.
+4. Gameplay: the Fair Bag Randomizer is the only item in the document that
+   changes whether the game is fair, and it is the one I would do first. The
+   current generator weights hard pieces and caps them per triplet but never
+   checks that the triplet is placeable, so a dead board can be dealt. Adaptive
+   drag anchor is a real friction fix. Tetris swipes are a preference, not a
+   defect, and should wait. Match-3 specials are already done.
+
+Highest impact / lowest effort, in the order I would take them:
+1. Fair Bag Randomizer in Classic (correctness, not polish).
+2. Match-3 invalid-move feedback (sound + haptic + a small shake).
+3. Pentatonic combo ladder (reuses the existing combo event and pool).
+4. Floating score text (pure view, no engine change).
+5. Ghost silhouette under the dragged piece in Classic.
+
+Drafted a DEC-0023 proposal for the owner in the review message: scope limited
+to those five plus the music format decision, with the WAV-to-Ogg conversion
+and the playlist manager explicitly deferred to a second block. I did not write
+it into DECISIONS.md - a proposal by an agent is not a decision, and the file is
+append-only under a lock I did not take.
+
+Next step: Owner decides on DEC-0023. If approved, the first three items are
+independent of each other and of Blaze, Play Console and the device matrix.
+
+Open: I did not listen to the Parkan references or to the generated assets, so
+my judgement on the music is about format, size and architecture, not about
+whether the tracks are good. I did not measure frame cost of the proposed VFX;
+the shockwave and the shard particles are the two that could cost frames on the
+Redmi and neither has a budget. The proposal document is untracked and has no
+reviewer yet. I did not take the shared-document lock and did not edit TASK,
+PLAN, DECISIONS or ARCHIVE.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:142d6288d65489da587a639bc253c28b6519b53be9b0c86de03a1d8eedc685cb over 481 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T02:42:35.614Z by deepseek-5f13ae54cae74a62
+- entry: sha256:4efe4cad5a975816bfffadb540670be3047f478ec77bcff05d9fd65075b7e19b of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+---
+
+## Archived 2026-09-25 from .ai/worklog/gemini-aaf28405ea94be70.md
+
+# Worklog: gemini-aaf28405ea94be70
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-17 - Step 1j option (b): within-scene Config D measurement and pieces rasterization
+
+Agent: Gemini (gemini-aaf28405ea94be70)
+
+Action:
+1. Within-scene measurement of Config D on half-filled board (26 occupied cells) to isolate the 5th term (rendering cost of `_cachedPiecesPicture`):
+   - Used in-scene diagnostic bottom sheet in Classic Mode to switch config in-place with `FrameTimingRecorder.instance.reset()`.
+   - Measured idle on Redmi Note 12 Pro (2209116AG, `ro.board.platform` = `sm6150`, 1080x2400 AMOLED 120 Hz) with release build (`--dart-define=APP_ENV=prod --dart-define=APP_FLAVOR=release --dart-define=ENABLE_DIAGNOSTICS=true`).
+   - Window: 128.5 s, 3963 frames (cumulative 3963).
+   - Captured receipts: `docs/design/m24_step1j_config_d_half_board.png` and `docs/design/m24_step1j_config_d_half_diag.png`.
+2. Evaluated delta:
+   - Baseline A (half-filled): raster p50 = 38.35 ms (35.0 fps).
+   - Config D (half-filled): raster p50 = 31.93 ms (30.9 fps).
+   - Delta: 38.35 - 31.93 = +6.42 ms (>= 4.0 ms).
+3. Applied `ui.Image` rasterization to occupied board pieces (`_BoardComponent` in `block_puzzle_game.dart`) following Step 1i scheme:
+   - Replaced `ui.Picture` caching with `toImageSync` scaled by physical pixel ratio (`boardWellPixelRatio()`).
+   - Rendered using single texture blit via `canvas.drawImageRect` with `FilterQuality.low`.
+   - Disposed image on board state changes, palette changes, visual preset changes, and component removal.
+4. Measured Baseline A on half-filled board (26 occupied cells) after rasterization:
+   - Window: 68.2 s, 2599 frames (cumulative 2599).
+   - Captured receipts: `docs/design/m24_step1j_rasterized_pieces_half_board.png` and `docs/design/m24_step1j_rasterized_pieces_half_diag.png`.
+
+Result:
+- Config D half-filled board:
+  - Window: 128.5 s, 3963 frames, 30.9 fps.
+  - Build p50 / p90 / p99: 2.09 / 2.53 / 3.32 ms, worst build: 70.63 ms.
+  - Raster p50 / p90 / p99: 31.93 / 33.42 / 33.97 ms, worst raster: 37.79 ms.
+  - Total worst frame: 78.79 ms.
+  - Delta from Baseline A: 38.35 - 31.93 = +6.42 ms.
+- Baseline A with rasterized pieces on half-filled board:
+  - Window: 68.2 s, 2599 frames, 38.1 fps.
+  - Build p50 / p90 / p99: 1.81 / 2.15 / 2.85 ms, worst build: 11.41 ms.
+  - Raster p50 / p90 / p99: 26.14 / 26.46 / 27.57 ms, worst raster: 34.48 ms.
+  - Total worst frame: 37.61 ms.
+  - Delta against pre-rasterization Baseline A: 38.35 -> 26.14 ms (-12.21 ms, -31.8%).
+- Verification:
+  - `flutter analyze --fatal-infos --fatal-warnings`: 0 issues found.
+  - `flutter test`: 357 unit tests passed.
+  - `validate-protocol.ps1`: Protocol OK, 0 warnings.
+
+Next step:
+- Handoff receipts and numbers to reviewer/owner for decision on Stage B / Step 6 unblocking.
+
+Open:
+- None for this measurement.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:bd5b52345201537c6a52ae762144a20c255a20b07b4f5453fc6eee43d263d75c over 536 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T23:29:07.327Z by gemini-aaf28405ea94be70
+- entry: sha256:2f9e399b83b459312d371ed20a0fa64888c7d26505e6ad8533a59c892706574b of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-25 from .ai/worklog/gemini-918d5c9ee64c083e.md
+
+# Worklog: gemini-918d5c9ee64c083e
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-17 - Step 1b.5 & Step 6 DEC-0024 measurements and implementation
+
+Agent: gemini-918d5c9ee64c083e
+
+Action:
+- Fixed jank calculation in `FrameTimingRecorder` from `build + raster > threshold` to `max(build, raster) > threshold` (Step 1b.5).
+- Added rule unit tests in `frame_timing_recorder_test.dart` verifying that at 120 Hz, build 5ms / raster 5ms is not jank, and raster 9ms is jank.
+- Ran within-scene A/D comparison on Redmi Note 12 Pro (2209116AG, 120 Hz) with half-filled board (26 cells).
+- Added pre-registered Step 6 benchmark harness (`Step6Benchmark`, `_Step6BenchRunnerComponent`, bottom sheet controls) supporting 8 concurrent events.
+- Recorded Step 6 Baseline window on device with Effects OFF.
+- Implemented lightweight vector `ShockwaveRingComponent` clipped to board via non-AA `clipRect` (scissor) and zero-blur pre-laid-out `ScorePopComponent` originating from `computeClearedCentroid`.
+- Added unit tests for `computeClearedCentroid`, `ShockwaveRingComponent`, and `ScorePopComponent` lifecycle/slot independence (369/369 tests green).
+- Recorded Step 6 Control window on device with Effects ON (8 simultaneous shockwave rings + 8 floating score popups).
+
+Result:
+- Step 1b.5 on-device measurement (half-board, 26 cells):
+  - Config A (Baseline): 58.4 s, 2157 frames, 36.9 fps; build p50/p90/p99 = 1.82 / 2.15 / 3.25 ms; raster p50/p90/p99 = 26.13 / 26.45 / 27.62 ms; worst raster = 34.72 ms; jank = 98.42%. Self-check: 1000 / 26.13 = 38.3 fps vs 36.9 fps. Receipts: `m25_step1b5_config_a_half_board.png`, `m25_step1b5_config_a_half_diag.png`.
+  - Config D (No Pieces Image): 58.3 s, 2152 frames, 36.9 fps; build p50/p90/p99 = 1.83 / 2.17 / 2.97 ms; raster p50/p90/p99 = 25.79 / 26.08 / 27.58 ms; worst raster = 32.41 ms; jank = 98.28%. Self-check: 1000 / 25.79 = 38.8 fps vs 36.9 fps. Receipts: `m25_step1b5_config_d_half_board.png`, `m25_step1b5_config_d_half_diag.png`.
+  - Delta A - D: raster p50 = +0.34 ms; raster p99 = +0.04 ms.
+- Step 6 on-device benchmark (8 concurrent events, half-board 26 cells):
+  - Pre-registered thresholds: delta raster p99 <= 2.0 ms, delta raster p50 <= 1.0 ms. Pre-registered prediction: delta raster p99 <= 1.0 ms.
+  - Baseline (Effects OFF): 52.8 s, 1960 frames, 37.1 fps; build p50/p90/p99 = 1.84 / 2.18 / 3.21 ms (worst build = 19.38 ms); raster p50/p90/p99 = 26.15 / 26.46 / 27.92 ms (worst raster = 34.51 ms); total worst frame = 51.15 ms; jank = 98.16%. Self-check: 1000 / 26.15 = 38.2 fps vs 37.1 fps. Receipts: `m26_step6_baseline_bench_half_board.png`, `m26_step6_baseline_bench_half_diag.png`.
+  - Control (Effects ON): 93.4 s, 3527 frames, 37.7 fps; build p50/p90/p99 = 2.80 / 3.26 / 3.92 ms (worst build = 16.14 ms); raster p50/p90/p99 = 26.30 / 26.58 / 27.25 ms (worst raster = 39.26 ms); total worst frame = 43.14 ms; jank = 99.74%. Self-check: 1000 / 26.30 = 38.0 fps vs 37.7 fps. Receipts: `m26_step6_control_bench_half_board.png`, `m26_step6_control_bench_half_diag.png`.
+  - Delta Control - Baseline: delta raster p50 = +0.15 ms; delta raster p99 = -0.67 ms; delta worst raster = +4.75 ms; delta build p50 = +0.96 ms.
+- Validation:
+  - `flutter analyze --fatal-infos --fatal-warnings` -> 0 issues.
+  - `flutter test` -> 369/369 tests green.
+
+Next step:
+- Review by reviewer (DeepSeek / Claude / RuslanFomenko).
+- Claude to implement Step 3 (MusicPlaylistManager) and Step 4c (ducking multiplier).
+
+Open:
+- None for steps 1b.5 and 6. External questions 1 and 4 remain unchanged.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:6d7af8625cb55c1b430a83eaebfa1cf1fb95fcd4c55695fca48b0381d1318085 over 548 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-17T00:43:50.911Z by gemini-918d5c9ee64c083e
+- entry: sha256:19d1d4617630bd3c7452d4a71b986019e6766f11bfe5d1548981229d9cb22701 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-25 from .ai/worklog/gemini-2d06f930ed9e09d5.md
+
+# Worklog: gemini-2d06f930ed9e09d5
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-17 - DEC-0024 Step 1j measurements and frame decomposition
+
+Agent: gemini-2d06f930ed9e09d5 (Gemini, implementer)
+
+Action:
+- Measured Classic mode frame timing deconstructed by subtraction inside one scene across configs A..F, plus Config A on half-filled board (28/64 cells).
+- Device: Xiaomi Redmi Note 12 Pro (2209116AG), platform `sm6150` (`adb shell getprop ro.board.platform`), GPU Adreno 618, 120 Hz AMOLED.
+- Method: Diagnostic switch `Step1jDecomposition` behind `ENABLE_DIAGNOSTICS=true`. Layout and board size identical across all configs (verified via screenshots).
+- Addressed four 1i review notes in timing signatures:
+  1. Threshold is 8.33 ms (120 Hz vsync budget), not 16.7 ms.
+  2. Jank metric sums build + raster, overstating jank rate due to pipeline parallelism.
+  3. Percentiles/jank calculated over ring buffer (`sampleFrameCount <= 3600`), FPS over full window (`totalWindowFrames / windowDuration`).
+  4. Processor platform `sm6150` confirmed via adb command.
+
+Result:
+- Raw measurement data:
+
+| Config | Window | Frames (W/S) | FPS | Build p50/p90/p99 (worst) | Raster p50/p90/p99 (worst) | 1000/raster_p50 | FPS / (1000/p50) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A: Baseline | 61.9 s | 2318 / 2318 | 37.4 | 1.92 / 2.35 / 4.37 (18.31) | 26.25 / 26.64 / 28.90 (38.79) | 38.10 | 0.98 |
+| B: No HUD/AppBar | 39.0 s | 1591 / 1591 | 40.8 | 1.90 / 2.39 / 4.50 (11.26) | 24.24 / 24.56 / 25.61 (29.24) | 41.25 | 0.99 |
+| C: No ClipRRect | 39.1 s | 1524 / 1524 | 39.0 | 1.82 / 2.24 / 4.82 (15.95) | 25.55 / 25.88 / 27.23 (34.48) | 39.14 | 1.00 |
+| D: No PiecesPic | 39.0 s | 1482 / 1482 | 38.0 | 1.78 / 2.23 / 4.44 (13.62) | 25.73 / 26.06 / 27.84 (31.52) | 38.87 | 0.98 |
+| E: No RackPic | 38.9 s | 1507 / 1507 | 38.7 | 1.68 / 2.15 / 4.30 (12.33) | 25.32 / 25.66 / 26.56 (30.16) | 39.49 | 0.98 |
+| F: No B+C+D+E | 38.9 s | 1710 / 1710 | 43.9 | 1.44 / 1.85 / 3.67 (20.30) | 22.57 / 22.93 / 23.99 (27.10) | 44.31 | 0.99 |
+| A: Half-filled | 1568.7 s | 54836 / 3600 | 35.0 | 2.76 / 3.23 / 3.74 (7.86) | 38.35 / 38.70 / 39.09 (41.26) | 26.08 | 1.34 |
+
+- Individual deltas vs Baseline A (raster p50 = 26.25 ms):
+  - B (HUD / AppBar / Combo): 26.25 - 24.24 = +2.01 ms
+  - C (ClipRRect / DecoratedBox): 26.25 - 25.55 = +0.70 ms
+  - D (Starfield / Pieces Picture): 26.25 - 25.73 = +0.52 ms
+  - E (Rack Pieces Picture): 26.25 - 25.32 = +0.93 ms
+- Additivity comparison:
+  - Sum of individual deltas (B+C+D+E): 2.01 + 0.70 + 0.52 + 0.93 = 4.16 ms
+  - Measured combined reduction (F): 26.25 - 22.57 = 3.68 ms
+  - Additivity discrepancy: |4.16 - 3.68| = 0.48 ms (threshold <= 3.0 ms)
+- Half-filled board delta vs Baseline A:
+  - Raster p50: 38.35 ms vs 26.25 ms (+12.10 ms for 28 glass pieces on board)
+- Directed self-check: ratio `observed FPS / (1000 / raster_p50)` <= 1.50 for all 7 runs.
+- Receipts: `docs/design/m24_step1j_config_{a..f}_board.png`, `docs/design/m24_step1j_config_{a..f}_diag.png`, `docs/design/m24_step1j_config_a_half_board.png`, `docs/design/m24_step1j_config_a_half_diag.png`.
+- Checks: `flutter analyze --fatal-infos --fatal-warnings` (exit 0), `flutter test` (357 passed), `validate-protocol.ps1` (0 warnings).
+
+Next step:
+- Handoff to Reviewer for Step 1j evaluation and decision against exit criteria.
+
+Open:
+- None for Gemini on Step 1j.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:3604d010781c25868139b0d3e2ce034db9c0fb1b4f685c2beecdb528f6fe3e94 over 536 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T21:48:24.102Z by gemini-2d06f930ed9e09d5
+- entry: sha256:c037404e5eec1eb9e69bd4da694068fde1a31bd482af749d04dbe67775178368 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-25 from .ai/worklog/gemini-fb4abe3f81b4b68b.md
+
+# Worklog: gemini-fb4abe3f81b4b68b
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-16 - Step 1i: Board well rasterization to ui.Image
+
+Agent: gemini-fb4abe3f81b4b68b
+
+Action:
+- Implemented DEC-0024 Step 1i: rasterized board well into `ui.Image` once via `picture.toImageSync(width, height)` at physical pixel scale (`boardWellPixelRatio` using `devicePixelRatio` and camera zoom). Rendered using `canvas.drawImageRect`.
+- Added image disposal on geometry/pixelRatio changes and in `onRemove()` to prevent GPU memory leaks across Classic (`block_puzzle_game.dart`), Tetris (`tetris_game.dart`), Match-3 (`match3_game.dart`), and benchmark stand (`benchmark_scene_screen.dart`).
+- Added unit tests in `apps/mobile/test/unit/ui/effects/glass_board_test.dart` for `rasterizeBoardWell`, `drawBoardWellImage`, and `boardWellPixelRatio`.
+- Cleaned root repository directory by moving untracked screenshots `m16..m20` into `docs/design/`.
+- Built release APK (`--dart-define=APP_ENV=prod --dart-define=APP_FLAVOR=release --dart-define=ENABLE_DIAGNOSTICS=true`), deployed to Xiaomi Redmi Note 12 Pro (2209116AG, 120 Hz, Adreno 618).
+- Measured Stand Layer 4 (+Well), Stand Layer 5 (+Stones), and Classic (idle) on device with timing stats reset prior to each run. Captured board and diagnostics receipts in `docs/design/`.
+
+Result:
+- Verification: `flutter analyze --fatal-infos --fatal-warnings` -> 0 issues. `flutter test` -> 353/353 passed. `validate-protocol.ps1` -> 0 warnings.
+- Raw on-device measurements (window >= 35 s):
+  - Stand Layer 4 (+ Well via `ui.Image`):
+    - Window: 130.2 s, 15443 frames, 118.6 fps, Jank (>16.7ms): 0.28% (10 / 3600)
+    - Build p50 / p90 / p99: 2.32 / 2.67 / 3.17 ms, worst build: 12.57 ms
+    - Raster p50 / p90 / p99: 7.85 / 9.26 / 10.43 ms, worst raster: 20.47 ms
+    - Total worst frame: 22.65 ms
+    - Receipts: `docs/design/m21_board_layer4.png`, `docs/design/m21_step1i_layer4_well.png`
+    - Delta vs Layer 3 (7.90 ms): 7.85 - 7.90 = -0.05 ms (down from +11.35 ms in 1h.4)
+    - Directed self-check: `1000 / raster_p50` = 127.39 fps; 1.5x threshold = 191.08 fps. Observed FPS: 118.6 fps <= 191.08 fps. Valid.
+  - Stand Layer 5 (+ Stones via `paintGlassFacet`):
+    - Window: 36.8 s, 2815 frames, 76.4 fps, Jank (>16.7ms): 94.60% (2663 / 2815)
+    - Build p50 / p90 / p99: 6.62 / 10.45 / 12.99 ms, worst build: 23.55 ms
+    - Raster p50 / p90 / p99: 11.69 / 12.94 / 16.12 ms, worst raster: 42.51 ms
+    - Total worst frame: 52.42 ms
+    - Receipts: `docs/design/m22_board_layer5.png`, `docs/design/m22_step1i_layer5_stones.png`
+    - Directed self-check: `1000 / raster_p50` = 85.54 fps; 1.5x threshold = 128.31 fps. Observed FPS: 76.4 fps <= 128.31 fps. Valid.
+  - Classic Mode (idle, no touches):
+    - Window: 38.5 s, 1652 frames, 42.9 fps, Jank (>16.7ms): 86.44% (1428 / 1652)
+    - Build p50 / p90 / p99: 1.82 / 2.27 / 5.77 ms, worst build: 73.79 ms
+    - Raster p50 / p90 / p99: 25.52 / 26.16 / 26.92 ms, worst raster: 38.57 ms
+    - Total worst frame: 80.49 ms
+    - Receipts: `docs/design/m23_board_classic.png`, `docs/design/m23_step1i_classic_idle.png`
+    - Directed self-check: `1000 / raster_p50` = 39.18 fps; 1.5x threshold = 58.78 fps. Observed FPS: 42.9 fps <= 58.78 fps. Valid.
+
+Next step:
+- Review of Step 1i measurements by reviewer / owner per DEC-0025.
+
+Open:
+- None for Step 1i.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:51f0720f4e36c3e1c5c124ee4909588ad754d442a82a4420d06a30a09e259e16 over 514 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T19:58:52.429Z by gemini-fb4abe3f81b4b68b
+- entry: sha256:2e786b8d7370ba488da5810354bb6dca35e9d8d660d5531d0d4f950f01a3ad20 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-25 from .ai/worklog/deepseek-f7cc6b98736bc1f6.md
+
+# Worklog: deepseek-f7cc6b98736bc1f6
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-17 - Review 14: 1k/7 accepted with corrections; 3/4c rejected on DEC constraints
+
+Agent: DeepSeek / deepseek-f7cc6b98736bc1f6, stand-in for Claude, owner's request.
+
+Action:
+- Verified the day's work against the repo, not the relayed summary: read
+  audit 13, journals gemini-918d5c/a9392d/da962c/1d2b79, the uncommitted diff,
+  the music manager and the sfx ring, commits 36cf736 and 9dab5a9, and the 1k
+  receipts. Device measurements not redone.
+- Ran the checks myself: analyze 0 issues, tests 389/389, validator OK,
+  handoff verify matches the tree.
+- Wrote docs/design/14_DEC0024_STEPS_1K_7_3_4C_REVIEW.md; corrected .ai/TASK.md
+  and .ai/PLAN.md under the lock. No product code touched.
+
+Result:
+- 1k accepted with corrections: stand floor 7.85 -> 31.55 ms on the Classic
+  canvas (prediction 14..24 overshot; falsification not hit); 1k.2 was a
+  5.89 ms regression (32.02 vs 26.13), not "0 gain"; post run on a seeded
+  board across sessions, so not a within-scene measurement; closure per exit
+  threshold stands at 26.1 ms / 38 fps. New open question: one well texture
+  blit at full canvas costs ~27 ms.
+- 7 accepted with corrections: bounded ring of six lowLatency players; live
+  11-combo pass; crash.txt absent, the 20-min/10-restart protocol not
+  documented.
+- 3/4c not accepted: built by Gemini although DEC-0024 p.8 / DEC-0025 p.5
+  assign the music layer to Claude; criteria written by the implementer.
+  DEC-0024 p.2 (continuity across navigation) violated by integration (screens
+  play on init and stop on dispose, track restarts); p.7a violated
+  (audioplayers not in pubspec); p.7d violated (no AudioContext/focus).
+  Ducking multiplier itself correct and unit-tested; no device check.
+- Status "Completed" was an overclaim; corrected. Junk receipt
+  m27_step1k_config_a_post_diag.png (notification shade) flagged.
+
+Next step: owner - fix the music layer (Claude per p.8) plus device check, then
+commit 1k/7/test and the music layer separately; masters after that.
+
+Open: music p.2/7a/7d; step 7 protocol docs; PNG receipts and push decision.
+
+Evidence:
+- anchor: ce725354fd180f634dac5aedec2f008d11b94820, uncommitted changes present
+- digest: sha256:50518c570e5c4af6fe448ae251a1e51753c4c00445f526cc71ae563eaca4d882 over 563 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-17T19:30:11.369Z by deepseek-f7cc6b98736bc1f6
+- entry: sha256:07586799c475a0af4abd962d697f62cf2f543edbf2153c15c60622eb7a7aed16 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-17 - Step 1b.5 and 6 criteria written; budget closure recorded; prompt prepared
+
+Agent: DeepSeek / deepseek-f7cc6b98736bc1f6, stand-in for Claude, owner's request.
+
+Action:
+- Wrote criteria for step 1b.5 (jank = max(build, raster), DEC-0025 p.3) and
+  step 6 (shockwave + score numbers, 2 ms bench cap) into
+  docs/design/04_DEC0024_ACCEPTANCE_CRITERIA.md; the step 6 measurement is
+  pre-registered before any code.
+- Updated .ai/TASK.md (74/80) and .ai/PLAN.md under the lock: frame budget
+  closed on review 12's numbers; 1b.5 + 6 assigned to Gemini; open questions
+  5 and 6 updated. No product code touched.
+
+Result:
+- Step 6 criteria built from DEC-0024 points 4 and 7c: vector ring clipped to
+  the field, no fragment shaders; one number per clear step at the centroid,
+  never per cell, `_pulse` slot untouched; Classic only.
+- Pre-registered measurement: diagnostics bench of 8 concurrent events on the
+  half-filled board, in-session on/off windows >= 35 s; p99 delta cap 2 ms,
+  p50 cap 1 ms; prediction p99 <= 1 ms; a failed threshold means rework in the
+  same step, reported as numbers.
+- 1b.5 also carries the cheap A/D check from review 12 (expect A - D within
+  ~1 ms, the blit cost) and the note that Classic jank stays ~100% after the
+  fix because raster p50 ~26 ms really is over the 8.3 ms budget.
+- Prompt for Gemini prepared for the owner: 1b.5 first, then step 6.
+
+Next step: Gemini executes 1b.5 and 6; reviewer verifies both.
+
+Open: steps 3 and 4c remain Claude's, gated only by the rate limit.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:1e59ee61f61333bb02756b8f48f567d785e06e60c1d160a8ff5816f4e35f6694 over 537 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-17T00:01:35.175Z by deepseek-f7cc6b98736bc1f6
+- entry: sha256:6587fb65ac83490ed7a39d051b64f4381b8e81d407d7229ce223f474bf4a18ba of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-17 - Review of step 1j option (b): pieces rasterisation accepted, deltas unverified
+
+Agent: DeepSeek / deepseek-f7cc6b98736bc1f6, stand-in for Claude, owner's request.
+
+Action:
+- Reviewed Gemini's follow-up (session gemini-aaf28405ea94be70) against review
+  11, section 8, option (b): read the D-half and post-fix receipts, the
+  in-scene bottom sheet, and the pieces rasterisation in block_puzzle_game.dart;
+  re-derived every number; ran analyze (0 issues), tests (357/357), validator
+  (OK), and verified Gemini's evidence digest. Did not redo device runs.
+- Wrote docs/design/12_DEC0024_STEP1J_FOLLOWUP_REVIEW.md; updated .ai/TASK.md
+  and .ai/PLAN.md under the lock. No product code touched.
+
+Result:
+- Both new windows verify digit for digit: D-half 31.93 ms p50 / 30.9 fps /
+  128.5 s / 3963 frames; post-fix control 26.14 ms / 38.1 fps / 68.2 s / 2599.
+  Self-check 0.99 and 1.00. Resets confirmed (cumulative == window).
+- **The deltas do not stand as measurements.** +6.42 subtracts the old session's
+  28-cell board (Goals 2/3, Best 190, 26-min window tail) from the new session's
+  26-cell board; 1j's own rule forbids cross-scene subtraction. The two new runs
+  are mutually inconsistent under equal conditions: post-fix A (26.14) is
+  5.79 ms faster than pre-fix D (31.93), which hides more. One run is
+  mis-conditioned; the saving is bounded (5.79 .. 12.21 ms) but unmeasured.
+- The fix itself: code follows the 1i scheme (physical pixels, toImageSync,
+  dispose on state/palette/preset/remove, drawImageRect + FilterQuality.low,
+  hideD gate intact). Accepted on mechanism plus the post-fix control; current
+  working numbers 26.25/37.4 empty and 26.14/38.1 half-filled.
+- Recommended unblocking step 6 with the pre-registered 2 ms effect cap,
+  measured on the half-filled board. Optional cheap check: post-fix in-scene
+  A/D toggle to show the blit is ~free. Notes: no unit test for the new cache
+  (357 unchanged; 1i extracted and tested rasterizeBoardWell); worst build
+  70.63 ms is the switch transient.
+
+Next step: Owner decision on closing the frame budget and starting step 6
+(shockwave + score numbers) with the 2 ms cap.
+
+Open: unit test for the pieces image cache; jank metric defect (DEC-0025 p.3)
+unassigned; steps 3 and 4c remain Claude's, gated only by the rate limit.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:9e3b74d3f9adc22353fdde090e3b86c059fa963a569cf159134f498f4a39e5fc over 537 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-16T23:55:08.489Z by deepseek-f7cc6b98736bc1f6
+- entry: sha256:b40dd6c674ef4162104f22777d26a1687695844f46ca50d3abc321f9ca8bc7e9 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+## Archived 2026-09-25 from .ai/worklog/claude-0789722ac9b82f43.md
+
+# Worklog: claude-0789722ac9b82f43
+
+Session journal. Owned by this session. No other session writes here.
+
+Newest entry first. Limit 150 lines.
+
+---
+
+## 2026-09-17 - Commit DEC-0024, slow the effects, close a crash class
+
+Agent: claude-0789722ac9b82f43
+
+Action:
+- Owner answered the three open questions: commit on a branch, run 1k, and the
+  effects run 3-5x too fast. Owner also reported Match-3 closing on some
+  combos and some restarts.
+- Created `dec-0024/av-polish` and committed the whole effort in six thematic
+  commits, then two more for this session's work. Nothing pushed.
+- Investigated the crash by reading, since no device or log was available.
+- Slowed the clear effects and added tests for the rule.
+- Wrote criteria for step 1k and a new step 7 into doc 04; updated TASK and
+  PLAN under the lock.
+
+Result:
+- **Committed.** Eight commits on the branch, working tree clean. The split is
+  by area, not by step: step isolation was no longer recoverable, which is the
+  same gap reviews 11 and 12 had to work around. Receipts (~18 MB) went in;
+  nothing is pushed, so that is still reversible.
+- **The crash is a native crash, not an exception.** `bootstrap.dart` wires the
+  zone guard, `FlutterError.onError` and `PlatformDispatcher.onError` to
+  Crashlytics, so a Dart error would be reported and the app would survive. An
+  app that closes outright is SIGSEGV/SIGABRT or OOM - which is what drawing a
+  disposed `ui.Image` or replaying a disposed `ui.Picture` does.
+- Found and fixed five caches written as `field?.dispose(); field = rebuild()`,
+  which holds a disposed handle for the length of the rebuild and keeps it
+  forever if the rebuild throws. In Match-3 there are forty lines of drawing
+  inside that window. Every one now clears the field first; every draw site
+  tolerates a null cache instead of asserting with `!`.
+- Three more lifecycle holes: `RackPieceComponent` replaced its cached Picture
+  without disposing it on every palette change, preset change and **drag** - a
+  native-memory leak; Match-3 and Tetris stayed installed as the controller's
+  visual listener after `onRemove`; and `toImageSync` images live on the GPU,
+  so all three screens now drop their caches on resume.
+- **This is a defence, not a diagnosis.** I could not reproduce the crash and
+  had no logcat. Step 7 asks for the log before anyone calls it fixed, and
+  says not to revert these fixes either way, because the defects are real
+  independently.
+- **Effects slowed 3.5x** via one constant, `kEffectTimeScale`, applied to the
+  effects' own clock rather than only to durations - stretching a particle's
+  life while gravity keeps running only rains it off the board. Input-driven
+  motion (rack tween, camera shake) deliberately untouched: a slow answer to a
+  touch reads as lag, not weight.
+- Checks: `flutter analyze --fatal-infos --fatal-warnings` exit 0;
+  `flutter test` **375 passed** (369 + 6 new), exit 0; `validate-protocol.ps1`
+  exit 0 (Evidence).
+
+Next step:
+- Owner hands steps 1k and 7 to Gemini; both have criteria in doc 04.
+- Steps 3 and 4c are mine and start next.
+
+Open:
+- The crash is undiagnosed. Reproduce it with a logcat before believing it gone.
+- Slower effects overlap more, not less. Whether a clear still reads as one
+  beat is an eyes-on question on device, not something a profiler answers.
+- 1k can still falsify the surface-area hypothesis, in which case the frame
+  budget closes at 26.1 ms / 38 fps.
+- Still no unit test for the occupied-cells image cache (review 12, 4.1).
+
+Evidence:
+- anchor: 9dab5a93882ae76dc272a6d9d455aa47bec54ef5, uncommitted changes present
+- digest: sha256:c9635ed2b5c256c811390e12c949dbef68c9a6e8b2489fa7ead3fd309588b06e over 550 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-17T01:19:11.425Z by claude-0789722ac9b82f43
+- entry: sha256:b171f0993036b950e52ca1d04ff96bd6b361fac63cd5e77f9bcc930f05fcc874 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 1s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+## 2026-09-17 - Full DEC-0024 audit, consolidation and cleanup
+
+Agent: claude-0789722ac9b82f43
+
+Action:
+- Audited steps 1b.5 and 6 (`gemini-918d5c9ee64c083e`), which had no review,
+  and re-read reviews 05..12 to consolidate every number into one document.
+- Ran the checks myself rather than quoting them: `flutter analyze
+  --fatal-infos --fatal-warnings` and `flutter test`.
+- Read the new code: the jank rule, `ShockwaveRingComponent`,
+  `ScorePopComponent`, `computeClearedCentroid`, their wiring into real clears,
+  and the step 6 bench harness.
+- Wrote `docs/design/13_DEC0024_AUDIT_AND_STATE.md` - the consolidated state.
+- Updated `.ai/TASK.md` and `.ai/PLAN.md` under the lock; added a pointer from
+  doc 04 to doc 13. Touched no product code.
+- Cleanup: removed seven journals that held only a template header and no
+  entry, recording their existence in `.ai/ARCHIVE.md` first; removed the
+  ignored `firestore-debug.log`. Worklog directory 20 files -> 12.
+
+Result:
+- Checks: analyze `No issues found!` exit 0; `flutter test` **369 passed**
+  exit 0; `validate-protocol.ps1` exit 0 (Evidence). Gemini's reported numbers
+  reproduce.
+- **Step 1b.5 accepted.** `max(build, raster)` replaces the sum - correct, the
+  stages are pipelined - and the rule has tests. The A/D pair on a half-filled
+  board is +0.34 ms, inside the +-1.0 ms prediction, and it is an in-session
+  subtraction, which is the form the step required.
+- **Step 6: code accepted, measurement reformulated.** The code meets DEC-0024
+  points 4, 7 and 7c: scissor clip, no saveLayer, no shader, text laid out
+  once, self-removing, one effect per event at the centroid, `_pulse`
+  untouched. But the raster deltas (+0.15 / +0.12 / **-0.67**) sit inside the
+  instrument's resolution and fps rose with effects on, which no real cost
+  does. The 2 ms cap holds as an **upper bound from noise**, not as a
+  measurement. The resolvable cost is **+0.96 ms build**, and the report did
+  not name it as the result.
+- **Derived the instrument's resolution, which nobody had stated:** ~0.7 ms
+  between sessions (25.52 vs 26.25 on an unchanged scene), ~0.3 ms within one.
+  Several deltas across the project are smaller than that.
+- **Consolidating the table exposed the real open fact:** Classic's raster p50
+  has stayed inside 22.6-26.3 ms across *every* configuration ever measured,
+  while the drawing inside them varied by multiples. Four named layers explain
+  4.16 ms of 17.67; config F, with all of them gone, is still 14.7 ms above the
+  stand.
+- **Named a fifth-term candidate:** the stand draws `GameWidget` in a 360x360
+  box, Classic gives it the full screen height and offsets the board with
+  viewport insets. Two different surface sizes were being compared throughout.
+  Pre-registered as step 1k with a falsification threshold and an exit rule.
+  It is a hypothesis from reading code, and those are 0:3 in this project.
+- Carried DeepSeek's correction: my 1i note "2209116AG has a different chip"
+  was wrong. It is SM7150 / Adreno 618, checked by `adb` in review 11.
+
+Next step:
+- Owner decides on step 1k, and on committing DEC-0024 at all.
+- Steps 3 and 4c are mine and blocked by nothing.
+
+Open:
+- **Nothing of DEC-0024 is in Git.** Last commit predates the effort; 28
+  commits unpushed; reviews, tests, diagnostics and 39 receipts untracked.
+- No unit test for the occupied-cells image cache (review 12, point 4.1).
+- Diagnostics flag tests are inert in CI without the define (review 11, 7.1).
+- Four or five effects now fire on one clear against DEC-0024 point 7.
+
+Evidence:
+- anchor: d5ae9471efb847be55af422574c8dd254468bf46, uncommitted changes present
+- digest: sha256:a46c2ba05487fe7c4e74e184ce2a86341e4cf86a35c24d4446ef9fd288994241 over 549 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-17T00:59:44.207Z by claude-0789722ac9b82f43
+- entry: sha256:cda6a8a5c4deed79e2eca8205998fdc03e8d7b13b1ba6a8c489f70b1e9bd61c8 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 1s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 
