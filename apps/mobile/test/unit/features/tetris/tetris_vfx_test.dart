@@ -12,6 +12,7 @@ import 'package:block_puzzle_mobile/features/tetris/presentation/tetris_screen.d
 import 'package:block_puzzle_mobile/ui/effects/combo_pulse_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/landing_squash_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/score_pop_component.dart';
+import 'package:block_puzzle_mobile/features/diagnostics/step6_benchmark.dart';
 import 'package:block_puzzle_mobile/ui/effects/shockwave_ring_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/vfx_director.dart';
 import 'package:block_puzzle_mobile/ui/effects/vfx_events.dart';
@@ -112,10 +113,12 @@ void main() {
       game.update(0.016);
 
       // Verify shockwave ring, score pop, and combo pulse TETRIS! spawned
-      expect(
-        game.vfxDirector.children.whereType<ShockwaveRingComponent>(),
-        isNotEmpty,
-      );
+      final List<ShockwaveRingComponent> rings =
+          game.vfxDirector.children.whereType<ShockwaveRingComponent>().toList();
+      expect(rings, isNotEmpty);
+      // Derived from actual 10x20 board size (cols * cell, rows * cell = 300, 600), NOT hardcoded 8x8!
+      expect(rings.first.boardRect.size, equals(const Size(300, 600)));
+
       expect(
         game.vfxDirector.children.whereType<ScorePopComponent>(),
         isNotEmpty,
@@ -128,6 +131,27 @@ void main() {
         game.vfxDirector.isHitStopActive,
         isTrue,
       );
+    });
+
+    test('reduced motion disables shockwave ring on lineClear', () async {
+      Step6Benchmark.reducedMotion.value = true;
+      try {
+        await game.onLoad();
+        game.onGameResize(Vector2(300, 600));
+        game.render(Canvas(PictureRecorder()));
+
+        controller.onVisualEvent?.call(
+          const TetrisEvent(TetrisEventType.lineClear, 4, 800),
+        );
+        game.update(0.016);
+
+        expect(
+          game.vfxDirector.children.whereType<ShockwaveRingComponent>(),
+          isEmpty,
+        );
+      } finally {
+        Step6Benchmark.reducedMotion.value = false;
+      }
     });
 
     test('perfectClear event triggers AllClear fanfare and score pop', () async {
@@ -207,6 +231,32 @@ void main() {
                 best: 4000,
                 lines: 20,
                 level: 3,
+                canRevive: false,
+                onRevive: () {},
+                onRestart: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Game Over'), findsOneWidget);
+      expect(find.text('New Record!'), findsNothing);
+    });
+
+    testWidgets('shows Game Over title without badge when score ties best score',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: TetrisGameOverCard(
+                score: 4000,
+                best: 4000,
+                lines: 40,
+                level: 5,
                 canRevive: false,
                 onRevive: () {},
                 onRestart: () {},

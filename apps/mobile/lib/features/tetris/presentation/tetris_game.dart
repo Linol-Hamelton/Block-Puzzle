@@ -135,6 +135,7 @@ class TetrisFlameGame extends FlameGame {
             color: const Color(0xFF00E5FF),
             boardOrigin: Vector2(_lox, _loy),
             cellSize: cell,
+            boardSize: Vector2(cols * cell, rows * cell),
           ),
         );
 
@@ -330,8 +331,9 @@ class TetrisFlameGame extends FlameGame {
         engine.isClearing ? engine.clearingRows.toSet() : const <int>{};
     final _ClearBeats beats = _ClearBeats(engine.clearProgress);
 
-    final double sx = _shake > 0 ? math.sin(_shake * 53) * _shake * 7 : 0;
-    final double sy = _shake > 0 ? math.cos(_shake * 61) * _shake * 7 : 0;
+    final bool reduced = Step6Benchmark.reducedMotion.value;
+    final double sx = (!reduced && _shake > 0) ? math.sin(_shake * 53) * _shake * 7 : 0;
+    final double sy = (!reduced && _shake > 0) ? math.cos(_shake * 61) * _shake * 7 : 0;
     canvas.save();
     canvas.translate(sx, sy);
 
@@ -497,8 +499,9 @@ class TetrisFlameGame extends FlameGame {
     }
 
     if (_flash > 0) {
+      final double maxA = reduced ? 0.08 : 0.55;
       final double alpha =
-          (_flash * (0.1 + (_flashStrength * 0.05))).clamp(0, 0.55).toDouble();
+          (_flash * (0.1 + (_flashStrength * 0.05))).clamp(0, maxA).toDouble();
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(ox, oy, boardW, boardH),

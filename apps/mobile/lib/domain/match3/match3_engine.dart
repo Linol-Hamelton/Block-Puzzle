@@ -40,7 +40,7 @@ enum Match3EventType {
 /// A discrete model event for the presentation layer (SFX, haptics, juice,
 /// analytics). Mirrors `TetrisEvent`.
 class Match3Event {
-  const Match3Event(this.type, [this.value = 0, this.detail = 0])
+  const Match3Event(this.type, [this.value = 0, this.detail = 0, this.points = 0])
       : special = null,
         combo = null;
 
@@ -48,17 +48,20 @@ class Match3Event {
       : type = Match3EventType.specialSpawned,
         value = 0,
         detail = 0,
+        points = 0,
         combo = null;
 
   const Match3Event.combined(this.combo)
       : type = Match3EventType.combo,
         value = 0,
         detail = 0,
+        points = 0,
         special = null;
 
   final Match3EventType type;
   final int value;
   final int detail;
+  final int points;
 
   /// Set on [Match3EventType.specialSpawned].
   final SpecialKind? special;

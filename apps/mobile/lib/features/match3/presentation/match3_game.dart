@@ -56,6 +56,7 @@ class Match3FlameGame extends FlameGame {
 
   // Fall distance and cascade drop tracking.
   int _dropSerial = -1;
+  double _dropElapsed = 0;
   Map<GridPos, double> _fallDistances = const <GridPos, double>{};
 
   // Last board geometry (screen space).
@@ -222,10 +223,11 @@ class Match3FlameGame extends FlameGame {
             color: matchColor,
             boardOrigin: Vector2(_ox, _oy),
             cellSize: cell,
+            boardSize: Vector2(_cols * cell, _rows * cell),
           ),
         );
 
-        final int scoreDelta = controller.score - _lastScore;
+        final int scoreDelta = event.points > 0 ? event.points : (controller.score - _lastScore);
         if (scoreDelta > 0) {
           _vfxDirector.handleEvent(
             VfxEvent.scorePopped(
@@ -398,6 +400,7 @@ class Match3FlameGame extends FlameGame {
     final int serial = controller.frameSerial;
     if (serial != _dropSerial) {
       _dropSerial = serial;
+      _dropElapsed = 0.0;
       _fallDistances = computeFallDistances(
         _cols,
         _rows,
@@ -415,7 +418,7 @@ class Match3FlameGame extends FlameGame {
     if (dropDuration <= 0) {
       return 1.0;
     }
-    final double t = (_chargeElapsed / dropDuration).clamp(0.0, 1.0);
+    final double t = (_dropElapsed / dropDuration).clamp(0.0, 1.0);
     return EasingPresets.evaluateProgress(t, EasingPresets.cascadeDropCurve);
   }
 
@@ -434,6 +437,7 @@ class Match3FlameGame extends FlameGame {
     }
     _lastScore = controller.score;
     _chargeElapsed += dt;
+    _dropElapsed += dt;
 
     // Idle hint: softly pulse one legal swap after 4.5s of player inactivity.
     if (_selected == null && !controller.isBusy && !controller.isGameOver) {
@@ -467,8 +471,9 @@ class Match3FlameGame extends FlameGame {
     _oy = oy;
     _cell = cell;
 
-    final double sx = _shake > 0 ? math.sin(_shake * 51) * _shake * 6 : 0;
-    final double sy = _shake > 0 ? math.cos(_shake * 59) * _shake * 6 : 0;
+    final bool reduced = Step6Benchmark.reducedMotion.value;
+    final double sx = (!reduced && _shake > 0) ? math.sin(_shake * 51) * _shake * 6 : 0;
+    final double sy = (!reduced && _shake > 0) ? math.cos(_shake * 59) * _shake * 6 : 0;
     canvas.save();
     canvas.translate(sx, sy);
 
@@ -590,7 +595,8 @@ class Match3FlameGame extends FlameGame {
     }
 
     if (_flash > 0) {
-      final double alpha = (_flash * 0.35).clamp(0, 0.5).toDouble();
+      final double maxA = reduced ? 0.08 : 0.5;
+      final double alpha = (_flash * 0.35).clamp(0, maxA).toDouble();
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(ox, oy, boardW, boardH),

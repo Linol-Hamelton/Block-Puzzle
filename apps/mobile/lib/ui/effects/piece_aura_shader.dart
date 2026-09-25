@@ -18,6 +18,7 @@ class PieceAuraShader {
         _isReducedMotion = isReducedMotion ?? (() => false);
 
   ui.FragmentProgram? _program;
+  ui.FragmentShader? _cachedShader;
   VfxLevel vfxLevel;
   final bool Function() _isReducedMotion;
 
@@ -25,7 +26,9 @@ class PieceAuraShader {
   bool get hasCompiledProgram => _program != null;
 
   /// Whether aura effects are currently enabled based on settings and motion preferences.
-  bool get isEnabled => vfxLevel == VfxLevel.full && !_isReducedMotion();
+  bool get isEnabled =>
+      (vfxLevel == VfxLevel.full || vfxLevel == VfxLevel.standard) &&
+      !_isReducedMotion();
 
   /// Loads the fragment shader asset asynchronously.
   ///
@@ -33,10 +36,19 @@ class PieceAuraShader {
   Future<void> loadShader() async {
     try {
       _program = await ui.FragmentProgram.fromAsset('shaders/piece_aura.frag');
+      _cachedShader?.dispose();
+      _cachedShader = _program?.fragmentShader();
     } catch (_) {
       // Graceful fallback to procedural gradient
       _program = null;
+      _cachedShader = null;
     }
+  }
+
+  /// Disposes the cached GPU fragment shader instance.
+  void dispose() {
+    _cachedShader?.dispose();
+    _cachedShader = null;
   }
 
   /// Creates a [Paint] configured with either the GPU fragment shader or a procedural fallback.
@@ -46,9 +58,8 @@ class PieceAuraShader {
     required double time,
     double intensity = 1.0,
   }) {
-    final ui.FragmentProgram? program = _program;
-    if (program != null) {
-      final ui.FragmentShader shader = program.fragmentShader();
+    final ui.FragmentShader? shader = _cachedShader;
+    if (_program != null && shader != null) {
       shader.setFloat(0, bounds.width);
       shader.setFloat(1, bounds.height);
       shader.setFloat(2, time);

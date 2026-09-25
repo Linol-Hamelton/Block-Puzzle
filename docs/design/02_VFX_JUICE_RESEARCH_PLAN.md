@@ -136,13 +136,14 @@
 
 Все этапы VFX-пайплайна (Этапы 0–5) были спроектированы модульно и в первую очередь интегрированы в эталонный режим **Classic (Block Puzzle)**, а для **Tetris** и **Match-3** реализован критический для производительности **Этап 6 (запекание `GlassTileAtlas` и батчинг)**.
 
-### Матрица покрытия и техдолга по режимам
+### Матрица покрытия и статуса по режимам
 
-| VFX-компонент | Classic | Tetris | Match-3 | Статус и план погашения техдолга |
+| VFX-компонент | Classic | Tetris | Match-3 | Статус реализации |
 | :--- | :---: | :---: | :---: | :--- |
-| **Этап 1: EasingPresets & Овершут** | ✅ | ⏳ | ⏳ | **Техдолг**: применить `cascadeDropCurve` к падению гемов в Match-3 и `scorePopupCurve` к всплывающим очкам Tetris/Match-3. |
-| **Этап 2: Шина VfxDirector & Частицы** | ✅ | ⏳ | ⏳ | **Техдолг**: подключить `VfxDirector` в `TetrisFlameGame` и `Match3Game`, эмиттить `piecePlaced`, `lineCleared`, `allClear`. |
-| **Этап 3: Camera Shake, Squash, Hit-Stop** | ✅ | ⏳ | ⏳ | **Техдолг**: вызывать `LandingSquashComponent` при hard drop в Tetris; camera shake на 4-линейном Tetris и каскадах Match-3 (≥4). |
-| **Этап 4: Шейдеры (PieceAuraShader)** | ✅ | ⏳ | ⏳ | **Техдолг**: аура для проекции Ghost Piece в Tetris и для заряженных кристаллов/бомб в Match-3. |
-| **Этап 5: CelebrationDirector (Победы)** | ✅ | ⏳ | ⏳ | **Техдолг**: интеграция `CelebrationDirector.instance.buildBadge` в карточки завершения раунда Tetris и Match-3. |
-| **Этап 6: Запекание атласа (GlassTileAtlas)** | ✅ | ✅ | ✅ | **Закрыто**: процедурный GPU-атлас запекается при старте и используется для батчинга мино и гемов. |
+| **Этап 1: EasingPresets & Овершут** | ✅ | ✅ | ✅ | **Закрыто**: `cascadeDropCurve` анимирует каскадное падение гемов в Match-3; `scorePopupCurve` анимирует всплывающие очки в Tetris и Match-3. |
+| **Этап 2: Шина VfxDirector & Частицы** | ✅ | ✅ | ✅ | **Закрыто**: `VfxDirector` подключен в `TetrisFlameGame` и `Match3FlameGame`, эмитит события, создает партиклы взрыва/вспышки и ударные волны с истинными размерами доски. |
+| **Этап 3: Camera Shake, Squash, Hit-Stop** | ✅ | ✅ | ✅ | **Закрыто**: `LandingSquashComponent` при hard drop в Tetris; camera shake и вспышки в `Match3FlameGame` и `TetrisFlameGame` (с полным учетом Reduced Motion). |
+| **Этап 4: Шейдеры (PieceAuraShader)** | ✅ | ✅ | ✅ | **Закрыто**: аура для Ghost Piece и активной фигуры в Tetris, для заряженных кристаллов/бомб в Match-3; шейдер переиспользуется без утечек и поддержан на `standard`/`full`. |
+| **Этап 5: CelebrationDirector (Победы)** | ✅ | ✅ | ✅ | **Закрыто**: бейджи победы интегрированы в экраны Tetris и Match-3; строгая проверка `score > sessionStartBestScore` исключает ложные бейджи при ничьей. |
+| **Этап 6: Запекание атласа (GlassTileAtlas)** | ✅ | ✅ | ✅ | **Закрыто**: процедурный GPU-атлас запекается при старте и используется для батчинга мино и гемов во всех 3 режимах. |
+

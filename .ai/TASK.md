@@ -1,6 +1,6 @@
 # Current Task
 
-Status: Completed - Track B.2 Match-3 Flame VFX Juice Adoption; ready for DeepSeek hostile audit
+Status: Completed
 Owner: RuslanFomenko
 Last update: 2026-09-25
 
@@ -8,26 +8,27 @@ Last update: 2026-09-25
 
 ## Objective
 
-1. Apply `EasingPresets.cascadeDropCurve` to Match-3 gem refill fall animation.
-2. Connect `Match3Game` to `VfxDirector` (bursts, shockwave rings, floating score pops, verbal tier combo pulses, camera shake & hit-stop).
-3. Connect special gem activations (bomb area explosions, laser line clears, rainbow bursts) to `VfxDirector`.
-4. Render `PieceAuraShader` on charged special crystals/gems.
-5. Integrate `CelebrationDirector` celebration badges in Match-3 game over view.
-6. Verify test suite (530+ tests green) and strict static analysis (0 issues).
+Fix all 6 blocking/actionable findings from DeepSeek's adversarial audit:
+1. Fix Tetris LineClear flash and shockwave hardcoded 8x8 size; derive from boardSize.
+2. Fix Match-3 cascadeDropCurve by using a dedicated drop clock reset per frame serial.
+3. Fix Match-3 ScorePop by carrying points on Match3Event and asserting ScorePopComponent.
+4. Gate game-level canvas shake/flash and shockwaves by reduced motion.
+5. Enable PieceAuraShader on standard tier, reuse/dispose FragmentShader to prevent GPU leak.
+6. Update tech-debt matrix in docs/design/02 and ensure strict score > best for new record.
 
 ## Problem & Acceptance
 
-- [x] Apply `EasingPresets.cascadeDropCurve` to falling gem refills
-- [x] Connect `Match3Game` to `VfxDirector` for matches, combos, and special explosions
-- [x] Render `PieceAuraShader` aura behind charged/special gems
-- [x] Integrate `CelebrationDirector.buildCelebrationWidget()` in Match-3 game over view
-- [x] Add/update unit and widget tests (8/8 in match3_vfx_test.dart)
-- [x] Pass `flutter analyze --fatal-infos --fatal-warnings` (0 issues) and all tests (530/530 green)
+- [x] 1. Tetris: boardSize passed to LineClearedVfxEvent, flash/shockwave covers 10x20
+- [x] 2. Match-3: cascade drop clock resets per serial, animate terminal/common refills
+- [x] 3. Match-3: Match3Event carries points, score pop spawns and tested
+- [x] 4. Accessibility: Canvas shakes/flashes & shockwaves fully gated by reducedMotion
+- [x] 5. Shader: Aura enabled on standard/full, FragmentShader cached & disposed
+- [x] 6. Docs & Badges: Update matrix in docs/design/02, strict score > best for tie
+- [x] 7. Full suite passes (flutter test 536/536, analyze 0, validate-protocol clean)
 
 ## Current state
 
-- Track B.1 (Tetris) and Track B.2 (Match-3) fully implemented and verified.
-- Handoff ready for DeepSeek adversarial audit.
+- All 6 DeepSeek audit findings resolved with regression tests. Ready for DeepSeek re-review and acceptance.
 
 ## Roles
 
@@ -42,4 +43,5 @@ None.
 ---
 
 Keep this file under 80 lines. It describes the current task only.
+
 

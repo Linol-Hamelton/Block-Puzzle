@@ -195,6 +195,7 @@ class _Match3ScreenState extends State<Match3Screen>
                     child: _GameOverCard(
                       score: _controller.score,
                       best: _controller.bestScore,
+                      isNewRecord: _controller.isNewRecord,
                       moves: _controller.movesUsed,
                       rounds: _controller.round - 1,
                       onRestart: _controller.restart,
@@ -365,6 +366,7 @@ class Match3GameOverCard extends StatelessWidget {
     required this.moves,
     required this.rounds,
     required this.onRestart,
+    this.isNewRecord,
   });
 
   final int score;
@@ -372,10 +374,11 @@ class Match3GameOverCard extends StatelessWidget {
   final int moves;
   final int rounds;
   final VoidCallback onRestart;
+  final bool? isNewRecord;
 
   @override
   Widget build(BuildContext context) {
-    final bool isNewBest = score >= best && score > 0;
+    final bool isNewBest = (isNewRecord ?? (score > best)) && score > 0;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 32),
       padding: const EdgeInsets.all(24),

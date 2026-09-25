@@ -13,6 +13,48 @@ Information needed to understand an accepted decision belongs in
 
 ## Archive
 
+### From .ai/worklog/antigravity-addff8667515dfd9.md, archived 2026-09-25
+
+## 2026-09-25 - Flame VFX Juice: Feedback Calibration & Multi-Game Tech Debt Formalization
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Formalized multi-game VFX adoption technical debt matrix across Classic, Tetris, and Match-3 in docs/design/02_VFX_JUICE_RESEARCH_PLAN.md.
+2. Updated .ai/PLAN.md with Track A (Feedback Calibration) and Track B (Multi-Game Adoption Tech Debt) tasks and criteria.
+3. Implemented strongly-typed VfxHapticLevel enum (light, medium, heavy, doubleHeavy) in apps/mobile/lib/ui/effects/vfx_events.dart.
+4. Integrated calibrated tactile feedback directly into VfxDirector:
+   - Piece drop: triggers medium impact synchronously with LandingSquashComponent and SFX.
+   - Line clear: tiered haptics (light for 1-2 lines, medium for 3 lines, heavy for 4+ lines) and synchronized 45ms hit-stop freeze.
+   - Combo streak: tiered haptics (medium for streak >= 3, heavy for streak >= 6) and 45ms hit-stop for streak >= 4.
+   - All Clear: doubleHeavy impact and 60ms hit-stop freeze.
+5. Refactored BlockPuzzleGame to route all tactile feedback via VfxDirector.onHapticFeedback, eliminating vibration race conditions and dropped pulses.
+6. Added unit test in apps/mobile/test/unit/ui/effects/vfx_director_test.dart verifying calibrated haptic tiers and events.
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (515/515 tests passing, +1 new test).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews, commits, and pushes changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: 8883735c5f7d7d81d073a0ccb631a633408b19dc, uncommitted changes present
+- digest: sha256:a798116fc00f80ca3153d5c5f788fd279e8dfc27584aa54a61dc8a1f1013e4e6 over 568 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T01:38:23.271Z by antigravity-addff8667515dfd9
+- entry: sha256:0a72f66d6ff14277c74a26016fbbd7e1a5320a10b095e4a088aa0b51fa43a839 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
+
+
 ### From .ai/worklog/deepseek-5f13ae54cae74a62.md, archived 2026-09-16
 
 ## 2026-09-16 - Independent review of the DEC-0022 round and the F1-F7 closure

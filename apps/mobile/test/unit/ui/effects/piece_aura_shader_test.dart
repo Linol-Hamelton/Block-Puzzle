@@ -10,7 +10,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('PieceAuraShader', () {
-    test('isEnabled is true only on VfxLevel.full with reduced motion off', () {
+    test('isEnabled is true on VfxLevel.standard and full with reduced motion off', () {
       bool reducedMotion = false;
       final PieceAuraShader shader = PieceAuraShader(
         vfxLevel: VfxLevel.full,
@@ -20,7 +20,7 @@ void main() {
       expect(shader.isEnabled, isTrue);
 
       shader.vfxLevel = VfxLevel.standard;
-      expect(shader.isEnabled, isFalse);
+      expect(shader.isEnabled, isTrue);
 
       shader.vfxLevel = VfxLevel.off;
       expect(shader.isEnabled, isFalse);
@@ -71,7 +71,7 @@ void main() {
 
     test('drawAura is a no-op when isEnabled is false or intensity is 0', () {
       final PieceAuraShader shader = PieceAuraShader(
-        vfxLevel: VfxLevel.standard, // disabled
+        vfxLevel: VfxLevel.off, // disabled
       );
 
       final ui.PictureRecorder recorder = ui.PictureRecorder();
@@ -86,7 +86,12 @@ void main() {
 
       final ui.Picture pic = recorder.endRecording();
       pic.dispose();
-      // No operations recorded or thrown
+      shader.dispose();
+    });
+
+    test('dispose cleans up cached shader without throwing', () {
+      final PieceAuraShader shader = PieceAuraShader(vfxLevel: VfxLevel.full);
+      expect(shader.dispose, returnsNormally);
     });
 
     test('loadShader catches asset errors gracefully without rethrowing', () async {
@@ -96,6 +101,7 @@ void main() {
 
       // In a headless unit test, asset bundle may not have compiled shaders
       await expectLater(shader.loadShader(), completes);
+      shader.dispose();
     });
   });
 }

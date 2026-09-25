@@ -143,6 +143,7 @@ class _TetrisScreenState extends State<TetrisScreen>
                     child: _GameOverCard(
                       score: _controller.score,
                       best: _controller.bestScore,
+                      isNewRecord: _controller.isNewRecord,
                       lines: _controller.lines,
                       level: _controller.level,
                       canRevive: _controller.canRevive,
@@ -616,6 +617,7 @@ class TetrisGameOverCard extends StatelessWidget {
     required this.canRevive,
     required this.onRevive,
     required this.onRestart,
+    this.isNewRecord,
   });
 
   final int score;
@@ -625,10 +627,11 @@ class TetrisGameOverCard extends StatelessWidget {
   final bool canRevive;
   final VoidCallback onRevive;
   final VoidCallback onRestart;
+  final bool? isNewRecord;
 
   @override
   Widget build(BuildContext context) {
-    final bool isNewBest = score >= best && score > 0;
+    final bool isNewBest = (isNewRecord ?? (score > best)) && score > 0;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 32),
       padding: const EdgeInsets.all(24),

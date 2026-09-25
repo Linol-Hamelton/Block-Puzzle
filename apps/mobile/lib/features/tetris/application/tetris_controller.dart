@@ -46,6 +46,7 @@ class TetrisController extends ChangeNotifier {
   bool _gameEndEmitted = false;
   bool _disposed = false;
   int _bestScore = 0;
+  int _sessionStartBestScore = 0;
   String _roundId = 'tetris_0';
   DateTime? _startedAt;
 
@@ -58,6 +59,8 @@ class TetrisController extends ChangeNotifier {
   int get level => _engine.level;
   int get lines => _engine.linesCleared;
   int get bestScore => _bestScore > _engine.score ? _bestScore : _engine.score;
+  int get sessionStartBestScore => _sessionStartBestScore;
+  bool get isNewRecord => _engine.score > _sessionStartBestScore && _engine.score > 0;
   bool get isGameOver => _engine.isGameOver;
   bool get canRevive => _engine.isGameOver && !_reviveUsed;
   bool get canHold => _engine.canHold;
@@ -72,6 +75,7 @@ class TetrisController extends ChangeNotifier {
     _started = true;
     _reviveUsed = false;
     _bestScore = await (_store?.loadBestScore() ?? Future<int>.value(0));
+    _sessionStartBestScore = _bestScore;
     final Map<String, Object?>? snapshot = await _store?.loadSnapshot();
     final bool resumed = snapshot != null;
     if (snapshot != null) {

@@ -13,6 +13,8 @@ import 'package:block_puzzle_mobile/features/match3/application/match3_controlle
 import 'package:block_puzzle_mobile/features/match3/presentation/match3_game.dart';
 import 'package:block_puzzle_mobile/features/match3/presentation/match3_screen.dart';
 import 'package:block_puzzle_mobile/ui/effects/combo_pulse_component.dart';
+import 'package:block_puzzle_mobile/features/diagnostics/step6_benchmark.dart';
+import 'package:block_puzzle_mobile/ui/effects/score_pop_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/shockwave_ring_component.dart';
 import 'package:block_puzzle_mobile/ui/effects/vfx_director.dart';
 import 'package:block_puzzle_mobile/ui/effects/vfx_events.dart';
@@ -124,7 +126,7 @@ void main() {
       game.render(Canvas(PictureRecorder()));
 
       controller.onVisualEvent?.call(
-        const Match3Event(Match3EventType.match, 6, 2),
+        const Match3Event(Match3EventType.match, 6, 2, 120),
       );
       game.update(0.016);
 
@@ -133,9 +135,51 @@ void main() {
         isNotEmpty,
       );
       expect(
+        game.vfxDirector.children.whereType<ScorePopComponent>(),
+        isNotEmpty,
+      );
+      expect(
         game.vfxDirector.children.whereType<ComboPulseComponent>(),
         isNotEmpty,
       );
+    });
+
+    test('reduced motion disables shockwave ring on match event', () async {
+      Step6Benchmark.reducedMotion.value = true;
+      try {
+        await game.onLoad();
+        game.onGameResize(Vector2(400, 400));
+        game.render(Canvas(PictureRecorder()));
+
+        controller.onVisualEvent?.call(
+          const Match3Event(Match3EventType.match, 6, 2, 120),
+        );
+        game.update(0.016);
+
+        expect(
+          game.vfxDirector.children.whereType<ShockwaveRingComponent>(),
+          isEmpty,
+        );
+      } finally {
+        Step6Benchmark.reducedMotion.value = false;
+      }
+    });
+
+    test('drop progress animates fall distances across frames after swap', () async {
+      await game.onLoad();
+      game.onGameResize(Vector2(400, 400));
+      game.render(Canvas(PictureRecorder()));
+
+      final (GridPos, GridPos)? hint = controller.engine.findHint();
+      expect(hint, isNotNull);
+      final bool ok = controller.trySwap(hint!.$1, hint.$2);
+      expect(ok, isTrue);
+
+      // Advance frames so drop progress clock runs
+      game.update(0.016);
+      game.render(Canvas(PictureRecorder()));
+
+      expect(game.vfxDirector.isHitStopActive, isFalse);
     });
 
     test('combo event dispatches ComboPulseVfxEvent, ScreenShake, and Hit-Stop', () async {
@@ -237,6 +281,30 @@ void main() {
                 best: 4000,
                 moves: 18,
                 rounds: 1,
+                onRestart: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Out of Moves'), findsOneWidget);
+      expect(find.text('New Record!'), findsNothing);
+    });
+
+    testWidgets('shows Out of Moves title without badge when score ties best score',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: Match3GameOverCard(
+                score: 4000,
+                best: 4000,
+                moves: 20,
+                rounds: 2,
                 onRestart: () {},
               ),
             ),

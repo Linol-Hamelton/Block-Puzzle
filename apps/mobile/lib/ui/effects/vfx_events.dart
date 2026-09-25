@@ -58,6 +58,7 @@ sealed class VfxEvent {
     required Color color,
     required Vector2 boardOrigin,
     required double cellSize,
+    Vector2? boardSize,
   }) = LineClearedVfxEvent;
 
   const factory VfxEvent.scorePopped({
@@ -119,6 +120,7 @@ class LineClearedVfxEvent extends VfxEvent {
     required this.color,
     required this.boardOrigin,
     required this.cellSize,
+    this.boardSize,
   });
 
   final Set<BoardCell> cells;
@@ -127,6 +129,7 @@ class LineClearedVfxEvent extends VfxEvent {
   final Color color;
   final Vector2 boardOrigin;
   final double cellSize;
+  final Vector2? boardSize;
 }
 
 /// Dispatched when bonus points or combo points pop up floating over the board.

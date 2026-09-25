@@ -6,6 +6,41 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Fix DeepSeek Hostile Audit Findings & Lift REJECT
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Finding 1 (P1): Added boardSize to LineClearedVfxEvent and VfxEvent.lineCleared. In TetrisFlameGame, passed boardSize: Vector2(cols * cell, rows * cell). In VfxDirector, derived flash and shockwave bounds from boardSize instead of hardcoded 8x8.
+2. Finding 2 (P1): Added dedicated _dropElapsed clock in Match3FlameGame reset whenever controller.frameSerial increments; evaluated cascade drop progress via EasingPresets.cascadeDropCurve, animating refills and single-step falls smoothly.
+3. Finding 3 (P1): Added points to Match3Event, populated from cascade step.gained in Match3Engine, and used in Match3FlameGame to spawn ScorePopComponent.
+4. Finding 4 (P1): Gated canvas shake (sx, sy) and attenuated full-board flash alpha by Step6Benchmark.reducedMotion.value in both TetrisFlameGame and Match3FlameGame; suppressed ShockwaveRingComponent under reduced motion.
+5. Finding 5 (P1 latent): Enabled PieceAuraShader on VfxLevel.standard and full; cached native FragmentShader instance per program and added dispose() to eliminate GPU leaks.
+6. Finding 6 (P2/P3): Updated docs/design/02_VFX_JUICE_RESEARCH_PLAN.md matrix to mark all stages closed (✅); updated tie-record logic to require strict score > sessionStartBestScore.
+7. Expanded test suites: added assertions for ShockwaveRingComponent boardRect size (300x600), ScorePopComponent, reducedMotion suppression, mid-fall drop progress, and tie score non-badge rendering.
+
+Result:
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (536/536 tests passing, all suites green).
+- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
+
+Next step:
+- Record protocol handoff evidence with protocol-handoff.cjs.
+- Release cooperative lock.
+- Human owner reviews, commits, and invites DeepSeek to verify and lift REJECT.
+
+Open:
+None.
+
+Evidence:
+- anchor: 5cf08b5fa512966215a04d0418a176ab98d44e34, uncommitted changes present
+- digest: sha256:6053a7f679a7e3493fa05ff4d0614b7aac568d8077a0927d75f35eb14702891a over 570 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T03:24:35.358Z by antigravity-addff8667515dfd9
+- entry: sha256:82fb7f29fa830b4b2c88a61682ec77fe3797e97b8914d76fb4e8a3dc799f6962 of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Track B.2: Match-3 Flame VFX Juice & Celebration Adoption
 
 Agent: antigravity-addff8667515dfd9
@@ -79,44 +114,6 @@ Evidence:
 - digest format: 4
 - recorded: 2026-09-25T02:09:32.450Z by antigravity-addff8667515dfd9
 - entry: sha256:b20fe69f0578d3befbe9a2cad47ab4ae4b4b5e7b3dcd62ca3583b816adb615d5 of this entry without this block
-- scope: protocol checks only; host-project tests run separately
-- validate-protocol.ps1: exit 0 in 2s
-- reproduce: node .ai/bin/protocol-handoff.cjs verify
-## 2026-09-25 - Flame VFX Juice: Feedback Calibration & Multi-Game Tech Debt Formalization
-
-Agent: antigravity-addff8667515dfd9
-
-Action:
-1. Formalized multi-game VFX adoption technical debt matrix across Classic, Tetris, and Match-3 in docs/design/02_VFX_JUICE_RESEARCH_PLAN.md.
-2. Updated .ai/PLAN.md with Track A (Feedback Calibration) and Track B (Multi-Game Adoption Tech Debt) tasks and criteria.
-3. Implemented strongly-typed VfxHapticLevel enum (light, medium, heavy, doubleHeavy) in apps/mobile/lib/ui/effects/vfx_events.dart.
-4. Integrated calibrated tactile feedback directly into VfxDirector:
-   - Piece drop: triggers medium impact synchronously with LandingSquashComponent and SFX.
-   - Line clear: tiered haptics (light for 1-2 lines, medium for 3 lines, heavy for 4+ lines) and synchronized 45ms hit-stop freeze.
-   - Combo streak: tiered haptics (medium for streak >= 3, heavy for streak >= 6) and 45ms hit-stop for streak >= 4.
-   - All Clear: doubleHeavy impact and 60ms hit-stop freeze.
-5. Refactored BlockPuzzleGame to route all tactile feedback via VfxDirector.onHapticFeedback, eliminating vibration race conditions and dropped pulses.
-6. Added unit test in apps/mobile/test/unit/ui/effects/vfx_director_test.dart verifying calibrated haptic tiers and events.
-
-Result:
-- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
-- flutter test --no-pub: exit 0 (515/515 tests passing, +1 new test).
-- validate-protocol.ps1: exit 0 (0 warnings, 28 decisions verified).
-
-Next step:
-- Record protocol handoff evidence with protocol-handoff.cjs.
-- Release cooperative lock.
-- Human owner reviews, commits, and pushes changes.
-
-Open:
-None.
-
-Evidence:
-- anchor: 8883735c5f7d7d81d073a0ccb631a633408b19dc, uncommitted changes present
-- digest: sha256:a798116fc00f80ca3153d5c5f788fd279e8dfc27584aa54a61dc8a1f1013e4e6 over 568 tracked and untracked files
-- digest format: 4
-- recorded: 2026-09-25T01:38:23.271Z by antigravity-addff8667515dfd9
-- entry: sha256:0a72f66d6ff14277c74a26016fbbd7e1a5320a10b095e4a088aa0b51fa43a839 of this entry without this block
 - scope: protocol checks only; host-project tests run separately
 - validate-protocol.ps1: exit 0 in 2s
 - reproduce: node .ai/bin/protocol-handoff.cjs verify

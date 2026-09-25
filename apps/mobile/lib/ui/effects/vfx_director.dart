@@ -192,29 +192,33 @@ class VfxDirector extends Component {
       }
     }
 
+    final Vector2 bSize = event.boardSize ?? Vector2.all(cellSize * 8);
+
     // 3. Full-board flash
     add(
       LineClearFlashComponent(
         boardOrigin: event.boardOrigin,
-        boardSize: Vector2.all(cellSize * 8),
+        boardSize: bSize,
         strength: event.strength,
         customMotionFactor: reduced ? 0.25 : 1.0,
       ),
     );
 
-    // 3. Shockwave ring expanding from centroid
-    add(
-      ShockwaveRingComponent(
-        center: event.centroid,
-        boardRect: Rect.fromLTWH(
-          event.boardOrigin.x,
-          event.boardOrigin.y,
-          cellSize * 8,
-          cellSize * 8,
+    // 3. Shockwave ring expanding from centroid (gated by reduced motion)
+    if (!reduced) {
+      add(
+        ShockwaveRingComponent(
+          center: event.centroid,
+          boardRect: Rect.fromLTWH(
+            event.boardOrigin.x,
+            event.boardOrigin.y,
+            bSize.x,
+            bSize.y,
+          ),
+          color: color,
         ),
-        color: color,
-      ),
-    );
+      );
+    }
 
     // 4. Particle bursts
     final int perCellCount = reduced
@@ -398,6 +402,7 @@ class VfxDirector extends Component {
     removeAll(children.whereType<LandingSquashComponent>().toList(growable: false));
     removeAll(children.whereType<CameraShakeEffect>().toList(growable: false));
     removeAll(children.whereType<ZoomPunchEffect>().toList(growable: false));
+    auraShader.dispose();
   }
 }
 

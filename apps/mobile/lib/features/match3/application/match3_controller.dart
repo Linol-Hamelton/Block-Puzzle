@@ -49,6 +49,7 @@ class Match3Controller extends ChangeNotifier {
   bool _gameEndEmitted = false;
   bool _disposed = false;
   int _bestScore = 0;
+  int _sessionStartBestScore = 0;
   String _roundId = 'match3_0';
   DateTime? _startedAt;
 
@@ -102,6 +103,8 @@ class Match3Controller extends ChangeNotifier {
   int get colorCount => _engine.colorCount;
   bool get isGameOver => _engine.isGameOver;
   int get bestScore => _bestScore > _engine.score ? _bestScore : _engine.score;
+  int get sessionStartBestScore => _sessionStartBestScore;
+  bool get isNewRecord => _engine.score > _sessionStartBestScore && _engine.score > 0;
 
   /// Loads the best score + any resume snapshot, then resumes or starts.
   Future<void> initialize() async {
@@ -110,6 +113,7 @@ class Match3Controller extends ChangeNotifier {
     }
     _started = true;
     _bestScore = await (_store?.loadBestScore() ?? Future<int>.value(0));
+    _sessionStartBestScore = _bestScore;
     final Map<String, Object?>? snapshot = await _store?.loadSnapshot();
     final bool resumed = snapshot != null;
     if (snapshot != null) {
