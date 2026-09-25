@@ -6,6 +6,42 @@ Newest entry first. Limit 150 lines.
 
 ---
 
+## 2026-09-25 - Comprehensive documentation synthesis and repository cleanup
+
+Agent: antigravity-addff8667515dfd9
+
+Action:
+1. Synthesized DEC-0024 performance profiling, frame bisection, and 4 falsified hypotheses (nebula, blurs, clipPath, gem vs well) into docs/design/01_PERFORMANCE_AND_GRAPHICS_LESSONS.md.
+2. Synthesized evaluated and rejected gameplay hypotheses (P2W, rubber-band difficulty, fever mode, social bloat) into docs/product/03_GAMEPLAY_HYPOTHESES_AND_DECISIONS.md.
+3. Synthesized development history and completed plans (Plans 12-15, Sprints 1-9) into docs/roadmap/02_HISTORICAL_PLANS_SUMMARY.md.
+4. Moved completed raw plans, architecture specs, and step reviews into docs/archive/ (roadmap, design, architecture, audit).
+5. Deleted obsolete files: 48 diagnostic PNG screenshots (35 MB) from docs/design/, duplicate date-suffixed audio docs, obsolete sprint issue scripts, generate_placeholders.py, and early sprint backlogs.
+6. Updated docs/archive/README.md, docs/DOCS_CHANGELOG.md, and docs/roadmap/05_IMPLEMENTATION_STATUS.md.
+
+Result:
+- Repository clean: 35 MB of heavy intermediate images and redundant documents removed.
+- docs/ streamlined and authoritative.
+- flutter analyze --fatal-infos --fatal-warnings: exit 0 (0 issues).
+- flutter test --no-pub: exit 0 (457/457 tests passing).
+- validate-protocol.ps1: exit 0 (0 warnings).
+
+Next step:
+- Record and verify protocol handoff evidence.
+- Release protocol lock.
+- Human owner reviews, commits, and pushes changes.
+
+Open:
+None.
+
+Evidence:
+- anchor: 475bbd2fc6ec43740e391941c9fd80c28ad8b184, uncommitted changes present
+- digest: sha256:0c0a4d7f63e6fc81f116b2a5c8b9cf9530c85742d4871f625ef3e04040c3f9cb over 547 tracked and untracked files
+- digest format: 4
+- recorded: 2026-09-25T00:12:08.991Z by antigravity-addff8667515dfd9
+- entry: sha256:72c42a372973b8243af6aefa2d12613481184ed0f494f64d7b0fbf34e47a595e of this entry without this block
+- scope: protocol checks only; host-project tests run separately
+- validate-protocol.ps1: exit 0 in 2s
+- reproduce: node .ai/bin/protocol-handoff.cjs verify
 ## 2026-09-25 - Archive 11 oldest worklogs to eliminate protocol validator warning
 
 Agent: antigravity-addff8667515dfd9

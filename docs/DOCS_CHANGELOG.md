@@ -2,6 +2,13 @@
 
 Append one dated line per status-changing documentation merge. The canonical status of the product is [roadmap/05_IMPLEMENTATION_STATUS.md](roadmap/05_IMPLEMENTATION_STATUS.md); this log records *when and why* it (and other load-bearing docs) changed. Supersedes the archived `archive/root/DOCS_CHANGELOG_2026-02-26.md`.
 
+## 2026-09-25 (Comprehensive Documentation Synthesis & Repository Cleanup)
+- Synthesized DEC-0024 performance profiling, frame bisection and 4 falsified hypotheses into `design/01_PERFORMANCE_AND_GRAPHICS_LESSONS.md`.
+- Synthesized evaluated and rejected gameplay hypotheses (P2W, rubber-band RNG, fever mode, social bloat) into `product/03_GAMEPLAY_HYPOTHESES_AND_DECISIONS.md`.
+- Synthesized development history and completed plans (Plans 12-15, Sprints 1-9) into `roadmap/02_HISTORICAL_PLANS_SUMMARY.md`.
+- Archived raw historical sources into `docs/archive/` (`roadmap/`, `design/`, `architecture/`, `audit/`).
+- Removed 48 obsolete diagnostic PNG screenshots (35 MB) from `docs/design/`, duplicate date-suffixed files, obsolete sprint scripts, and sprint backlogs from early 2026.
+
 ## 2026-09-25 (Stage W4 — Documentation Hygiene & Status Reconciliation)
 - Reconciled `roadmap/05_IMPLEMENTATION_STATUS.md` and `README.md` against codebase reality (3 playable modes, 453 tests, Stage W3 complete).
 - Corrected inaccurate claim regarding automated `cold_kill_recovery_test` (flagged in audits 06/07/09 and plan 15; documented as pending automated test, manually verified on device).

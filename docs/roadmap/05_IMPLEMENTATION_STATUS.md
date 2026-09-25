@@ -8,12 +8,12 @@ Last updated: 2026-09-25 (reconciled against codebase after DEC-0024, DEC-0026, 
 - Product maturity: `pre-release / external testing ready`
 - Playable scope: `Classic`, `Tetris`, `Match-3`, `Daily Challenge`
 - Release readiness: `ready for Stage W3 external APK testing`
-- Active phase: `Stage W3 code & build wiring complete (W3.1-W3.5); W3.6-W3.8 (APK tester cohort distribution and telemetry gathering) will be executed during external testing. Stage W4 (Documentation Hygiene) in progress` (per [15_POST_DEC0024_PLAN_2026-09-21.md](15_POST_DEC0024_PLAN_2026-09-21.md))
+- Active phase: `Stage W3 code & build wiring complete (W3.1-W3.5); W3.6-W3.8 (APK tester cohort distribution and telemetry gathering) will be executed during external testing. Stage W4 (Documentation Hygiene) in progress` (per [02_HISTORICAL_PLANS_SUMMARY.md](02_HISTORICAL_PLANS_SUMMARY.md) and [docs/archive/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md](../archive/roadmap/15_POST_DEC0024_PLAN_2026-09-21.md))
 - Strategy: finish reliability/data/quality foundations before open public distribution
 - Monetization model: fully ad-free; in v1.0 monetization surfaces are completely gated / hidden per DEC-0026 / DEC-0028
 - Production data plane: Firebase-first (Crashlytics, Analytics + BigQuery, Remote Config, Cloud Messaging, Auth, Cloud Functions)
 - `services/config-api` and `services/analytics-pipeline` — deferred; superseded by Firebase
-- Quality status: `flutter analyze --no-pub` reports 0 issues; `flutter test --no-pub` passes **453/453 tests**
+- Quality status: `flutter analyze --no-pub` reports 0 issues; `flutter test --no-pub` passes **457/457 tests**
 
 ## Implemented In Code
 - **Multi-Game Core**:
@@ -67,7 +67,7 @@ These are allowed only for `dev/debug` builds and rejected in release mode via `
 - Release builds send `game_session_start`, `game_start`, `game_end`, and `ops_*` via Firebase Analytics with correct `game_id`.
 - Crashlytics receives real crash events from release builds.
 - Store metadata matches shipped functionality.
-- `flutter analyze --fatal-infos --fatal-warnings` green (0 issues) and `flutter test` green (all 453 tests passing).
+- `flutter analyze --fatal-infos --fatal-warnings` green (0 issues) and `flutter test` green (all 457 tests passing).
 - Early game-over rate <= 0.30 for Classic, runtime error session rate <= 0.02, `ops_alert_critical_count == 0`.
 - No open P0/P1 bugs.
 
